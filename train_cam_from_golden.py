@@ -248,7 +248,7 @@ def plot_heatmap(image_id, activation_map, explicitly_upsample):
     plt.show()
 
 
-def test_epoch_bbox(test_set, model):
+def test_bbox(test_set, model):
     test_image_num = len(test_set)
     total_tp = 0
     total_fp = 0
@@ -266,7 +266,7 @@ def test_epoch_bbox(test_set, model):
             continue
 
         output = model(image_tensor)
-        predicted_classes = predict_classes(output)
+        predicted_classes = predict_classes(output, confidence_threshold)
         # CHANGE
         from torchvision.models import resnet18
         from torchcam.cams import CAM
@@ -305,9 +305,9 @@ def test_epoch_bbox(test_set, model):
     print('tp: ' + str(total_tp))
 
 
-def test_epoch_classification(test_set, model):
-    function_name = 'test_epoch_classification'
-    indent = 2
+def test_classification(test_set, model, conf_threshold):
+    function_name = 'test_classification'
+    indent = 1
     total_tp = 0
     total_fp = 0
     total_tn = 0
@@ -325,7 +325,7 @@ def test_epoch_classification(test_set, model):
 
         image_tensor = sampled_batch['image'].to(model.device)
         output = model(image_tensor)
-        predicted_classes = predict_classes(output)
+        predicted_classes = predict_classes(output, conf_threshold)
 
         gt_vector = sampled_batch['label']
         class_num = model.class_num
@@ -349,11 +349,10 @@ def test_epoch_classification(test_set, model):
     log_print(function_name, indent, 'F1: ' + str(f1))
 
 
-def predict_classes(output):
-    threshold = 0.3
+def predict_classes(output, confidence_threshold=0.3):
     class_num = output.shape[1]
     prob_output = torch.sigmoid(output)
-    return [x for x in range(class_num) if prob_output[0, x] > threshold]
+    return [x for x in range(class_num) if prob_output[0, x] > confidence_threshold]
 
 
 def predict_bboxes(model, output, predicted_classes):
@@ -374,21 +373,15 @@ def evaluate_classification(predicted_classes, gt_classes, class_num):
     return tp, fp, tn, fn
 
 
-def train_cam(timestamp, training_set, test_set, model, epoch_num):
+def train_cam(timestamp, training_set, model, epoch_num):
     function_name = 'train_cam'
     indent = 1
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
 
+    model_path = os.path.join(timestamp, 'model.mdl')
     log_print(function_name, indent, 'Starting training...')
     for i in range(epoch_num):
         log_print(function_name, indent+1, 'Starting training Epoch ' + str(i+1))
         train_epoch(training_set, model, optimizer)
+        torch.save(model.state_dict(), model_path)
     log_print(function_name, indent, 'Finished training')
-
-    model_path = os.path.join(timestamp, 'model.mdl')
-    torch.save(model.state_dict(), model_path)
-    # model.load_state_dict(torch.load('model.mdl'))
-    log_print(function_name, indent, 'Testing...')
-    test_epoch_classification(test_set, model)
-    # test_epoch_bbox(test_set, model)
-    log_print(function_name, indent, 'Finished testing')
