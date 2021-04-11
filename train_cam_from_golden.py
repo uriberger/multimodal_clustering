@@ -21,7 +21,7 @@ def train_epoch(training_set, model, optimizer):
     losses = []
 
     dataloader = data.DataLoader(training_set, batch_size=4, shuffle=True)
-    checkpoint_len = 100
+    checkpoint_len = 1000
     checkpoint_time = time.time()
     for i_batch, sampled_batch in enumerate(dataloader):
         if i_batch % checkpoint_len == 0:
