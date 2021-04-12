@@ -12,6 +12,7 @@ import torch.utils.data as data
 from aux_functions import log_print
 import time
 import os
+from cam_model import predict_classes
 
 
 def train_epoch(training_set, model, optimizer):
@@ -347,12 +348,6 @@ def test_classification(test_set, model, conf_threshold):
     log_print(function_name, indent, 'Precision: ' + str(precision))
     log_print(function_name, indent, 'Recall: ' + str(recall))
     log_print(function_name, indent, 'F1: ' + str(f1))
-
-
-def predict_classes(output, confidence_threshold=0.3):
-    class_num = output.shape[1]
-    prob_output = torch.sigmoid(output)
-    return [x for x in range(class_num) if prob_output[0, x] > confidence_threshold]
 
 
 def predict_bboxes(model, output, predicted_classes):

@@ -1,5 +1,6 @@
 import numpy as np
 
+
 class NounIdentifier:
 
     def __init__(self, semantic_class_num):
@@ -22,3 +23,10 @@ class NounIdentifier:
         probability = highest_count / overall_count
 
         return highest_correlated_semantic_class, probability
+
+
+def preprocess_token(token):
+    token = "".join(c for c in token if c not in ("?", ".", ";", ":", "!"))
+    token = token.lower()
+
+    return token

@@ -32,6 +32,9 @@ img_bboxes_training_set_filename = 'coco_img_bboxes_training_set'
 img_bboxes_val_set_filename = 'coco_img_bboxes_val_set'
 img_bboxes_test_set_filename = 'coco_img_bboxes_test_set'
 
+img_caption_training_set_filename = 'coco_img_caption_training_set'
+img_caption_val_set_filename = 'coco_img_caption_val_set'
+
 img_rps_dataset_filename = 'coco_img_rps_dataset'
 
 
