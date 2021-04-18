@@ -21,10 +21,10 @@ class CAMNet(nn.Module):
                                    kernel_size=3, stride=1, padding=1)
 
         # CHANGE2
-        # self.projector = nn.Linear(in_features=feature_map_num,
-        #                            out_features=class_num, bias=False)
-        self.projector = nn.Linear(in_features=feature_map_num*14*14,
+        self.projector = nn.Linear(in_features=feature_map_num,
                                    out_features=class_num, bias=False)
+        # self.projector = nn.Linear(in_features=feature_map_num*14*14,
+        #                            out_features=class_num, bias=False)
 
         self.cam_extractor = CAM(self, target_layer='last_conv', fc_layer='projector')
         if torch.cuda.is_available():
@@ -43,8 +43,8 @@ class CAMNet(nn.Module):
         feature_map_num = feature_maps.shape[1]
         feature_maps = feature_maps.view(feature_maps.shape[0], feature_map_num, -1)
         # CHANGE2
-        # pooled_vector = feature_maps.mean(dim=2)
-        pooled_vector = feature_maps.view(feature_maps.shape[0], -1)
+        pooled_vector = feature_maps.mean(dim=2)
+        # pooled_vector = feature_maps.view(feature_maps.shape[0], -1)
 
         # Finally, project to the wanted dimension
         output = self.projector(pooled_vector)
