@@ -1,100 +1,148 @@
 from cam_model import CAMNet, predict_classes
+import torchvision.models as models
 from noun_identifier import NounIdentifier, preprocess_token
 import torch.utils.data as data
 import time
 from aux_functions import log_print
 import torch
 import torch.nn as nn
-import numpy as np
+import os
 
 
-def train_joint_model(training_set, class_num, epoch_num):
+def loss_with_weight_constraint(output, labels, fc_layer_weights, lambda_diversity_loss):
+    bce_loss = nn.BCEWithLogitsLoss()(output, labels)
+
+    # norm_vec = torch.norm(fc_layer_weights, dim=1, p=2)
+    norm_vec = torch.sum(fc_layer_weights, dim=1)
+    diversity_loss = torch.max(norm_vec) - torch.min(norm_vec)
+
+    total_loss = bce_loss + lambda_diversity_loss * diversity_loss
+
+    return bce_loss, diversity_loss, total_loss
+
+
+def train_joint_model(timestamp, training_set, class_num, epoch_num, config):
     function_name = 'train_joint_model'
     indent = 1
 
-    image_criterion = nn.BCEWithLogitsLoss()
+    image_criterion = loss_with_weight_constraint
     losses = []
-    noun_threshold = 0.155
-    object_threshold = 0.5
 
-    image_model = CAMNet(class_num, pretrained_raw_net=True)
-    text_model = NounIdentifier(class_num)
+    # Configuration
+    noun_threshold = config.noun_threshold
+    object_threshold = config.object_threshold
+    lambda_diversity_loss = config.lambda_diversity_loss
+    pretrained_base = config.pretrained_image_base_model
+    learning_rate = config.image_learning_rate
+    text_model_mode = config.text_model_mode
+    image_model_str = config.image_model
+
+    if image_model_str == 'CAMNet':
+        image_model = CAMNet(class_num, pretrained_raw_net=pretrained_base)
+    elif image_model_str == 'resnet18':
+        image_model = models.resnet18(pretrained=pretrained_base)
+        image_model.fc = nn.Linear(512, class_num)
+    elif image_model_str == 'vgg16':
+        image_model = models.vgg16(pretrained=pretrained_base)
+        image_model.classifier = nn.Sequential(*list(image_model.classifier.children())[:-1],
+                                               nn.Linear(4096, class_num))
+        image_model.classifier = nn.Linear(25088, class_num)
+
+    text_model = NounIdentifier(class_num, text_model_mode)
 
     ''' Use SGD and not ADAM. After one iteration, ADAM makes the output results much lower,
     so that when I'm predicting the classes according to the image, no one crosses the threshold.'''
-    image_optimizer = torch.optim.SGD(image_model.parameters(), lr=1e-4)
+    image_optimizer = torch.optim.SGD(image_model.parameters(), lr=learning_rate)
+
+    # CHANGE
+    if torch.cuda.is_available():
+        image_model.device = torch.device('cuda:0')
+    else:
+        image_model.device = torch.device('cpu')
 
     image_model.to(image_model.device)
 
-    dataloader = data.DataLoader(training_set, batch_size=100, shuffle=True)
-    checkpoint_len = 100
-    checkpoint_time = time.time()
-    for i_batch, sampled_batch in enumerate(dataloader):
-        if i_batch % checkpoint_len == 0:
-            log_print(function_name, indent+1, 'Starting batch ' + str(i_batch) +
-                      ' out of ' + str(len(dataloader)) +
-                      ', time from previous checkpoint ' + str(time.time() - checkpoint_time))
-            checkpoint_time = time.time()
+    for epoch_ind in range(epoch_num):
+        log_print(function_name, indent + 1, 'Starting epoch ' + str(epoch_ind))
 
-        image_tensor = sampled_batch['image'].to(image_model.device)
-        captions = sampled_batch['caption']
-        batch_size = len(captions)
-        token_lists = []
-        for caption in captions:
-            token_list = caption.split()
-            token_list = [preprocess_token(token) for token in token_list]
-            token_lists.append(token_list)
+        dataloader = data.DataLoader(training_set, batch_size=100, shuffle=True)
+        checkpoint_len = 1
+        checkpoint_time = time.time()
+        for i_batch, sampled_batch in enumerate(dataloader):
+            if i_batch % checkpoint_len == 0:
+                log_print(function_name, indent+2, 'Starting batch ' + str(i_batch) +
+                          ' out of ' + str(len(dataloader)) +
+                          ', time from previous checkpoint ' + str(time.time() - checkpoint_time))
+                checkpoint_time = time.time()
 
-        image_optimizer.zero_grad()
-        image_output = image_model(image_tensor)
+            image_tensor = sampled_batch['image'].to(image_model.device)
+            captions = sampled_batch['caption']
+            batch_size = len(captions)
+            token_lists = []
+            for caption in captions:
+                token_list = caption.split()
+                token_list = [preprocess_token(token) for token in token_list]
+                token_lists.append(token_list)
 
-        best_winner = torch.max(torch.tensor(
-            [len([i for i in range(batch_size) if torch.argmax(image_output[i, :]).item() == j])
-             for j in range(class_num)])).item()
-        log_print(function_name, indent+2, 'Best winner won ' + str(best_winner) + ' times out of ' + str(batch_size))
+            image_optimizer.zero_grad()
+            image_output = image_model(image_tensor)
 
-        # Train text model, assuming that the image model is already trained
-        with torch.no_grad():
-            predicted_classes_by_image_list = predict_classes(image_output, confidence_threshold=object_threshold)
-        predictions_num = sum([len(predicted_classes_by_image_list[i]) for i in range(batch_size)])
-        log_print(function_name, indent + 2, 'Predicted ' + str(predictions_num) + ' classes according to image')
-        for caption_ind in range(batch_size):
-            predicted_classes_by_image = predicted_classes_by_image_list[caption_ind]
-            for token in token_lists[caption_ind]:
-                for semantic_class_ind in predicted_classes_by_image:
-                    text_model.document_co_occurence(token, semantic_class_ind)
+            best_winner = torch.max(torch.tensor(
+                [len([i for i in range(batch_size) if torch.argmax(image_output[i, :]).item() == j])
+                 for j in range(class_num)])).item()
+            best_winner_ind = torch.argmax(torch.tensor(
+                [len([i for i in range(batch_size) if torch.argmax(image_output[i, :]).item() == j])
+                 for j in range(class_num)])).item()
+            best_winner_weight_sum = torch.sum(image_model.fc.weight[best_winner_ind, :]).item()
+            weight_mean = sum([torch.sum(image_model.fc.weight[i, :]).item() for i in range(class_num)])/class_num
+            log_print(function_name, indent+3, 'Best winner won ' + str(best_winner) + ' times out of ' + str(batch_size))
+            log_print(function_name, indent+3, 'Best winner weights: ' + str(best_winner_weight_sum)
+                      + ', mean weight: ' + str(weight_mean))
 
-        # Train image model, assuming that the text model is already trained
-        with torch.no_grad():
-            no_prediction_count = 0
-            label_tensor = torch.zeros(batch_size, class_num)
+            # Train text model, assuming that the image model is already trained
+            with torch.no_grad():
+                predicted_classes_by_image_list = predict_classes(image_output, confidence_threshold=object_threshold)
+            predictions_num = sum([len(predicted_classes_by_image_list[i]) for i in range(batch_size)])
+            log_print(function_name, indent + 3, 'Predicted ' + str(predictions_num) + ' classes according to image')
             for caption_ind in range(batch_size):
-                predicted_class_list = []
+                predicted_classes_by_image = predicted_classes_by_image_list[caption_ind]
                 for token in token_lists[caption_ind]:
-                    prediction_res = text_model.predict_semantic_class(token)
-                    if prediction_res is None:
-                        # Never seen this token before
-                        continue
-                    predicted_class, prob = prediction_res
-                    if prob >= noun_threshold:
-                        predicted_class_list.append(predicted_class)
-                # if len(predicted_class_list) == 0:
-                #     # We couldn't predict the classes for this caption. Create a random prediction
-                #     predicted_class_list.append(np.random.randint(class_num))
-                #     predicted_class_list.append(np.random.randint(class_num))
-                #     predicted_class_list.append(np.random.randint(class_num))
-                #     predicted_class_list.append(np.random.randint(class_num))
-                #     predicted_class_list.append(np.random.randint(class_num))
-                #     no_prediction_count += 1
-                label_tensor[caption_ind, torch.tensor(predicted_class_list).long()] = 1.0
-            # print('Couldn\'t predict classes for ' + str(no_prediction_count) + ' captions out of ' + str(batch_size))
+                    for semantic_class_ind in predicted_classes_by_image:
+                        text_model.document_co_occurrence(token, semantic_class_ind)
 
-        predictions_num = torch.sum(label_tensor).item()
-        log_print(function_name, indent + 2, 'Predicted ' + str(predictions_num) + ' classes according to text')
-        # Train image model
-        loss = image_criterion(image_output, label_tensor)
-        loss_val = loss.item()
-        losses.append(loss_val)
+            # Train image model, assuming that the text model is already trained
+            with torch.no_grad():
+                text_model.calculate_probs()
+                no_prediction_count = 0
+                label_tensor = torch.zeros(batch_size, class_num)
+                for caption_ind in range(batch_size):
+                    predicted_class_list = []
+                    for token in token_lists[caption_ind]:
+                        prediction_res = text_model.predict_semantic_class(token)
+                        if prediction_res is None:
+                            # Never seen this token before
+                            continue
+                        predicted_class, prob = prediction_res
+                        if prob >= noun_threshold:
+                            predicted_class_list.append(predicted_class)
+                    label_tensor[caption_ind, torch.tensor(predicted_class_list).long()] = 1.0
+                # print('Couldn\'t predict classes for ' + str(no_prediction_count) + ' captions out of ' + str(batch_size))
 
-        loss.backward()
-        image_optimizer.step()
+            predictions_num = torch.sum(label_tensor).item()
+            log_print(function_name, indent + 3, 'Predicted ' + str(predictions_num) + ' classes according to text')
+            # Train image model
+            bce_loss, diversity_loss, loss =\
+                image_criterion(image_output, label_tensor,
+                                image_model.fc.weight, lambda_diversity_loss)
+            bce_loss_val = bce_loss.item()
+            weight_loss_val = diversity_loss.item()
+            log_print(function_name, indent + 3, 'BCE loss: ' + str(bce_loss_val) +
+                      ' diversity loss: ' + str(weight_loss_val))
+            losses.append(bce_loss_val)
+
+            loss.backward()
+            image_optimizer.step()
+        image_model_path = os.path.join(timestamp, 'image_model.mdl')
+        torch.save(image_model.state_dict(), image_model_path)
+        text_model_path = os.path.join(timestamp, 'text_model.mdl')
+        torch.save(text_model, text_model_path)
