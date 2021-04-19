@@ -200,7 +200,10 @@ def generate_selected_class_caption_dataset_internal(class_list, only_single_cla
         img_class_dataset = {x[0]: x[1] for x in img_class_dataset.items() if len(x[1]) == 1}
 
     class_set = set(class_list)
-    selected_dataset = [x for x in full_dataset
+    selected_dataset = [{'image_id': x['image_id'],
+                         'caption': x['caption'],
+                         'gt_classes': img_class_dataset[x['image_id']]}
+                        for x in full_dataset
                         if x['image_id'] in img_class_dataset and
                         len(class_set.intersection(img_class_dataset[x['image_id']])) > 0]
 
@@ -215,25 +218,29 @@ def generate_selected_class_caption_dataset_internal(class_list, only_single_cla
     return selected_dataset
 
 
-def generate_simplified_caption_dataset(orig_dataset, slice_str, filename):
+def generate_simplified_caption_dataset(orig_dataset, filename):
     """ orig_dataset is a dataset of (image, caption) pairs. This function returns a simplified
      dataset of (image, class name). """
-    return generate_dataset(filename, generate_simplified_caption_dataset_internal, orig_dataset, slice_str)
+    return generate_dataset(filename, generate_simplified_caption_dataset_internal, orig_dataset)
 
 
-def generate_simplified_caption_dataset_internal(orig_dataset, slice_str):
+def generate_simplified_caption_dataset_internal(orig_dataset):
     print('Generating dataset...')
-    img_bboxes_training_set, img_bboxes_val_set, class_mapping = generate_bboxes_dataset_coco()
+    _, _, class_mapping = generate_bboxes_dataset_coco()
 
-    if slice_str == 'train':
-        boxes_dataset = img_bboxes_training_set
-    if slice_str == 'val':
-        boxes_dataset = img_bboxes_val_set
-
-    img_class_dataset = {x[0]: [y[1] for y in x[1]] for x in boxes_dataset.items()}
-    simplified_dataset = [{'image_id': x['image_id'],
-                           'id': x['id'],
-                          'caption': ' '.join([class_mapping[y] for y in img_class_dataset[x['image_id']]])}
-                          for x in orig_dataset]
+    simplified_dataset_with_repetitions = \
+        [{'image_id': x['image_id'],
+          'caption': ' '.join([class_mapping[y] for y in x['gt_classes']]),
+          'gt_classes': x['gt_classes']}
+         for x in orig_dataset]
+    ''' Since in the original dataset each sample has multiple captions, in the simplified dataset
+    we'll have repetitions. So we ant only a unique sample of each image id. '''
+    observed_image_ids = {}
+    simplified_dataset = []
+    for sample in simplified_dataset_with_repetitions:
+        image_id = sample['image_id']
+        if image_id not in observed_image_ids:
+            observed_image_ids[image_id] = True
+            simplified_dataset.append(sample)
 
     return simplified_dataset

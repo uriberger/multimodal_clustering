@@ -44,6 +44,9 @@ class ImageCaptionDataset(data.Dataset):
         # Caption
         caption = item_caption_data['caption']
 
-        sample = {'image': image_tensor, 'caption': caption}
+        # Ground truth classes
+        gt_classes = item_caption_data['gt_classes']
+
+        sample = {'image': image_tensor, 'caption': caption, 'gt_classes': gt_classes}
 
         return sample
