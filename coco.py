@@ -156,3 +156,84 @@ def get_image_id(image_filename):
     image_id = int(image_id_with_leading_zeros)
 
     return image_id
+
+
+def generate_selected_class_caption_dataset(class_list, only_single_class_images, slice_str):
+    """ This function returns a dataset of (image, caption) pairs, where the dataset only contains
+     images with classes of the given class list.
+     If only_single_class_images=True, we filter images that contains more than a single class. """
+    _, _, class_mapping = generate_bboxes_dataset_coco()
+
+    if only_single_class_images:
+        single_or_multi_str = 'single'
+    else:
+        single_or_multi_str = 'multi'
+
+    if slice_str == 'train':
+        dataset_filename_prefix = img_caption_training_set_filename
+    if slice_str == 'val':
+        dataset_filename_prefix = img_caption_val_set_filename
+
+    dataset_filename = \
+        dataset_filename_prefix + \
+        '_' + '_'.join([class_mapping[x] for x in class_list]) + \
+        '_' + single_or_multi_str + '_class'
+
+    return generate_dataset(dataset_filename, generate_selected_class_caption_dataset_internal,
+                            class_list, only_single_class_images, slice_str)
+
+
+def generate_selected_class_caption_dataset_internal(class_list, only_single_class_images, slice_str):
+    print('Generating dataset...')
+    img_bboxes_training_set, img_bboxes_val_set, class_mapping = generate_bboxes_dataset_coco()
+
+    if slice_str == 'train':
+        full_dataset_filename = img_caption_training_set_filename
+        boxes_dataset = img_bboxes_training_set
+    if slice_str == 'val':
+        full_dataset_filename = img_caption_val_set_filename
+        boxes_dataset = img_bboxes_val_set
+    full_dataset = torch.load(full_dataset_filename)
+
+    img_class_dataset = {x[0]: [y[1] for y in x[1]] for x in boxes_dataset.items()}
+    if only_single_class_images:
+        img_class_dataset = {x[0]: x[1] for x in img_class_dataset.items() if len(x[1]) == 1}
+
+    class_set = set(class_list)
+    selected_dataset = [x for x in full_dataset
+                        if x['image_id'] in img_class_dataset and
+                        len(class_set.intersection(img_class_dataset[x['image_id']])) > 0]
+
+    class_names = [class_mapping[x] for x in class_list]
+    if only_single_class_images:
+        at_least_exactly_str = 'exactly'
+    else:
+        at_least_exactly_str = 'at least'
+    print('Found ' + str(len(selected_dataset)) + ' captions for images containing ' +
+          at_least_exactly_str + ' one of the classes in ' + str(class_names))
+
+    return selected_dataset
+
+
+def generate_simplified_caption_dataset(orig_dataset, slice_str, filename):
+    """ orig_dataset is a dataset of (image, caption) pairs. This function returns a simplified
+     dataset of (image, class name). """
+    return generate_dataset(filename, generate_simplified_caption_dataset_internal, orig_dataset, slice_str)
+
+
+def generate_simplified_caption_dataset_internal(orig_dataset, slice_str):
+    print('Generating dataset...')
+    img_bboxes_training_set, img_bboxes_val_set, class_mapping = generate_bboxes_dataset_coco()
+
+    if slice_str == 'train':
+        boxes_dataset = img_bboxes_training_set
+    if slice_str == 'val':
+        boxes_dataset = img_bboxes_val_set
+
+    img_class_dataset = {x[0]: [y[1] for y in x[1]] for x in boxes_dataset.items()}
+    simplified_dataset = [{'image_id': x['image_id'],
+                           'id': x['id'],
+                          'caption': ' '.join([class_mapping[y] for y in img_class_dataset[x['image_id']]])}
+                          for x in orig_dataset]
+
+    return simplified_dataset
