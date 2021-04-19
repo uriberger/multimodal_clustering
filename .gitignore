@@ -1,0 +1,12 @@
+*_training_set*
+*_val_set*
+*_test_set*
+
+venv
+__pycache__
+
+# Old files that I don't want on git
+fast_rcnn_model.py
+fast_rcnn_prepare_data.py
+train_fast_rcnn_from_golden.py
+train_rcnn_from_golden.py
