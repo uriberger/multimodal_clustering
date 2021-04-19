@@ -39,7 +39,7 @@ def train_noun_identifier_from_golden():
 
         for token in caption:
             for semantic_class_ind in semantic_class_inds:
-                noun_identifier.document_co_occurence(token, semantic_class_ind)
+                noun_identifier.document_co_occurrence(token, semantic_class_ind)
     print('Finished training noun identifier')
 
     eval_set, eval_token_num = generate_noun_identification_dataset(eval_caption_list)
