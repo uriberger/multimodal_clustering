@@ -54,13 +54,12 @@ def train_joint_model(timestamp, training_set, class_num, epoch_num, config):
     so that when I'm predicting the classes according to the image, no one crosses the threshold.'''
     image_optimizer = torch.optim.SGD(image_model.parameters(), lr=learning_rate)
 
-    # CHANGE
     if torch.cuda.is_available():
-        image_model.device = torch.device('cuda:0')
+        device = torch.device('cuda:0')
     else:
-        image_model.device = torch.device('cpu')
+        device = torch.device('cpu')
 
-    image_model.to(image_model.device)
+    image_model.to(device)
 
     for epoch_ind in range(epoch_num):
         log_print(function_name, indent + 1, 'Starting epoch ' + str(epoch_ind))
@@ -75,7 +74,7 @@ def train_joint_model(timestamp, training_set, class_num, epoch_num, config):
                           ', time from previous checkpoint ' + str(time.time() - checkpoint_time))
                 checkpoint_time = time.time()
 
-            image_tensor = sampled_batch['image'].to(image_model.device)
+            image_tensor = sampled_batch['image'].to(device)
             captions = sampled_batch['caption']
             batch_size = len(captions)
             token_lists = []
@@ -113,8 +112,7 @@ def train_joint_model(timestamp, training_set, class_num, epoch_num, config):
             # Train image model, assuming that the text model is already trained
             with torch.no_grad():
                 text_model.calculate_probs()
-                no_prediction_count = 0
-                label_tensor = torch.zeros(batch_size, class_num)
+                label_tensor = torch.zeros(batch_size, class_num).to(device)
                 for caption_ind in range(batch_size):
                     predicted_class_list = []
                     for token in token_lists[caption_ind]:
@@ -126,7 +124,6 @@ def train_joint_model(timestamp, training_set, class_num, epoch_num, config):
                         if prob >= noun_threshold:
                             predicted_class_list.append(predicted_class)
                     label_tensor[caption_ind, torch.tensor(predicted_class_list).long()] = 1.0
-                # print('Couldn\'t predict classes for ' + str(no_prediction_count) + ' captions out of ' + str(batch_size))
 
             predictions_num = torch.sum(label_tensor).item()
             log_print(function_name, indent + 3, 'Predicted ' + str(predictions_num) + ' classes according to text')
