@@ -5,6 +5,9 @@
 venv
 __pycache__
 
+*.mdl
+2021-*
+
 # Old files that I don't want on git
 fast_rcnn_model.py
 fast_rcnn_prepare_data.py

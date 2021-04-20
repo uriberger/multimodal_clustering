@@ -1,7 +1,7 @@
 from coco import img_caption_training_set_filename, img_caption_val_set_filename, generate_bboxes_dataset_coco
 from aux_functions import log_print, set_write_to_log
 from datetime import datetime
-from train_joint_model import train_joint_model
+from train_joint_model import train_joint_model, test_models
 import os
 from captions_dataset import ImageCaptionDataset
 from config import Config
@@ -11,7 +11,12 @@ timestamp = str(datetime.now()).replace(' ', '_')
 os.mkdir(timestamp)
 set_write_to_log(timestamp)
 
-config = Config(image_model='resnet18')
+config = Config(
+    image_model='resnet18',
+    text_model_mode='generative',
+    lambda_diversity_loss=0,
+    class_num=2
+)
 log_print('Main', 0, str(config))
 
 log_print('Main', 0, 'Generating datasets...')
@@ -32,6 +37,6 @@ log_print('Main', 0, 'Training model...')
 train_joint_model(timestamp, training_set, 2, 5, config)
 log_print('Main', 0, 'Finished training model')
 
-# log_print('Main', 0, 'Testing model...')
-# test_classification(test_set, model, conf_threshold=0.3)
-# log_print('Main', 0, 'Finished testing model')
+log_print('Main', 0, 'Testing models...')
+test_models(timestamp, test_set, 2, config)
+log_print('Main', 0, 'Finished testing model')

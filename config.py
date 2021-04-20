@@ -6,7 +6,8 @@ class Config:
                  lambda_diversity_loss=2,
                  image_learning_rate=1e-4,
                  text_model_mode='discriminative',
-                 noun_threshold=0.155
+                 noun_threshold=0.155,
+                 class_num=80
                  ):
         self.image_model = image_model
         self.pretrained_image_base_model = pretrained_image_base_model
@@ -15,6 +16,7 @@ class Config:
         self.image_learning_rate = image_learning_rate
         self.text_model_mode = text_model_mode
         self.noun_threshold = noun_threshold
+        self.class_num = class_num
 
     def __str__(self):
         return \
@@ -24,4 +26,5 @@ class Config:
             ', lambda: ' + str(self.lambda_diversity_loss) + \
             ', learning rate: ' + str(self.image_learning_rate) + \
             ', text model mode: ' + str(self.text_model_mode) + \
-            ', noun threshold: ' + str(self.noun_threshold)
+            ', noun threshold: ' + str(self.noun_threshold) + \
+            ', class num: ' + str(self.class_num)

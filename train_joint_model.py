@@ -7,12 +7,27 @@ from aux_functions import log_print
 import torch
 import torch.nn as nn
 import os
+import matplotlib.pyplot as plt
+
+
+def generate_model(model_str, class_num, pretrained_base):
+    if model_str == 'CAMNet':
+        model = CAMNet(class_num, pretrained_raw_net=pretrained_base)
+    elif model_str == 'resnet18':
+        model = models.resnet18(pretrained=pretrained_base)
+        model.fc = nn.Linear(512, class_num)
+    elif model_str == 'vgg16':
+        model = models.vgg16(pretrained=pretrained_base)
+        model.classifier = nn.Sequential(*list(model.classifier.children())[:-1],
+                                               nn.Linear(4096, class_num))
+        model.classifier = nn.Linear(25088, class_num)
+
+    return model
 
 
 def loss_with_weight_constraint(output, labels, fc_layer_weights, lambda_diversity_loss):
     bce_loss = nn.BCEWithLogitsLoss()(output, labels)
 
-    # norm_vec = torch.norm(fc_layer_weights, dim=1, p=2)
     norm_vec = torch.sum(fc_layer_weights, dim=1)
     diversity_loss = torch.max(norm_vec) - torch.min(norm_vec)
 
@@ -37,22 +52,10 @@ def train_joint_model(timestamp, training_set, class_num, epoch_num, config):
     text_model_mode = config.text_model_mode
     image_model_str = config.image_model
 
-    if image_model_str == 'CAMNet':
-        image_model = CAMNet(class_num, pretrained_raw_net=pretrained_base)
-    elif image_model_str == 'resnet18':
-        image_model = models.resnet18(pretrained=pretrained_base)
-        image_model.fc = nn.Linear(512, class_num)
-    elif image_model_str == 'vgg16':
-        image_model = models.vgg16(pretrained=pretrained_base)
-        image_model.classifier = nn.Sequential(*list(image_model.classifier.children())[:-1],
-                                               nn.Linear(4096, class_num))
-        image_model.classifier = nn.Linear(25088, class_num)
-
+    image_model = generate_model(image_model_str, class_num, pretrained_base)
     text_model = NounIdentifier(class_num, text_model_mode)
 
-    ''' Use SGD and not ADAM. After one iteration, ADAM makes the output results much lower,
-    so that when I'm predicting the classes according to the image, no one crosses the threshold.'''
-    image_optimizer = torch.optim.SGD(image_model.parameters(), lr=learning_rate)
+    image_optimizer = torch.optim.Adam(image_model.parameters(), lr=learning_rate)
 
     if torch.cuda.is_available():
         device = torch.device('cuda:0')
@@ -143,3 +146,84 @@ def train_joint_model(timestamp, training_set, class_num, epoch_num, config):
         torch.save(image_model.state_dict(), image_model_path)
         text_model_path = os.path.join(timestamp, 'text_model.mdl')
         torch.save(text_model, text_model_path)
+
+
+def test_models(timestamp, test_set, class_num, config):
+    function_name = 'test_models'
+    indent = 1
+
+    # Config parameters
+    object_threshold = config.object_threshold
+    pretrained_base = config.pretrained_image_base_model
+    image_model_str = config.image_model
+
+    if torch.cuda.is_available():
+        device = torch.device('cuda:0')
+    else:
+        device = torch.device('cpu')
+
+    # Load models
+    image_model = generate_model(image_model_str, class_num, pretrained_base)
+    image_model_path = os.path.join(timestamp, 'image_model.mdl')
+    image_model.load_state_dict(torch.load(image_model_path, map_location=torch.device(device)))
+    image_model.eval()
+
+    text_model_path = os.path.join(timestamp, 'text_model.mdl')
+    text_model = torch.load(text_model_path)
+
+    tp = 0
+    tn = 0
+    fp = 0
+    fn = 0
+
+    dataloader = data.DataLoader(test_set, batch_size=1, shuffle=True)
+    checkpoint_len = 100
+    checkpoint_time = time.time()
+    for i_batch, sampled_batch in enumerate(dataloader):
+        if i_batch % checkpoint_len == 0:
+            log_print(function_name, indent + 1, 'Starting batch ' + str(i_batch) +
+                      ' out of ' + str(len(dataloader)) +
+                      ', time from previous checkpoint ' + str(time.time() - checkpoint_time))
+            checkpoint_time = time.time()
+
+        # Test image model
+        with torch.no_grad():
+            image_tensor = sampled_batch['image'].to(device)
+            image_output = image_model(image_tensor)
+            predicted_classes_by_image_list = predict_classes(image_output, confidence_threshold=object_threshold)
+            # report_prediction(image_tensor, predicted_classes_by_image_list)
+            if sampled_batch['gt_classes'][0].item() == 4:
+                if 1 in predicted_classes_by_image_list[0]:
+                    tp += 1
+                else:
+                    fn += 1
+                if 0 in predicted_classes_by_image_list[0]:
+                    fp += 1
+                else:
+                    tn += 1
+            if sampled_batch['gt_classes'][0].item() == 14:
+                if 0 in predicted_classes_by_image_list[0]:
+                    tp += 1
+                else:
+                    fn += 1
+                if 1 in predicted_classes_by_image_list[0]:
+                    fp += 1
+                else:
+                    tn += 1
+
+    print(tp, tn, fp, fn)
+    precision = tp/(tp+fp)
+    print('Precision: ' + str(precision))
+    recall = tp/(tp+fn)
+    print('Recall: ' + str(recall))
+    f1 = 2*(precision*recall)/(precision+recall)
+    print('F1: ' + str(f1))
+
+
+def report_prediction(image_tensor, predictions):
+    image_for_plt = image_tensor.view(3, image_tensor.shape[2], image_tensor.shape[3])
+    image_for_plt = image_for_plt.permute(1, 2, 0)
+    plt.imshow(image_for_plt)
+    plt.show()
+
+    print('Predicted the following classes: ' + str(predictions[0]))
