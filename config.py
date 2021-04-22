@@ -1,3 +1,6 @@
+wanted_image_size = (224, 224)
+
+
 class Config:
     def __init__(self,
                  image_model='CAMNet',
@@ -6,7 +9,7 @@ class Config:
                  lambda_diversity_loss=2,
                  image_learning_rate=1e-4,
                  text_model_mode='discriminative',
-                 noun_threshold=0.155,
+                 noun_threshold=0.5,
                  class_num=80
                  ):
         self.image_model = image_model

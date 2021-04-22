@@ -13,6 +13,7 @@ from aux_functions import log_print
 import time
 import os
 from cam_model import predict_classes
+from config import wanted_image_size
 
 
 def train_epoch(training_set, model, optimizer):

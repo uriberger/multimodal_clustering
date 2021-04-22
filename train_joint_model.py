@@ -1,13 +1,21 @@
 from cam_model import CAMNet, predict_classes
+from train_cam_from_golden import predict_bbox
 import torchvision.models as models
 from noun_identifier import NounIdentifier, preprocess_token
 import torch.utils.data as data
 import time
-from aux_functions import log_print
+from aux_functions import log_print, calc_ious
 import torch
 import torch.nn as nn
 import os
 import matplotlib.pyplot as plt
+from torchcam.cams import CAM
+from PIL import ImageDraw
+from torchvision.transforms.functional import to_pil_image
+import spacy
+from golden_semantic_class_dataset import noun_tags
+from coco import generate_bboxes_dataset_coco
+from config import wanted_image_size
 
 
 def generate_model(model_str, class_num, pretrained_base):
@@ -68,6 +76,7 @@ def train_joint_model(timestamp, training_set, class_num, epoch_num, config):
         log_print(function_name, indent + 1, 'Starting epoch ' + str(epoch_ind))
 
         dataloader = data.DataLoader(training_set, batch_size=100, shuffle=True)
+        # dataloader = data.DataLoader(training_set, batch_size=5, shuffle=True)
         checkpoint_len = 1
         checkpoint_time = time.time()
         for i_batch, sampled_batch in enumerate(dataloader):
@@ -154,6 +163,7 @@ def test_models(timestamp, test_set, class_num, config):
 
     # Config parameters
     object_threshold = config.object_threshold
+    noun_threshold = config.noun_threshold
     pretrained_base = config.pretrained_image_base_model
     image_model_str = config.image_model
 
@@ -162,22 +172,30 @@ def test_models(timestamp, test_set, class_num, config):
     else:
         device = torch.device('cpu')
 
+    _, img_bboxes_val_set, _ = generate_bboxes_dataset_coco()
+
     # Load models
     image_model = generate_model(image_model_str, class_num, pretrained_base)
-    image_model_path = os.path.join(timestamp, 'image_model.mdl')
+    # image_model_path = os.path.join(timestamp, 'image_model.mdl')
+    image_model_path = 'non_pretrained_image_model.mdl'
     image_model.load_state_dict(torch.load(image_model_path, map_location=torch.device(device)))
     image_model.eval()
 
-    text_model_path = os.path.join(timestamp, 'text_model.mdl')
+    # text_model_path = os.path.join(timestamp, 'text_model.mdl')
+    text_model_path = 'non_pretrained_text_model.mdl'
     text_model = torch.load(text_model_path)
+    nlp = spacy.load("en_core_web_sm")
 
-    tp = 0
-    tn = 0
-    fp = 0
-    fn = 0
+    image_tp = 0
+    image_fp = 0
+    image_fn = 0
+    text_tp = 0
+    text_tn = 0
+    text_fp = 0
+    text_fn = 0
 
     dataloader = data.DataLoader(test_set, batch_size=1, shuffle=True)
-    checkpoint_len = 100
+    checkpoint_len = 1000
     checkpoint_time = time.time()
     for i_batch, sampled_batch in enumerate(dataloader):
         if i_batch % checkpoint_len == 0:
@@ -189,35 +207,56 @@ def test_models(timestamp, test_set, class_num, config):
         # Test image model
         with torch.no_grad():
             image_tensor = sampled_batch['image'].to(device)
-            image_output = image_model(image_tensor)
-            predicted_classes_by_image_list = predict_classes(image_output, confidence_threshold=object_threshold)
-            # report_prediction(image_tensor, predicted_classes_by_image_list)
-            if sampled_batch['gt_classes'][0].item() == 4:
-                if 1 in predicted_classes_by_image_list[0]:
-                    tp += 1
-                else:
-                    fn += 1
-                if 0 in predicted_classes_by_image_list[0]:
-                    fp += 1
-                else:
-                    tn += 1
-            if sampled_batch['gt_classes'][0].item() == 14:
-                if 0 in predicted_classes_by_image_list[0]:
-                    tp += 1
-                else:
-                    fn += 1
-                if 1 in predicted_classes_by_image_list[0]:
-                    fp += 1
-                else:
-                    tn += 1
+            # draw_bounding_box(image_model, image_tensor)
+            image_id = sampled_batch['image_id'].item()
+            if image_id in img_bboxes_val_set:
+                orig_image_size = sampled_batch['orig_image_size']
+                gt_bboxes_with_classes = img_bboxes_val_set[image_id]
+                gt_bboxes = [(
+                    int((x[0][0] / orig_image_size[0])*wanted_image_size[0]),
+                    int((x[0][1] / orig_image_size[1])*wanted_image_size[1]),
+                    int((x[0][2] / orig_image_size[0])*wanted_image_size[0]),
+                    int((x[0][3] / orig_image_size[1])*wanted_image_size[1])
+                ) for x in gt_bboxes_with_classes]
+                cur_tp, cur_fp, cur_fn = \
+                    evaluate_bounding_boxes(image_model, image_tensor, object_threshold, gt_bboxes, image_model_str)
+                image_tp += cur_tp
+                image_fp += cur_fp
+                image_fn += cur_fn
 
-    print(tp, tn, fp, fn)
-    precision = tp/(tp+fp)
-    print('Precision: ' + str(precision))
-    recall = tp/(tp+fn)
-    print('Recall: ' + str(recall))
-    f1 = 2*(precision*recall)/(precision+recall)
-    print('F1: ' + str(f1))
+            caption = sampled_batch['caption'][0]
+            doc = nlp(caption)
+            for token in doc:
+                token_str = preprocess_token(token.text)
+                prediction = text_model.predict_semantic_class(token_str)
+                if prediction is None:
+                    continue
+                is_noun_prediction = prediction[1] >= noun_threshold
+                is_noun_gt = token.tag_ in noun_tags
+                if is_noun_prediction and is_noun_gt:
+                    text_tp += 1
+                elif is_noun_prediction and (not is_noun_gt):
+                    text_fp += 1
+                elif (not is_noun_prediction) and is_noun_gt:
+                    text_fn += 1
+                else:
+                    text_tn += 1
+
+    print(image_tp, image_fp, image_fn)
+    image_precision = image_tp/(image_tp+image_fp)
+    print('Image precision: ' + str(image_precision))
+    image_recall = image_tp/(image_tp+image_fn)
+    print('Image recall: ' + str(image_recall))
+    image_f1 = 2*(image_precision*image_recall)/(image_precision+image_recall)
+    print('Image F1: ' + str(image_f1))
+
+    print(text_tp, text_tn, text_fp, text_fn)
+    text_precision = text_tp / (text_tp + text_fp)
+    print('Text precision: ' + str(text_precision))
+    text_recall = text_tp / (text_tp + text_fn)
+    print('Text recall: ' + str(text_recall))
+    text_f1 = 2 * (text_precision * text_recall) / (text_precision + text_recall)
+    print('Text F1: ' + str(text_f1))
 
 
 def report_prediction(image_tensor, predictions):
@@ -227,3 +266,65 @@ def report_prediction(image_tensor, predictions):
     plt.show()
 
     print('Predicted the following classes: ' + str(predictions[0]))
+
+
+def draw_bounding_box(image_model, image_tensor):
+    cam_extractor = CAM(image_model)
+    image_output = image_model(image_tensor)
+    activation_map = cam_extractor(image_output.squeeze(0).argmax().item(), image_output)
+    bbox = predict_bbox(activation_map)
+    image_obj = to_pil_image(image_tensor.view(3, 224, 224))
+    draw = ImageDraw.Draw(image_obj)
+    draw.rectangle(bbox)
+    plt.imshow(image_obj)
+    plt.show()
+
+
+def predict_bboxes(image_model, image_tensor, object_threshold, image_model_str):
+    if image_model_str == 'CAMNet':  # TODO fix the content of this if statement
+        cam_extractor = CAM(image_model, target_layer='layer4', fc_layer='fc')
+    elif image_model_str == 'resnet18':
+        cam_extractor = CAM(image_model, target_layer='layer4', fc_layer='fc')
+    elif image_model_str == 'vgg16':  # TODO fix the content of this if statement
+        cam_extractor = CAM(image_model, target_layer='layer4', fc_layer='fc')
+    image_output = image_model(image_tensor)
+    predicted_classes = predict_classes(image_output, confidence_threshold=object_threshold)[0]
+    predicted_bboxes = []
+    for predicted_class in predicted_classes:
+        activation_map = cam_extractor(predicted_class, image_output)
+        bbox = predict_bbox(activation_map)
+        predicted_bboxes.append(bbox)
+    return predicted_bboxes
+
+
+def evaluate_bounding_boxes(image_model, image_tensor, object_threshold, gt_bboxes, image_model_str, iou_threshold=0.5):
+    predicted_bboxes = predict_bboxes(image_model, image_tensor, object_threshold, image_model_str)
+
+    # image_obj = to_pil_image(image_tensor.view(3, 224, 224))
+    # draw = ImageDraw.Draw(image_obj)
+    # for bbox in predicted_bboxes:
+    #     draw.rectangle(bbox, outline=(255, 0, 0))
+    # for bbox in gt_bboxes:
+    #     draw.rectangle(bbox, outline=(0, 255, 0))
+    # plt.imshow(image_obj)
+    # plt.show()
+
+    gt_bbox_num = len(gt_bboxes)
+    gt_bboxes = torch.stack([torch.tensor(x) for x in gt_bboxes])
+    predicted_bboxes = torch.stack([torch.tensor(x) for x in predicted_bboxes])
+    ious = calc_ious(gt_bboxes, predicted_bboxes)
+
+    tp = 0
+    fp = 0
+    identifed_gt_inds = {}
+    for predicted_bbox_ind in range(len(predicted_bboxes)):
+        for gt_bbox_ind in range(gt_bbox_num):
+            iou = ious[gt_bbox_ind, predicted_bbox_ind]
+            if iou >= iou_threshold:
+                tp += 1
+                identifed_gt_inds[gt_bbox_ind] = True
+                continue
+            fp += 1
+    fn = gt_bbox_num - len(identifed_gt_inds)
+
+    return tp, fp, fn

@@ -21,12 +21,13 @@ class ImageCaptionDataset(data.Dataset):
     def transform_to_torch_format(self, image_id):
         image_obj = Image.open(get_image_path(image_id, self.slice_str))
         # TODO: should I keep the next line? Is the resizing necessary?
+        orig_image_size = image_obj.size
         image_obj = image_obj.resize(self.wanted_image_size)
         image_tensor = torch.from_numpy(np.array(image_obj))/255
         image_tensor = image_tensor.permute(2, 0, 1)
         # image_tensor = self.normalizer(image_tensor)
 
-        return image_tensor.float()
+        return image_tensor.float(), orig_image_size
 
     def __len__(self):
         return len(self.caption_data)
@@ -39,7 +40,7 @@ class ImageCaptionDataset(data.Dataset):
 
         # Image
         image_id = item_caption_data['image_id']
-        image_tensor = self.transform_to_torch_format(image_id)
+        image_tensor, orig_image_size = self.transform_to_torch_format(image_id)
 
         # Caption
         caption = item_caption_data['caption']
@@ -47,6 +48,12 @@ class ImageCaptionDataset(data.Dataset):
         # Ground truth classes
         gt_classes = item_caption_data['gt_classes']
 
-        sample = {'image': image_tensor, 'caption': caption, 'gt_classes': gt_classes}
+        sample = {
+            'image_id': image_id,
+            'image': image_tensor,
+            'orig_image_size': orig_image_size,
+            'caption': caption,
+            'gt_classes': gt_classes
+        }
 
         return sample
