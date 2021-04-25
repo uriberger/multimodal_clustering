@@ -15,8 +15,8 @@ config = Config(
     image_model='resnet18',
     text_model_mode='generative',
     lambda_diversity_loss=0,
-    class_num=2,
-    noun_threshold=0.7,
+    class_num=20,
+    noun_threshold=0.1,
     pretrained_image_base_model=False
 )
 log_print('Main', 0, str(config))
@@ -25,19 +25,21 @@ log_print('Main', 0, 'Generating datasets...')
 
 # training_set_filename = img_caption_training_set_filename
 # test_set_filename = img_caption_val_set_filename
-training_set_filename = 'coco_img_caption_training_set_airplane_bird_single_class'
-test_set_filename = 'coco_img_caption_val_set_airplane_bird_single_class'
+# training_set_filename = 'coco_img_caption_training_set_airplane_bird_single_class'
+# test_set_filename = 'coco_img_caption_val_set_airplane_bird_single_class'
 # training_set_filename = 'coco_img_caption_training_set_airplane_bird_single_class_simplified'
 # test_set_filename = 'coco_img_caption_val_set_airplane_bird_single_class_simplified'
+training_set_filename = 'coco_img_caption_training_set_one_word_classes'
+test_set_filename = 'coco_img_caption_val_set_one_word_classes'
 
 training_set = ImageCaptionDataset(wanted_image_size, training_set_filename, 'train')
 test_set = ImageCaptionDataset(wanted_image_size, test_set_filename, 'val')
 log_print('Main', 0, 'Datasets generated')
 
-# log_print('Main', 0, 'Training model...')
-# train_joint_model(timestamp, training_set, 2, 5, config)
-# log_print('Main', 0, 'Finished training model')
+log_print('Main', 0, 'Training model...')
+train_joint_model(timestamp, training_set, 5, config)
+log_print('Main', 0, 'Finished training model')
 
-log_print('Main', 0, 'Testing models...')
-test_models(timestamp, test_set, 2, config)
-log_print('Main', 0, 'Finished testing model')
+# log_print('Main', 0, 'Testing models...')
+# test_models(timestamp, test_set, 2, config)
+# log_print('Main', 0, 'Finished testing model')

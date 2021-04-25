@@ -46,7 +46,7 @@ class ImageCaptionDataset(data.Dataset):
         caption = item_caption_data['caption']
 
         # Ground truth classes
-        gt_classes = item_caption_data['gt_classes']
+        gt_classes = ','.join([str(x) for x in item_caption_data['gt_classes']])
 
         sample = {
             'image_id': image_id,

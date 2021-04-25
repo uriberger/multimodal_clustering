@@ -44,7 +44,7 @@ def loss_with_weight_constraint(output, labels, fc_layer_weights, lambda_diversi
     return bce_loss, diversity_loss, total_loss
 
 
-def train_joint_model(timestamp, training_set, class_num, epoch_num, config):
+def train_joint_model(timestamp, training_set, epoch_num, config):
     function_name = 'train_joint_model'
     indent = 1
 
@@ -59,6 +59,7 @@ def train_joint_model(timestamp, training_set, class_num, epoch_num, config):
     learning_rate = config.image_learning_rate
     text_model_mode = config.text_model_mode
     image_model_str = config.image_model
+    class_num = config.class_num
 
     image_model = generate_model(image_model_str, class_num, pretrained_base)
     text_model = NounIdentifier(class_num, text_model_mode)
@@ -77,10 +78,13 @@ def train_joint_model(timestamp, training_set, class_num, epoch_num, config):
 
         dataloader = data.DataLoader(training_set, batch_size=100, shuffle=True)
         # dataloader = data.DataLoader(training_set, batch_size=5, shuffle=True)
-        checkpoint_len = 1
+        checkpoint_len = 10
         checkpoint_time = time.time()
         for i_batch, sampled_batch in enumerate(dataloader):
             if i_batch % checkpoint_len == 0:
+                print_info = True
+
+            if print_info:
                 log_print(function_name, indent+2, 'Starting batch ' + str(i_batch) +
                           ' out of ' + str(len(dataloader)) +
                           ', time from previous checkpoint ' + str(time.time() - checkpoint_time))
@@ -98,17 +102,11 @@ def train_joint_model(timestamp, training_set, class_num, epoch_num, config):
             image_optimizer.zero_grad()
             image_output = image_model(image_tensor)
 
-            best_winner = torch.max(torch.tensor(
-                [len([i for i in range(batch_size) if torch.argmax(image_output[i, :]).item() == j])
-                 for j in range(class_num)])).item()
-            best_winner_ind = torch.argmax(torch.tensor(
-                [len([i for i in range(batch_size) if torch.argmax(image_output[i, :]).item() == j])
-                 for j in range(class_num)])).item()
-            best_winner_weight_sum = torch.sum(image_model.fc.weight[best_winner_ind, :]).item()
-            weight_mean = sum([torch.sum(image_model.fc.weight[i, :]).item() for i in range(class_num)])/class_num
-            log_print(function_name, indent+3, 'Best winner won ' + str(best_winner) + ' times out of ' + str(batch_size))
-            log_print(function_name, indent+3, 'Best winner weights: ' + str(best_winner_weight_sum)
-                      + ', mean weight: ' + str(weight_mean))
+            if print_info:
+                best_winner = torch.max(torch.tensor(
+                    [len([i for i in range(batch_size) if torch.argmax(image_output[i, :]).item() == j])
+                     for j in range(class_num)])).item()
+                log_print(function_name, indent+3, 'Best winner won ' + str(best_winner) + ' times out of ' + str(batch_size))
 
             # Train text model, assuming that the image model is already trained
             with torch.no_grad():
@@ -138,15 +136,17 @@ def train_joint_model(timestamp, training_set, class_num, epoch_num, config):
                     label_tensor[caption_ind, torch.tensor(predicted_class_list).long()] = 1.0
 
             predictions_num = torch.sum(label_tensor).item()
-            log_print(function_name, indent + 3, 'Predicted ' + str(predictions_num) + ' classes according to text')
+            if print_info:
+                log_print(function_name, indent + 3, 'Predicted ' + str(predictions_num) + ' classes according to text')
             # Train image model
             bce_loss, diversity_loss, loss =\
                 image_criterion(image_output, label_tensor,
                                 image_model.fc.weight, lambda_diversity_loss)
             bce_loss_val = bce_loss.item()
             weight_loss_val = diversity_loss.item()
-            log_print(function_name, indent + 3, 'BCE loss: ' + str(bce_loss_val) +
-                      ' diversity loss: ' + str(weight_loss_val))
+            if print_info:
+                log_print(function_name, indent + 3, 'BCE loss: ' + str(bce_loss_val) +
+                          ' diversity loss: ' + str(weight_loss_val))
             losses.append(bce_loss_val)
 
             loss.backward()
