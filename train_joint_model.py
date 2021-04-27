@@ -194,6 +194,7 @@ def test_models(timestamp, test_set, config):
     # image_model_path = os.path.join(timestamp, 'image_model.mdl')
     image_model_path = 'non_pretrained_image_model.mdl'
     image_model.load_state_dict(torch.load(image_model_path, map_location=torch.device(device)))
+    image_model.to(device)
     image_model.eval()
 
     # text_model_path = os.path.join(timestamp, 'text_model.mdl')
