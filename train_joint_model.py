@@ -78,11 +78,13 @@ def train_joint_model(timestamp, training_set, epoch_num, config):
 
         dataloader = data.DataLoader(training_set, batch_size=100, shuffle=True)
         # dataloader = data.DataLoader(training_set, batch_size=5, shuffle=True)
-        checkpoint_len = 10
+        checkpoint_len = 50
         checkpoint_time = time.time()
         for i_batch, sampled_batch in enumerate(dataloader):
             if i_batch % checkpoint_len == 0:
                 print_info = True
+            else:
+                print_info = False
 
             if print_info:
                 log_print(function_name, indent+2, 'Starting batch ' + str(i_batch) +
@@ -111,8 +113,9 @@ def train_joint_model(timestamp, training_set, epoch_num, config):
             # Train text model, assuming that the image model is already trained
             with torch.no_grad():
                 predicted_classes_by_image_list = predict_classes(image_output, confidence_threshold=object_threshold)
-            predictions_num = sum([len(predicted_classes_by_image_list[i]) for i in range(batch_size)])
-            log_print(function_name, indent + 3, 'Predicted ' + str(predictions_num) + ' classes according to image')
+            if print_info:
+                predictions_num = sum([len(predicted_classes_by_image_list[i]) for i in range(batch_size)])
+                log_print(function_name, indent + 3, 'Predicted ' + str(predictions_num) + ' classes according to image')
             for caption_ind in range(batch_size):
                 predicted_classes_by_image = predicted_classes_by_image_list[caption_ind]
                 for token in token_lists[caption_ind]:
