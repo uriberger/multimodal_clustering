@@ -57,6 +57,7 @@ def advance_pixel(row, col, h, w):
         else:
             return None, None
 
+
 def get_final_cc(cc_ind, cc_to_final_cc):
     while cc_ind in cc_to_final_cc:
         cc_ind = cc_to_final_cc[cc_ind]
@@ -133,7 +134,7 @@ def map_pixel_to_cc(input_tensor):
     cur_col = 0
     pixel_ind = 0
     while cur_row is not None:
-        if input_tensor[cur_row, cur_col] == 1:
+        if input_tensor[cur_row, cur_col]:
             cc_ind = find_neighbors_cc_ind(pixel_to_cc_ind, cc_to_final_cc, width, pixel_ind)
             if cc_ind is None:
                 # New connected component
@@ -214,8 +215,8 @@ def predict_bbox(activation_map, segment_threshold_rate=0.5):
 
     cam_max_val = torch.max(orig_image_activation_vals)
 
-    segmentation_map = torch.zeros(wanted_image_size)
-    segmentation_map[orig_image_activation_vals >= segment_threshold_rate * cam_max_val] = 1
+    segmentation_map = torch.zeros(wanted_image_size, dtype=torch.bool)
+    segmentation_map[orig_image_activation_vals >= segment_threshold_rate * cam_max_val] = False
 
     upper_edge, lower_edge, left_edge, right_edge = \
         find_largest_connected_component(segmentation_map)
