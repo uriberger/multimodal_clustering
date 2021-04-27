@@ -220,8 +220,8 @@ def test_models(timestamp, test_set, config):
                       ', time from previous checkpoint ' + str(time.time() - checkpoint_time))
             checkpoint_time = time.time()
 
-        # Test image model
         with torch.no_grad():
+            # Test image model
             image_tensor = sampled_batch['image'].to(device)
             # draw_bounding_box(image_model, image_model_str, image_tensor)
             image_id = sampled_batch['image_id'].item()
@@ -240,6 +240,7 @@ def test_models(timestamp, test_set, config):
                 image_fp += cur_fp
                 image_fn += cur_fn
 
+            # Test text model
             caption = sampled_batch['caption'][0]
             doc = nlp(caption)
             for token in doc:
@@ -258,21 +259,21 @@ def test_models(timestamp, test_set, config):
                 else:
                     text_tn += 1
 
-    print(image_tp, image_fp, image_fn)
+    log_print(function_name, indent, image_tp, image_fp, image_fn)
     image_precision = image_tp/(image_tp+image_fp)
-    print('Image precision: ' + str(image_precision))
+    log_print(function_name, indent, 'Image precision: ' + str(image_precision))
     image_recall = image_tp/(image_tp+image_fn)
-    print('Image recall: ' + str(image_recall))
+    log_print(function_name, indent, 'Image recall: ' + str(image_recall))
     image_f1 = 2*(image_precision*image_recall)/(image_precision+image_recall)
-    print('Image F1: ' + str(image_f1))
+    log_print(function_name, indent, 'Image F1: ' + str(image_f1))
 
-    print(text_tp, text_tn, text_fp, text_fn)
+    log_print(function_name, indent, text_tp, text_tn, text_fp, text_fn)
     text_precision = text_tp / (text_tp + text_fp)
-    print('Text precision: ' + str(text_precision))
+    log_print(function_name, indent, 'Text precision: ' + str(text_precision))
     text_recall = text_tp / (text_tp + text_fn)
-    print('Text recall: ' + str(text_recall))
+    log_print(function_name, indent, 'Text recall: ' + str(text_recall))
     text_f1 = 2 * (text_precision * text_recall) / (text_precision + text_recall)
-    print('Text F1: ' + str(text_f1))
+    log_print(function_name, indent, 'Text F1: ' + str(text_f1))
 
 
 def report_prediction(image_tensor, predictions):
