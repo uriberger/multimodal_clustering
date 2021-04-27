@@ -36,10 +36,10 @@ training_set = ImageCaptionDataset(wanted_image_size, training_set_filename, 'tr
 test_set = ImageCaptionDataset(wanted_image_size, test_set_filename, 'val')
 log_print('Main', 0, 'Datasets generated')
 
-log_print('Main', 0, 'Training model...')
-train_joint_model(timestamp, training_set, 5, config)
-log_print('Main', 0, 'Finished training model')
+# log_print('Main', 0, 'Training model...')
+# train_joint_model(timestamp, training_set, 1, config)
+# log_print('Main', 0, 'Finished training model')
 
-# log_print('Main', 0, 'Testing models...')
-# test_models(timestamp, test_set, 2, config)
-# log_print('Main', 0, 'Finished testing model')
+log_print('Main', 0, 'Testing models...')
+test_models(timestamp, test_set, config)
+log_print('Main', 0, 'Finished testing model')
