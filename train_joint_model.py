@@ -33,6 +33,17 @@ def generate_model(model_str, class_num, pretrained_base):
     return model
 
 
+def generate_cam_extractor(image_model, image_model_str):
+    if image_model_str == 'CAMNet':  # TODO fix the content of this if statement
+        cam_extractor = CAM(image_model, target_layer='layer4', fc_layer='fc')
+    elif image_model_str == 'resnet18':
+        cam_extractor = CAM(image_model, target_layer='layer4', fc_layer='fc')
+    elif image_model_str == 'vgg16':  # TODO fix the content of this if statement
+        cam_extractor = CAM(image_model, target_layer='layer4', fc_layer='fc')
+
+    return cam_extractor
+
+
 def loss_with_weight_constraint(output, labels, fc_layer_weights, lambda_diversity_loss):
     bce_loss = nn.BCEWithLogitsLoss()(output, labels)
 
@@ -83,6 +94,8 @@ def train_joint_model(timestamp, training_set, epoch_num, config):
         for i_batch, sampled_batch in enumerate(dataloader):
             if i_batch % checkpoint_len == 0:
                 print_info = True
+            else:
+                print_info = False
 
             if print_info:
                 log_print(function_name, indent+2, 'Starting batch ' + str(i_batch) +
@@ -157,7 +170,7 @@ def train_joint_model(timestamp, training_set, epoch_num, config):
         torch.save(text_model, text_model_path)
 
 
-def test_models(timestamp, test_set, class_num, config):
+def test_models(timestamp, test_set, config):
     function_name = 'test_models'
     indent = 1
 
@@ -166,6 +179,7 @@ def test_models(timestamp, test_set, class_num, config):
     noun_threshold = config.noun_threshold
     pretrained_base = config.pretrained_image_base_model
     image_model_str = config.image_model
+    class_num = config.class_num
 
     if torch.cuda.is_available():
         device = torch.device('cuda:0')
@@ -207,7 +221,7 @@ def test_models(timestamp, test_set, class_num, config):
         # Test image model
         with torch.no_grad():
             image_tensor = sampled_batch['image'].to(device)
-            # draw_bounding_box(image_model, image_tensor)
+            # draw_bounding_box(image_model, image_model_str, image_tensor)
             image_id = sampled_batch['image_id'].item()
             if image_id in img_bboxes_val_set:
                 orig_image_size = sampled_batch['orig_image_size']
@@ -268,8 +282,8 @@ def report_prediction(image_tensor, predictions):
     print('Predicted the following classes: ' + str(predictions[0]))
 
 
-def draw_bounding_box(image_model, image_tensor):
-    cam_extractor = CAM(image_model)
+def draw_bounding_box(image_model, image_model_str, image_tensor):
+    cam_extractor = generate_cam_extractor(image_model, image_model_str)
     image_output = image_model(image_tensor)
     activation_map = cam_extractor(image_output.squeeze(0).argmax().item(), image_output)
     bbox = predict_bbox(activation_map)
@@ -281,12 +295,7 @@ def draw_bounding_box(image_model, image_tensor):
 
 
 def predict_bboxes(image_model, image_tensor, object_threshold, image_model_str):
-    if image_model_str == 'CAMNet':  # TODO fix the content of this if statement
-        cam_extractor = CAM(image_model, target_layer='layer4', fc_layer='fc')
-    elif image_model_str == 'resnet18':
-        cam_extractor = CAM(image_model, target_layer='layer4', fc_layer='fc')
-    elif image_model_str == 'vgg16':  # TODO fix the content of this if statement
-        cam_extractor = CAM(image_model, target_layer='layer4', fc_layer='fc')
+    cam_extractor = generate_cam_extractor(image_model, image_model_str)
     image_output = image_model(image_tensor)
     predicted_classes = predict_classes(image_output, confidence_threshold=object_threshold)[0]
     predicted_bboxes = []
@@ -311,8 +320,9 @@ def evaluate_bounding_boxes(image_model, image_tensor, object_threshold, gt_bbox
 
     gt_bbox_num = len(gt_bboxes)
     gt_bboxes = torch.stack([torch.tensor(x) for x in gt_bboxes])
-    predicted_bboxes = torch.stack([torch.tensor(x) for x in predicted_bboxes])
-    ious = calc_ious(gt_bboxes, predicted_bboxes)
+    if len(predicted_bboxes) > 0:
+        predicted_bboxes = torch.stack([torch.tensor(x) for x in predicted_bboxes])
+        ious = calc_ious(gt_bboxes, predicted_bboxes)
 
     tp = 0
     fp = 0
