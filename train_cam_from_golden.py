@@ -216,7 +216,7 @@ def predict_bbox(activation_map, segment_threshold_rate=0.5):
     cam_max_val = torch.max(orig_image_activation_vals)
 
     segmentation_map = torch.zeros(wanted_image_size, dtype=torch.bool)
-    segmentation_map[orig_image_activation_vals >= segment_threshold_rate * cam_max_val] = False
+    segmentation_map[orig_image_activation_vals >= segment_threshold_rate * cam_max_val] = True
 
     upper_edge, lower_edge, left_edge, right_edge = \
         find_largest_connected_component(segmentation_map)
