@@ -267,7 +267,10 @@ def test_models(timestamp, test_set, config):
     log_print(function_name, indent, 'Image precision: ' + str(image_precision))
     image_recall = image_tp/(image_tp+image_fn)
     log_print(function_name, indent, 'Image recall: ' + str(image_recall))
-    image_f1 = 2*(image_precision*image_recall)/(image_precision+image_recall)
+    if image_precision + image_recall == 0:
+        image_f1 = 0
+    else:
+        image_f1 = 2*(image_precision*image_recall)/(image_precision+image_recall)
     log_print(function_name, indent, 'Image F1: ' + str(image_f1))
 
     log_print(function_name, indent,
@@ -279,7 +282,10 @@ def test_models(timestamp, test_set, config):
     log_print(function_name, indent, 'Text precision: ' + str(text_precision))
     text_recall = text_tp / (text_tp + text_fn)
     log_print(function_name, indent, 'Text recall: ' + str(text_recall))
-    text_f1 = 2 * (text_precision * text_recall) / (text_precision + text_recall)
+    if text_precision + text_recall == 0:
+        text_f1 = 0
+    else:
+        text_f1 = 2 * (text_precision * text_recall) / (text_precision + text_recall)
     log_print(function_name, indent, 'Text F1: ' + str(text_f1))
 
 
