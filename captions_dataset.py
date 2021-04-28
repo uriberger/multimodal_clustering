@@ -9,14 +9,20 @@ import numpy as np
 class ImageCaptionDataset(data.Dataset):
     """A dataset with image samples and corresponding captions."""
 
-    def __init__(self, wanted_image_size, captions_file_path, slice_str):
+    def __init__(self, wanted_image_size, captions_file_path, slice_str,
+                 class_mapping, simplified_captions=False):
         self.image_id_caption_dataset = []
-        self.caption_data = torch.load(captions_file_path)
         self.wanted_image_size = wanted_image_size
         self.slice_str = slice_str
+
         mean_tuple = (0.471, 0.4474, 0.4078)
         std_tuple = (0.2718, 0.2672, 0.2826)
         self.normalizer = transforms.Normalize(mean_tuple, std_tuple)
+
+        self.caption_data = torch.load(captions_file_path)
+        self.class_mapping = class_mapping
+
+        self.simplified_captions = simplified_captions
 
     def transform_to_torch_format(self, image_id):
         image_obj = Image.open(get_image_path(image_id, self.slice_str))
@@ -43,7 +49,10 @@ class ImageCaptionDataset(data.Dataset):
         image_tensor, orig_image_size = self.transform_to_torch_format(image_id)
 
         # Caption
-        caption = item_caption_data['caption']
+        if self.simplified_captions:
+            caption = ' '.join([self.class_mapping[x] for x in item_caption_data['gt_classes']])
+        else:
+            caption = item_caption_data['caption']
 
         # Ground truth classes
         gt_classes = ','.join([str(x) for x in item_caption_data['gt_classes']])
