@@ -16,6 +16,7 @@ import spacy
 from golden_semantic_class_dataset import noun_tags
 from coco import generate_bboxes_dataset_coco
 from config import wanted_image_size
+from concretness_dataset import generate_concretness_dataset
 
 
 def generate_model(model_str, class_num, pretrained_base):
@@ -187,7 +188,9 @@ def test_models(timestamp, test_set, config):
     else:
         device = torch.device('cpu')
 
+    # Load datasets
     _, img_bboxes_val_set, _ = generate_bboxes_dataset_coco()
+    concretness_dataset = generate_concretness_dataset()
 
     # Load models
     image_model = generate_model(image_model_str, class_num, pretrained_base)
@@ -209,6 +212,8 @@ def test_models(timestamp, test_set, config):
     text_tn = 0
     text_fp = 0
     text_fn = 0
+    conc_absolute_error_sum = 0
+    concretness_count = 0
 
     dataloader = data.DataLoader(test_set, batch_size=1, shuffle=True)
     checkpoint_len = 1000
@@ -248,6 +253,8 @@ def test_models(timestamp, test_set, config):
                 prediction = text_model.predict_semantic_class(token_str)
                 if prediction is None:
                     continue
+
+                # Predict if this is a noun
                 is_noun_prediction = prediction[1] >= noun_threshold
                 is_noun_gt = token.tag_ in noun_tags
                 if is_noun_prediction and is_noun_gt:
@@ -258,6 +265,15 @@ def test_models(timestamp, test_set, config):
                     text_fn += 1
                 else:
                     text_tn += 1
+
+                # Measure the concretness of the word
+                if token_str in concretness_dataset:
+                    concretness_count += 1
+                    gt_concretness = concretness_dataset[token_str]
+                    ''' Concretness should be between 1 and 5. We have a number between
+                    0 and 1. So we scale it to the range [1, 5] '''
+                    predicted_concretness = 1 + 4*prediction[1]
+                    conc_absolute_error_sum += abs(gt_concretness - predicted_concretness)
 
     log_print(function_name, indent,
               'image: tp ' + str(image_tp) +
@@ -287,6 +303,9 @@ def test_models(timestamp, test_set, config):
     else:
         text_f1 = 2 * (text_precision * text_recall) / (text_precision + text_recall)
     log_print(function_name, indent, 'Text F1: ' + str(text_f1))
+
+    concretness_mae = conc_absolute_error_sum/concretness_count
+    log_print(function_name, indent, 'Concretness mean squared error: ' + str(concretness_mae))
 
 
 def report_prediction(image_tensor, predictions):
