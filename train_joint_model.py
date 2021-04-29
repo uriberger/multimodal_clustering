@@ -45,28 +45,16 @@ def generate_cam_extractor(image_model, image_model_str):
     return cam_extractor
 
 
-def loss_with_weight_constraint(output, labels, fc_layer_weights, lambda_diversity_loss):
-    bce_loss = nn.BCEWithLogitsLoss()(output, labels)
-
-    norm_vec = torch.sum(fc_layer_weights, dim=1)
-    diversity_loss = torch.max(norm_vec) - torch.min(norm_vec)
-
-    total_loss = bce_loss + lambda_diversity_loss * diversity_loss
-
-    return bce_loss, diversity_loss, total_loss
-
-
 def train_joint_model(timestamp, training_set, epoch_num, config):
     function_name = 'train_joint_model'
     indent = 1
 
-    image_criterion = loss_with_weight_constraint
+    image_criterion = nn.BCEWithLogitsLoss()
     losses = []
 
     # Configuration
     noun_threshold = config.noun_threshold
     object_threshold = config.object_threshold
-    lambda_diversity_loss = config.lambda_diversity_loss
     pretrained_base = config.pretrained_image_base_model
     learning_rate = config.image_learning_rate
     text_model_mode = config.text_model_mode
@@ -154,15 +142,11 @@ def train_joint_model(timestamp, training_set, epoch_num, config):
             if print_info:
                 log_print(function_name, indent + 3, 'Predicted ' + str(predictions_num) + ' classes according to text')
             # Train image model
-            bce_loss, diversity_loss, loss =\
-                image_criterion(image_output, label_tensor,
-                                image_model.fc.weight, lambda_diversity_loss)
-            bce_loss_val = bce_loss.item()
-            weight_loss_val = diversity_loss.item()
+            loss = image_criterion(image_output, label_tensor)
+            loss_val = loss.item()
             if print_info:
-                log_print(function_name, indent + 3, 'BCE loss: ' + str(bce_loss_val) +
-                          ' diversity loss: ' + str(weight_loss_val))
-            losses.append(bce_loss_val)
+                log_print(function_name, indent + 3, 'Loss: ' + str(loss_val))
+            losses.append(loss_val)
 
             loss.backward()
             image_optimizer.step()
@@ -194,14 +178,12 @@ def test_models(timestamp, test_set, config):
 
     # Load models
     image_model = generate_model(image_model_str, class_num, pretrained_base)
-    # image_model_path = os.path.join(timestamp, 'image_model.mdl')
-    image_model_path = 'non_pretrained_image_model.mdl'
+    image_model_path = os.path.join(timestamp, 'image_model.mdl')
     image_model.load_state_dict(torch.load(image_model_path, map_location=torch.device(device)))
     image_model.to(device)
     image_model.eval()
 
-    # text_model_path = os.path.join(timestamp, 'text_model.mdl')
-    text_model_path = 'non_pretrained_text_model.mdl'
+    text_model_path = os.path.join(timestamp, 'text_model.mdl')
     text_model = torch.load(text_model_path)
     nlp = spacy.load("en_core_web_sm")
 

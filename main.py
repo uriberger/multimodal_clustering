@@ -14,10 +14,9 @@ set_write_to_log(timestamp)
 config = Config(
     image_model='resnet18',
     text_model_mode='generative',
-    lambda_diversity_loss=0,
-    class_num=20,
-    noun_threshold=0.1,
-    pretrained_image_base_model=False
+    class_num=2,
+    noun_threshold=0.6,
+    pretrained_image_base_model=True
 )
 log_print('Main', 0, str(config))
 
@@ -25,10 +24,10 @@ log_print('Main', 0, 'Generating datasets...')
 
 # training_set_filename = img_caption_training_set_filename
 # test_set_filename = img_caption_val_set_filename
-# training_set_filename = 'coco_img_caption_training_set_airplane_bird_single_class'
-# test_set_filename = 'coco_img_caption_val_set_airplane_bird_single_class'
-training_set_filename = 'coco_img_caption_training_set_one_word_classes'
-test_set_filename = 'coco_img_caption_val_set_one_word_classes'
+training_set_filename = 'coco_img_caption_training_set_airplane_bird_single_class'
+test_set_filename = 'coco_img_caption_val_set_airplane_bird_single_class'
+# training_set_filename = 'coco_img_caption_training_set_one_word_classes'
+# test_set_filename = 'coco_img_caption_val_set_one_word_classes'
 _, _, class_mapping = generate_bboxes_dataset_coco()
 
 training_set = ImageCaptionDataset(wanted_image_size, training_set_filename,
