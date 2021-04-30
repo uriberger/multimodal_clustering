@@ -27,20 +27,19 @@ def generate_model(model_str, class_num, pretrained_base):
         model.fc = nn.Linear(512, class_num)
     elif model_str == 'vgg16':
         model = models.vgg16(pretrained=pretrained_base)
-        model.classifier = nn.Sequential(*list(model.classifier.children())[:-1],
-                                               nn.Linear(4096, class_num))
-        model.classifier = nn.Linear(25088, class_num)
+        model.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        model.classifier = nn.Linear(512, class_num)
 
     return model
 
 
 def generate_cam_extractor(image_model, image_model_str):
-    if image_model_str == 'CAMNet':  # TODO fix the content of this if statement
-        cam_extractor = CAM(image_model, target_layer='layer4', fc_layer='fc')
+    if image_model_str == 'CAMNet':
+        cam_extractor = CAM(image_model, target_layer='last_conv', fc_layer='projector')
     elif image_model_str == 'resnet18':
         cam_extractor = CAM(image_model, target_layer='layer4', fc_layer='fc')
-    elif image_model_str == 'vgg16':  # TODO fix the content of this if statement
-        cam_extractor = CAM(image_model, target_layer='layer4', fc_layer='fc')
+    elif image_model_str == 'vgg16':
+        cam_extractor = CAM(image_model, target_layer='features', fc_layer='classifier')
 
     return cam_extractor
 
@@ -87,7 +86,7 @@ def train_joint_model(timestamp, training_set, epoch_num, config):
                 print_info = False
 
             if print_info:
-                log_print(function_name, indent+2, 'Starting batch ' + str(i_batch) +
+                log_print(function_name, indent + 2, 'Starting batch ' + str(i_batch) +
                           ' out of ' + str(len(dataloader)) +
                           ', time from previous checkpoint ' + str(time.time() - checkpoint_time))
                 checkpoint_time = time.time()
@@ -108,14 +107,16 @@ def train_joint_model(timestamp, training_set, epoch_num, config):
                 best_winner = torch.max(torch.tensor(
                     [len([i for i in range(batch_size) if torch.argmax(image_output[i, :]).item() == j])
                      for j in range(class_num)])).item()
-                log_print(function_name, indent+3, 'Best winner won ' + str(best_winner) + ' times out of ' + str(batch_size))
+                log_print(function_name, indent + 3,
+                          'Best winner won ' + str(best_winner) + ' times out of ' + str(batch_size))
 
             # Train text model, assuming that the image model is already trained
             with torch.no_grad():
                 predicted_classes_by_image_list = predict_classes(image_output, confidence_threshold=object_threshold)
             if print_info:
                 predictions_num = sum([len(predicted_classes_by_image_list[i]) for i in range(batch_size)])
-                log_print(function_name, indent + 3, 'Predicted ' + str(predictions_num) + ' classes according to image')
+                log_print(function_name, indent + 3,
+                          'Predicted ' + str(predictions_num) + ' classes according to image')
             for caption_ind in range(batch_size):
                 predicted_classes_by_image = predicted_classes_by_image_list[caption_ind]
                 for token in token_lists[caption_ind]:
@@ -216,10 +217,10 @@ def test_models(timestamp, test_set, config):
                 orig_image_size = sampled_batch['orig_image_size']
                 gt_bboxes_with_classes = img_bboxes_val_set[image_id]
                 gt_bboxes = [(
-                    int((x[0][0] / orig_image_size[0])*wanted_image_size[0]),
-                    int((x[0][1] / orig_image_size[1])*wanted_image_size[1]),
-                    int((x[0][2] / orig_image_size[0])*wanted_image_size[0]),
-                    int((x[0][3] / orig_image_size[1])*wanted_image_size[1])
+                    int((x[0][0] / orig_image_size[0]) * wanted_image_size[0]),
+                    int((x[0][1] / orig_image_size[1]) * wanted_image_size[1]),
+                    int((x[0][2] / orig_image_size[0]) * wanted_image_size[0]),
+                    int((x[0][3] / orig_image_size[1]) * wanted_image_size[1])
                 ) for x in gt_bboxes_with_classes]
                 cur_tp, cur_fp, cur_fn = \
                     evaluate_bounding_boxes(image_model, image_tensor, object_threshold, gt_bboxes, image_model_str)
@@ -254,21 +255,21 @@ def test_models(timestamp, test_set, config):
                     gt_concretness = concretness_dataset[token_str]
                     ''' Concretness should be between 1 and 5. We have a number between
                     0 and 1. So we scale it to the range [1, 5] '''
-                    predicted_concretness = 1 + 4*prediction[1]
+                    predicted_concretness = 1 + 4 * prediction[1]
                     conc_absolute_error_sum += abs(gt_concretness - predicted_concretness)
 
     log_print(function_name, indent,
               'image: tp ' + str(image_tp) +
               ', fp ' + str(image_fp) +
               ', fn ' + str(image_fn))
-    image_precision = image_tp/(image_tp+image_fp)
+    image_precision = image_tp / (image_tp + image_fp)
     log_print(function_name, indent, 'Image precision: ' + str(image_precision))
-    image_recall = image_tp/(image_tp+image_fn)
+    image_recall = image_tp / (image_tp + image_fn)
     log_print(function_name, indent, 'Image recall: ' + str(image_recall))
     if image_precision + image_recall == 0:
         image_f1 = 0
     else:
-        image_f1 = 2*(image_precision*image_recall)/(image_precision+image_recall)
+        image_f1 = 2 * (image_precision * image_recall) / (image_precision + image_recall)
     log_print(function_name, indent, 'Image F1: ' + str(image_f1))
 
     log_print(function_name, indent,
@@ -286,7 +287,7 @@ def test_models(timestamp, test_set, config):
         text_f1 = 2 * (text_precision * text_recall) / (text_precision + text_recall)
     log_print(function_name, indent, 'Text F1: ' + str(text_f1))
 
-    concretness_mae = conc_absolute_error_sum/concretness_count
+    concretness_mae = conc_absolute_error_sum / concretness_count
     log_print(function_name, indent, 'Concretness mean squared error: ' + str(concretness_mae))
 
 
