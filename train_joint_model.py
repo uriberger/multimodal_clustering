@@ -169,7 +169,7 @@ def train_joint_model(timestamp, training_set, epoch_num, config):
         torch.save(text_model, text_model_path)
 
 
-def test_models(timestamp, test_set, config):
+def test_models(timestamp, test_set, config, model_name=None):
     function_name = 'test_models'
     indent = 1
 
@@ -190,13 +190,21 @@ def test_models(timestamp, test_set, config):
     concretness_dataset = generate_concretness_dataset()
 
     # Load models
+    models_dir = 'models'
+    
     image_model = generate_model(image_model_str, class_num, pretrained_base)
-    image_model_path = os.path.join(timestamp, 'image_model.mdl')
+    if model_name is not None:
+        image_model_path = os.path.join(models_dir, 'image', model_name + '.mdl')
+    else:
+        image_model_path = os.path.join(timestamp, 'image_model.mdl')
     image_model.load_state_dict(torch.load(image_model_path, map_location=torch.device(device)))
     image_model.to(device)
     image_model.eval()
 
-    text_model_path = os.path.join(timestamp, 'text_model.mdl')
+    if model_name is not None:
+        text_model_path = os.path.join(models_dir, 'text', model_name + '.mdl')
+    else:
+        text_model_path = os.path.join(timestamp, 'text_model.mdl')
     text_model = torch.load(text_model_path)
     nlp = spacy.load("en_core_web_sm")
 
