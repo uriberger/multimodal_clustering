@@ -37,7 +37,7 @@ def generate_model(model_str, class_num, pretrained_base):
 
 
 def forward_pass(model, input_tensor, model_str):
-    if model_str == 'googlenet':
+    if model_str == 'googlenet' and model.training:
         return model(input_tensor)[0]
     else:
         return model(input_tensor)
