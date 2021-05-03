@@ -29,8 +29,18 @@ def generate_model(model_str, class_num, pretrained_base):
         model = models.vgg16(pretrained=pretrained_base)
         model.avgpool = nn.AdaptiveAvgPool2d((1, 1))
         model.classifier = nn.Linear(512, class_num)
+    elif model_str == 'googlenet':
+        model = models.googlenet(pretrained=pretrained_base)
+        model.fc = nn.Linear(1024, class_num)
 
     return model
+
+
+def forward_pass(model, input_tensor, model_str):
+    if model_str == 'googlenet':
+        return model(input_tensor)[0]
+    else:
+        return model(input_tensor)
 
 
 def generate_cam_extractor(image_model, image_model_str):
@@ -40,6 +50,8 @@ def generate_cam_extractor(image_model, image_model_str):
         cam_extractor = CAM(image_model, target_layer='layer4', fc_layer='fc')
     elif image_model_str == 'vgg16':
         cam_extractor = CAM(image_model, target_layer='features', fc_layer='classifier')
+    elif image_model_str == 'googlenet':
+        cam_extractor = CAM(image_model, target_layer='inception5b', fc_layer='fc')
 
     return cam_extractor
 
@@ -101,7 +113,7 @@ def train_joint_model(timestamp, training_set, epoch_num, config):
                 token_lists.append(token_list)
 
             image_optimizer.zero_grad()
-            image_output = image_model(image_tensor)
+            image_output = forward_pass(image_model, image_tensor, image_model_str)
 
             if print_info:
                 best_winner = torch.max(torch.tensor(
@@ -302,7 +314,7 @@ def report_prediction(image_tensor, predictions):
 
 def draw_bounding_box(image_model, image_model_str, image_tensor):
     cam_extractor = generate_cam_extractor(image_model, image_model_str)
-    image_output = image_model(image_tensor)
+    image_output = forward_pass(image_model, image_tensor, image_model_str)
     activation_map = cam_extractor(image_output.squeeze(0).argmax().item(), image_output)
     bbox = predict_bbox(activation_map)
     image_obj = to_pil_image(image_tensor.view(3, 224, 224))
@@ -314,7 +326,7 @@ def draw_bounding_box(image_model, image_model_str, image_tensor):
 
 def predict_bboxes(image_model, image_tensor, object_threshold, image_model_str):
     cam_extractor = generate_cam_extractor(image_model, image_model_str)
-    image_output = image_model(image_tensor)
+    image_output = forward_pass(image_model, image_tensor, image_model_str)
     predicted_classes = predict_classes(image_output, confidence_threshold=object_threshold)[0]
     predicted_bboxes = []
     for predicted_class in predicted_classes:
