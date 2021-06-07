@@ -14,8 +14,8 @@ set_write_to_log(timestamp)
 config = Config(
     image_model='resnet18',
     text_model_mode='generative',
-    class_num=2,
-    noun_threshold=0.6,
+    concept_num=65,
+    noun_threshold=0.016,
     pretrained_image_base_model=True
 )
 log_print('Main', 0, str(config))

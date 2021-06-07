@@ -12,7 +12,7 @@ import torch.utils.data as data
 from aux_functions import log_print
 import time
 import os
-from cam_model import predict_classes
+from cam_model import predict_concepts
 from config import wanted_image_size
 
 
