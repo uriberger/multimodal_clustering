@@ -57,14 +57,14 @@ class CAMNet(nn.Module):
         return activation_map
 
 
-def predict_classes(output, confidence_threshold=0.3):
+def predict_concepts(output, confidence_threshold=0.3):
     sample_num = output.shape[0]
-    class_num = output.shape[1]
+    concept_num = output.shape[1]
 
     prob_output = torch.sigmoid(output)
     res_list = []
     for sample_ind in range(sample_num):
-        cur_res = [x for x in range(class_num) if prob_output[sample_ind, x] > confidence_threshold]
+        cur_res = [x for x in range(concept_num) if prob_output[sample_ind, x] > confidence_threshold]
         res_list.append(cur_res)
 
     return res_list

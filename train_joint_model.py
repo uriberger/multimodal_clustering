@@ -1,4 +1,4 @@
-from cam_model import CAMNet, predict_classes
+from cam_model import CAMNet, predict_concepts
 from train_cam_from_golden import predict_bbox
 import torchvision.models as models
 from noun_identifier import NounIdentifier, preprocess_token
@@ -17,21 +17,22 @@ from golden_semantic_class_dataset import noun_tags
 from coco import generate_bboxes_dataset_coco
 from config import wanted_image_size
 from concretness_dataset import generate_concretness_dataset
+import numpy as np
 
 
-def generate_model(model_str, class_num, pretrained_base):
+def generate_model(model_str, concept_num, pretrained_base):
     if model_str == 'CAMNet':
-        model = CAMNet(class_num, pretrained_raw_net=pretrained_base)
+        model = CAMNet(concept_num, pretrained_raw_net=pretrained_base)
     elif model_str == 'resnet18':
         model = models.resnet18(pretrained=pretrained_base)
-        model.fc = nn.Linear(512, class_num)
+        model.fc = nn.Linear(512, concept_num)
     elif model_str == 'vgg16':
         model = models.vgg16(pretrained=pretrained_base)
         model.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        model.classifier = nn.Linear(512, class_num)
+        model.classifier = nn.Linear(512, concept_num)
     elif model_str == 'googlenet':
         model = models.googlenet(pretrained=pretrained_base, aux_logits=False)
-        model.fc = nn.Linear(1024, class_num)
+        model.fc = nn.Linear(1024, concept_num)
 
     return model
 
@@ -63,10 +64,15 @@ def train_joint_model(timestamp, training_set, epoch_num, config):
     learning_rate = config.image_learning_rate
     text_model_mode = config.text_model_mode
     image_model_str = config.image_model
-    class_num = config.class_num
+    concept_num = config.concept_num
 
-    image_model = generate_model(image_model_str, class_num, pretrained_base)
-    text_model = NounIdentifier(class_num, text_model_mode)
+    image_model = generate_model(image_model_str, concept_num, pretrained_base)
+    text_model = NounIdentifier(concept_num, text_model_mode)
+
+    image_model_path = os.path.join(timestamp, 'image_model.mdl')
+    torch.save(image_model.state_dict(), image_model_path)
+    text_model_path = os.path.join(timestamp, 'text_model.mdl')
+    torch.save(text_model, text_model_path)
 
     image_optimizer = torch.optim.Adam(image_model.parameters(), lr=learning_rate)
 
@@ -111,42 +117,42 @@ def train_joint_model(timestamp, training_set, epoch_num, config):
             if print_info:
                 best_winner = torch.max(torch.tensor(
                     [len([i for i in range(batch_size) if torch.argmax(image_output[i, :]).item() == j])
-                     for j in range(class_num)])).item()
+                     for j in range(concept_num)])).item()
                 log_print(function_name, indent + 3,
                           'Best winner won ' + str(best_winner) + ' times out of ' + str(batch_size))
 
             # Train text model, assuming that the image model is already trained
             with torch.no_grad():
-                predicted_classes_by_image_list = predict_classes(image_output, confidence_threshold=object_threshold)
+                predicted_concepts_by_image_list = predict_concepts(image_output, confidence_threshold=object_threshold)
             if print_info:
-                predictions_num = sum([len(predicted_classes_by_image_list[i]) for i in range(batch_size)])
+                predictions_num = sum([len(predicted_concepts_by_image_list[i]) for i in range(batch_size)])
                 log_print(function_name, indent + 3,
-                          'Predicted ' + str(predictions_num) + ' classes according to image')
+                          'Predicted ' + str(predictions_num) + ' concepts according to image')
             for caption_ind in range(batch_size):
-                predicted_classes_by_image = predicted_classes_by_image_list[caption_ind]
+                predicted_concepts_by_image = predicted_concepts_by_image_list[caption_ind]
                 for token in token_lists[caption_ind]:
-                    for semantic_class_ind in predicted_classes_by_image:
-                        text_model.document_co_occurrence(token, semantic_class_ind)
+                    for concept_ind in predicted_concepts_by_image:
+                        text_model.document_co_occurrence(token, concept_ind)
 
             # Train image model, assuming that the text model is already trained
             with torch.no_grad():
                 text_model.calculate_probs()
-                label_tensor = torch.zeros(batch_size, class_num).to(device)
+                label_tensor = torch.zeros(batch_size, concept_num).to(device)
                 for caption_ind in range(batch_size):
-                    predicted_class_list = []
+                    predicted_concept_list = []
                     for token in token_lists[caption_ind]:
-                        prediction_res = text_model.predict_semantic_class(token)
+                        prediction_res = text_model.predict_concept(token)
                         if prediction_res is None:
                             # Never seen this token before
                             continue
-                        predicted_class, prob = prediction_res
+                        predicted_concept, prob = prediction_res
                         if prob >= noun_threshold:
-                            predicted_class_list.append(predicted_class)
-                    label_tensor[caption_ind, torch.tensor(predicted_class_list).long()] = 1.0
+                            predicted_concept_list.append(predicted_concept)
+                    label_tensor[caption_ind, torch.tensor(predicted_concept_list).long()] = 1.0
 
             predictions_num = torch.sum(label_tensor).item()
             if print_info:
-                log_print(function_name, indent + 3, 'Predicted ' + str(predictions_num) + ' classes according to text')
+                log_print(function_name, indent + 3, 'Predicted ' + str(predictions_num) + ' concepts according to text')
             # Train image model
             loss = image_criterion(image_output, label_tensor)
             loss_val = loss.item()
@@ -171,7 +177,7 @@ def test_models(timestamp, test_set, config):
     noun_threshold = config.noun_threshold
     pretrained_base = config.pretrained_image_base_model
     image_model_str = config.image_model
-    class_num = config.class_num
+    concept_num = config.concept_num
 
     if torch.cuda.is_available():
         device = torch.device('cuda:0')
@@ -183,7 +189,7 @@ def test_models(timestamp, test_set, config):
     concretness_dataset = generate_concretness_dataset()
 
     # Load models
-    image_model = generate_model(image_model_str, class_num, pretrained_base)
+    image_model = generate_model(image_model_str, concept_num, pretrained_base)
     image_model_path = os.path.join(timestamp, 'image_model.mdl')
     image_model.load_state_dict(torch.load(image_model_path, map_location=torch.device(device)))
     image_model.to(device)
@@ -213,12 +219,12 @@ def test_models(timestamp, test_set, config):
                       ', time from previous checkpoint ' + str(time.time() - checkpoint_time))
             checkpoint_time = time.time()
 
-        with torch.no_grad():
-            # Test image model
-            image_tensor = sampled_batch['image'].to(device)
-            # draw_bounding_box(image_model, image_model_str, image_tensor)
-            image_id = sampled_batch['image_id'].item()
-            if image_id in img_bboxes_val_set:
+        image_id = sampled_batch['image_id'].item()
+        if image_id in img_bboxes_val_set:
+            with torch.no_grad():
+                # Test image model
+                image_tensor = sampled_batch['image'].to(device)
+                # draw_bounding_box(image_model, image_model_str, image_tensor)
                 orig_image_size = sampled_batch['orig_image_size']
                 gt_bboxes_with_classes = img_bboxes_val_set[image_id]
                 gt_bboxes = [(
@@ -227,41 +233,41 @@ def test_models(timestamp, test_set, config):
                     int((x[0][2] / orig_image_size[0]) * wanted_image_size[0]),
                     int((x[0][3] / orig_image_size[1]) * wanted_image_size[1])
                 ) for x in gt_bboxes_with_classes]
-                cur_tp, cur_fp, cur_fn = \
-                    evaluate_bounding_boxes(image_model, image_tensor, object_threshold, gt_bboxes, image_model_str)
-                image_tp += cur_tp
-                image_fp += cur_fp
-                image_fn += cur_fn
+            cur_tp, cur_fp, cur_fn = \
+                evaluate_bounding_boxes(image_model, image_tensor, object_threshold, gt_bboxes, image_model_str)
+            image_tp += cur_tp
+            image_fp += cur_fp
+            image_fn += cur_fn
 
-            # Test text model
-            caption = sampled_batch['caption'][0]
-            doc = nlp(caption)
-            for token in doc:
-                token_str = preprocess_token(token.text)
-                prediction = text_model.predict_semantic_class(token_str)
-                if prediction is None:
-                    continue
+        # Test text model
+        caption = sampled_batch['caption'][0]
+        doc = nlp(caption)
+        for token in doc:
+            token_str = preprocess_token(token.text)
+            prediction = text_model.predict_concept(token_str)
+            if prediction is None:
+                continue
 
-                # Predict if this is a noun
-                is_noun_prediction = prediction[1] >= noun_threshold
-                is_noun_gt = token.tag_ in noun_tags
-                if is_noun_prediction and is_noun_gt:
-                    text_tp += 1
-                elif is_noun_prediction and (not is_noun_gt):
-                    text_fp += 1
-                elif (not is_noun_prediction) and is_noun_gt:
-                    text_fn += 1
-                else:
-                    text_tn += 1
+            # Predict if this is a noun
+            is_noun_prediction = prediction[1] >= noun_threshold
+            is_noun_gt = token.tag_ in noun_tags
+            if is_noun_prediction and is_noun_gt:
+                text_tp += 1
+            elif is_noun_prediction and (not is_noun_gt):
+                text_fp += 1
+            elif (not is_noun_prediction) and is_noun_gt:
+                text_fn += 1
+            else:
+                text_tn += 1
 
-                # Measure the concretness of the word
-                if token_str in concretness_dataset:
-                    concretness_count += 1
-                    gt_concretness = concretness_dataset[token_str]
-                    ''' Concretness should be between 1 and 5. We have a number between
-                    0 and 1. So we scale it to the range [1, 5] '''
-                    predicted_concretness = 1 + 4 * prediction[1]
-                    conc_absolute_error_sum += abs(gt_concretness - predicted_concretness)
+            # Measure the concretness of the word
+            if token_str in concretness_dataset:
+                concretness_count += 1
+                gt_concretness = concretness_dataset[token_str]
+                ''' Concretness should be between 1 and 5. We have a number between
+                0 and 1. So we scale it to the range [1, 5] '''
+                predicted_concretness = 1 + 4 * prediction[1]
+                conc_absolute_error_sum += abs(gt_concretness - predicted_concretness)
 
     log_print(function_name, indent,
               'image: tp ' + str(image_tp) +
@@ -295,6 +301,41 @@ def test_models(timestamp, test_set, config):
     concretness_mae = conc_absolute_error_sum / concretness_count
     log_print(function_name, indent, 'Concretness mean squared error: ' + str(concretness_mae))
 
+    # Next, test image-caption alignment
+    dataloader = data.DataLoader(test_set, batch_size=2, shuffle=True)
+    overall_count = 0
+    correct_count = 0
+    checkpoint_len = 1000
+    checkpoint_time = time.time()
+    for i_batch, sampled_batch in enumerate(dataloader):
+        if i_batch % checkpoint_len == 0:
+            log_print(function_name, indent + 1, 'Starting batch ' + str(i_batch) +
+                      ' out of ' + str(len(dataloader)) +
+                      ', time from previous checkpoint ' + str(time.time() - checkpoint_time))
+            checkpoint_time = time.time()
+
+        with torch.no_grad():
+            # Take only the first image, but the two captions
+            image_tensor = sampled_batch['image'].to(device)[[0], :, :, :]
+            first_caption = sampled_batch['caption'][0]
+            second_caption = sampled_batch['caption'][1]
+
+            image_output = image_model(image_tensor)
+            concepts_by_image = np.zeros(image_output.shape[1])
+            concepts_by_image[image_output[0] >= object_threshold] = 1
+            concepts_by_first_caption = text_model.predict_concepts(first_caption, noun_threshold)
+            concepts_by_second_caption = text_model.predict_concepts(second_caption, noun_threshold)
+
+            first_hamming_distance = np.sum(np.abs(concepts_by_image - concepts_by_first_caption))
+            second_hamming_distance = np.sum(np.abs(concepts_by_image - concepts_by_second_caption))
+
+            if first_hamming_distance > second_hamming_distance:
+                correct_count += 1
+            overall_count += 1
+
+    image_align_accuracy = correct_count/overall_count
+    log_print(function_name, indent, 'Image caption alignment accuracy: ' + str(image_align_accuracy))
+
 
 def report_prediction(image_tensor, predictions):
     image_for_plt = image_tensor.view(3, image_tensor.shape[2], image_tensor.shape[3])
@@ -320,7 +361,7 @@ def draw_bounding_box(image_model, image_model_str, image_tensor):
 def predict_bboxes(image_model, image_tensor, object_threshold, image_model_str):
     cam_extractor = generate_cam_extractor(image_model, image_model_str)
     image_output = image_model(image_tensor)
-    predicted_classes = predict_classes(image_output, confidence_threshold=object_threshold)[0]
+    predicted_classes = predict_concepts(image_output, confidence_threshold=object_threshold)[0]
     predicted_bboxes = []
     for predicted_class in predicted_classes:
         activation_map = cam_extractor(predicted_class, image_output)
