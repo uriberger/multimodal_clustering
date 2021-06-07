@@ -205,7 +205,8 @@ def generate_selected_class_caption_dataset_internal(class_list, only_single_cla
                          'gt_classes': img_class_dataset[x['image_id']]}
                         for x in full_dataset
                         if x['image_id'] in img_class_dataset and
-                        len(class_set.intersection(img_class_dataset[x['image_id']])) > 0]
+                        len(class_set.intersection(img_class_dataset[x['image_id']])) ==
+                        len(img_class_dataset[x['image_id']])]
 
     class_names = [class_mapping[x] for x in class_list]
     if only_single_class_images:
