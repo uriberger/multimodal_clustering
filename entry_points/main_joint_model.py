@@ -45,6 +45,6 @@ trainer.train()
 log_print(function_name, 0, 'Finished training model')
 
 log_print(function_name, 0, 'Testing models...')
-evaluator = JointModelEvaluator(timestamp, test_set, gt_classes_file_path, gt_bboxes_file_path, model_config, 1)
+evaluator = JointModelEvaluator(timestamp, test_set, gt_classes_file_path, gt_bboxes_file_path, 1)
 evaluator.evaluate()
 log_print(function_name, 0, 'Finished testing model')
