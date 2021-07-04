@@ -101,7 +101,7 @@ class VisualModelWrapper(ModelWrapper):
     def predict_concept_indicators(self):
         with torch.no_grad():
             prob_output = torch.sigmoid(self.cached_output)
-            concepts_indicator = torch.zeros(prob_output.shape)
+            concepts_indicator = torch.zeros(prob_output.shape).to(self.device)
             concepts_indicator[prob_output > self.config.object_threshold] = 1
 
         return concepts_indicator
