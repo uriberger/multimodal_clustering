@@ -1,7 +1,4 @@
-*_training_set*
-*_val_set*
-*_test_set*
-
+cached_dataset_files
 venv
 __pycache__
 

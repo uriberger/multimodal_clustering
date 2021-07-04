@@ -1,51 +1,29 @@
 import torch
-from tqdm import trange
-from PIL import Image
-from coco import get_image_path
-import numpy as np
 import torch.nn as nn
+from models_src.model_config import wanted_image_size
 import matplotlib.pyplot as plt
-from PIL import ImageDraw
+from PIL import Image, ImageDraw
 from torchvision.transforms.functional import to_pil_image
 from torchcam.utils import overlay_mask
-import torch.utils.data as data
-from aux_functions import log_print
-import time
-import os
-from cam_model import predict_concepts
-from config import wanted_image_size
+import numpy as np
 
 
-def train_epoch(training_set, model, optimizer):
-    function_name = 'train_epoch'
-    indent = 2
-    criterion = nn.BCEWithLogitsLoss()
-    losses = []
+def calc_ious(box1, box2):
+    box1_area = (box1[:, 2] - box1[:, 0]) * (box1[:, 3] - box1[:, 1])
+    box2_area = (box2[:, 2] - box2[:, 0]) * (box2[:, 3] - box2[:, 1])
+    area_sum = box1_area.reshape((-1, 1)) + box2_area.reshape((1, -1))
 
-    dataloader = data.DataLoader(training_set, batch_size=4, shuffle=True)
-    checkpoint_len = 1000
-    checkpoint_time = time.time()
-    for i_batch, sampled_batch in enumerate(dataloader):
-        if i_batch % checkpoint_len == 0:
-            log_print(function_name, indent+1, 'Starting batch ' + str(i_batch) +
-                      ' out of ' + str(len(dataloader)) +
-                      ', time from previous checkpoint ' + str(time.time() - checkpoint_time))
-            checkpoint_time = time.time()
+    intersection_x_min = torch.max(box1[:, 0].reshape((-1, 1)), box2[:, 0].reshape((1, -1)))
+    intersection_x_max = torch.min(box1[:, 2].reshape((-1, 1)), box2[:, 2].reshape((1, -1)))
+    intersection_y_min = torch.max(box1[:, 1].reshape((-1, 1)), box2[:, 1].reshape((1, -1)))
+    intersection_y_max = torch.min(box1[:, 3].reshape((-1, 1)), box2[:, 3].reshape((1, -1)))
 
-        image_tensor = sampled_batch['image'].to(model.device)
-        label_tensor = sampled_batch['label'].to(model.device)
-
-        output = model(image_tensor)
-        loss = criterion(output, label_tensor)
-        loss_val = loss.item()
-        losses.append(loss_val)
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-    avg_loss = np.mean(losses)
-    log_print(function_name, indent, 'Avg loss = ' + str(avg_loss))
+    intersection_width = torch.max(intersection_x_max - intersection_x_min, torch.tensor([0.]))
+    intersection_height = torch.max(intersection_y_max - intersection_y_min, torch.tensor([0.]))
+    intersection_area = intersection_width * intersection_height
+    union_area = area_sum - intersection_area
+    ious = intersection_area / union_area
+    return ious
 
 
 def advance_pixel(row, col, h, w):
@@ -208,6 +186,7 @@ def resize_activation_map(activation_map):
     upsample_op = nn.Upsample(size=wanted_image_size, mode='bicubic', align_corners=False)
     activation_map = activation_map.view(1, 1, activation_map.shape[0], activation_map.shape[1])
     return upsample_op(activation_map).view(wanted_image_size)
+    return upsample_op(activation_map).view(wanted_image_size)
 
 
 def predict_bbox(activation_map, segment_threshold_rate=0.5):
@@ -226,11 +205,25 @@ def predict_bbox(activation_map, segment_threshold_rate=0.5):
     return bbox
 
 
-def plot_bboxes(image_id, bbox_list):
-    image_obj = Image.open(get_image_path(image_id))
+def get_image_tensor_from_id(image_id, get_image_path_func, slice_str):
+    image_obj = Image.open(get_image_path_func(image_id, slice_str))
+    orig_image_size = image_obj.size
     image_obj = image_obj.resize(wanted_image_size)
+    image_tensor = torch.from_numpy(np.array(image_obj)) / 255
+    image_tensor = image_tensor.permute(2, 0, 1).float()
 
+    return image_tensor, orig_image_size
+
+
+def get_image_shape_from_id(image_id, get_image_path_func, slice_str):
+    image_obj = Image.open(get_image_path_func(image_id, slice_str))
+    return np.array(image_obj).shape
+
+
+def plot_bboxes(image_tensor, bbox_list):
+    image_obj = to_pil_image(image_tensor.view(3, wanted_image_size[0], wanted_image_size[1]))
     draw = ImageDraw.Draw(image_obj)
+
     for bbox in bbox_list:
         draw.rectangle(bbox)
 
@@ -249,136 +242,3 @@ def plot_heatmap(image_id, activation_map, explicitly_upsample):
 
     plt.imshow(result)
     plt.show()
-
-
-def test_bbox(test_set, model):
-    test_image_num = len(test_set)
-    total_tp = 0
-    total_fp = 0
-    total_fn = 0
-
-    for i in trange(test_image_num):
-        image_id = list(test_set.keys())[i]
-
-        gt_box_data = test_set[image_id]
-        gt_class_labels = [x[1] for x in gt_box_data]
-        unique_gt_class_labels = list(set(gt_class_labels))
-
-        image_tensor = transform_to_torch_format(image_id)
-        if image_tensor is None:
-            continue
-
-        output = model(image_tensor)
-        predicted_classes = predict_classes(output, confidence_threshold)
-        # CHANGE
-        from torchvision.models import resnet18
-        from torchcam.cams import CAM
-        tmp_model = resnet18(pretrained=True).eval()
-        tmp_cam_extractor = CAM(tmp_model)
-        tmp_output = tmp_model(image_tensor)
-        tmp_activation_map = tmp_cam_extractor(tmp_output.squeeze(0).argmax().item(), tmp_output)
-
-        bbox1 = predict_bbox(tmp_activation_map, 0.5)
-        bbox2 = predict_bbox(tmp_activation_map, 0.6)
-        bbox3 = predict_bbox(tmp_activation_map, 0.7)
-        bbox4 = predict_bbox(tmp_activation_map, 0.8)
-
-        plot_bboxes(image_id, [bbox1, bbox2, bbox3, bbox4])
-        plot_heatmap(image_id, tmp_activation_map, True)
-        plot_heatmap(image_id, tmp_activation_map, False)
-
-        for class_ind in predicted_classes:
-            activation_map = model.extract_cam(class_ind, output)
-            bbox1 = predict_bbox(activation_map, 0.5)
-            bbox2 = predict_bbox(activation_map, 0.6)
-            bbox3 = predict_bbox(activation_map, 0.7)
-            bbox4 = predict_bbox(activation_map, 0.8)
-
-            plot_bboxes(image_id, [bbox1, bbox2, bbox3, bbox4])
-            plot_heatmap(image_id, activation_map, True)
-            plot_heatmap(image_id, activation_map, False)
-        # END CHANGE
-        predicted_boxes_data = predict_bboxes(model, output, predicted_classes)
-        tp, fp, fn = evaluate_bbox_prediction(predicted_boxes_data, gt_box_data)
-
-        total_tp += tp
-        total_fp += fp
-        total_fn += fn
-
-    print('tp: ' + str(total_tp))
-
-
-def test_classification(test_set, model, conf_threshold):
-    function_name = 'test_classification'
-    indent = 1
-    total_tp = 0
-    total_fp = 0
-    total_tn = 0
-    total_fn = 0
-
-    dataloader = data.DataLoader(test_set, batch_size=1, shuffle=False)
-    checkpoint_len = 1000
-    checkpoint_time = time.time()
-    for i_batch, sampled_batch in enumerate(dataloader):
-        if i_batch % checkpoint_len == 0:
-            log_print(function_name, indent + 1, 'Starting batch ' + str(i_batch) +
-                      ' out of ' + str(len(dataloader)) +
-                      ', time from previous checkpoint ' + str(time.time() - checkpoint_time))
-            checkpoint_time = time.time()
-
-        image_tensor = sampled_batch['image'].to(model.device)
-        output = model(image_tensor)
-        predicted_classes = predict_classes(output, conf_threshold)
-
-        gt_vector = sampled_batch['label']
-        class_num = model.class_num
-        gt_classes = [x for x in range(class_num) if gt_vector[0, x] == 1]
-
-        tp, fp, tn, fn = evaluate_classification(predicted_classes, gt_classes, model.class_num)
-
-        total_tp += tp
-        total_fp += fp
-        total_tn += tn
-        total_fn += fn
-
-    precision = total_tp / (total_tp + total_fp)
-    recall = total_tp / (total_tp + total_fn)
-    if precision == 0 and recall == 0:
-        f1 = 0
-    else:
-        f1 = 2 * (precision * recall) / (precision + recall)
-    log_print(function_name, indent, 'Precision: ' + str(precision))
-    log_print(function_name, indent, 'Recall: ' + str(recall))
-    log_print(function_name, indent, 'F1: ' + str(f1))
-
-
-def predict_bboxes(model, output, predicted_classes):
-    for class_ind in predicted_classes:
-        activation_map = model.extract_cam(class_ind, output)
-        print('a')
-
-
-def evaluate_classification(predicted_classes, gt_classes, class_num):
-    predicted_num = len(predicted_classes)
-    tp = len(list(set(predicted_classes).intersection(gt_classes)))
-    fp = predicted_num - tp
-
-    non_predicted_num = class_num - predicted_num
-    fn = len(list(set(gt_classes).difference(predicted_classes)))
-    tn = non_predicted_num - fn
-
-    return tp, fp, tn, fn
-
-
-def train_cam(timestamp, training_set, model, epoch_num):
-    function_name = 'train_cam'
-    indent = 1
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
-
-    model_path = os.path.join(timestamp, 'model.mdl')
-    log_print(function_name, indent, 'Starting training...')
-    for i in range(epoch_num):
-        log_print(function_name, indent+1, 'Starting training Epoch ' + str(i+1))
-        train_epoch(training_set, model, optimizer)
-        torch.save(model.state_dict(), model_path)
-    log_print(function_name, indent, 'Finished training')

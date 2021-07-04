@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class NounIdentifier:
+class WordConceptCountModel:
 
     def __init__(self, concept_num, mode):
         self.concept_num = concept_num
@@ -62,10 +62,10 @@ class NounIdentifier:
             probability = highest_count / overall_count
             most_probable_class = highest_correlated_concept
         else:
-            class_to_prob = [self.concept_to_word_prob[x][word]
-                             if word in self.concept_to_word_prob[x]
-                             else 0
-                             for x in range(self.concept_num)]
+            concept_to_prob = [self.concept_to_word_prob[x][word]
+                               if word in self.concept_to_word_prob[x]
+                               else 0
+                               for x in range(self.concept_num)]
 
             # word_occur_count = sum(
             #     self.concept_to_word_co_occur[x][word]
@@ -81,33 +81,13 @@ class NounIdentifier:
             # # Apply Bayes rule
             # p_class_cond_word = [(class_to_prob[i]*self.concept_prob[i])/word_prob
             #                      for i in range(self.concept_num)]
-            word_prob_sum = sum(class_to_prob)
+            word_prob_sum = sum(concept_to_prob)
             if word_prob_sum == 0:
                 # print('Never encountered word \'' + word + '\'.')
                 return None
 
-            p_class_cond_word = [class_to_prob[x] / word_prob_sum for x in range(self.concept_num)]
+            p_class_cond_word = [concept_to_prob[x] / word_prob_sum for x in range(self.concept_num)]
 
             probability = max(p_class_cond_word)
             most_probable_class = np.argmax(p_class_cond_word)
         return most_probable_class, probability
-
-    def predict_concepts(self, sentence, noun_threshold):
-        output = np.zeros(self.concept_num)
-        for token in sentence:
-            token = preprocess_token(token)
-            prediction = self.predict_concept(token)
-            if prediction is None:
-                continue
-
-            if prediction[1] >= noun_threshold:
-                output[prediction[0]] = 1
-
-        return output
-
-
-def preprocess_token(token):
-    token = "".join(c for c in token if c not in ("?", ".", ";", ":", "!"))
-    token = token.lower()
-
-    return token

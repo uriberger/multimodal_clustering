@@ -1,9 +1,8 @@
 import os
-import torch
 from xml.dom import minidom
-from aux_functions import generate_dataset
+from utils.general_utils import generate_dataset
 
-flickr30_dir_path = os.path.join('..', 'datasets', 'flickr30')
+flickr30_dir_path = os.path.join('../..', 'cached_dataset_files', 'flickr30')
 
 tokens_dir_name = 'tokens'
 tokens_file_name = 'results_20130124.token'
@@ -121,11 +120,11 @@ def extract_boxes_and_chains_internal():
                             if len(none_inds) > 0:
                                 for none_ind in none_inds:
                                     print('Didn\'t find coordinate ' + coord_strs[none_ind] + ' for bounding box ' +
-                                          str(bounding_box_ind) + ' in image ' + img_filename)
+                                          str(bounding_box_ind) + ' in image ' + filename)
                                 assert False
                             if box_chain is None:
                                 print('Didn\'t find chain for bounding box ' +
-                                      str(bounding_box_ind) + ' in image ' + img_filename)
+                                      str(bounding_box_ind) + ' in image ' + filename)
                                 assert False
                             bounding_boxes.append((bounding_box, box_chain))
 
