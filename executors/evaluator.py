@@ -21,7 +21,7 @@ class Evaluator(Executor):
     def run_metrics_on_dataset(self, metric_list, data_loader):
         self.increment_indent()
         self.metric_list = metric_list
-        checkpoint_len = 1000
+        checkpoint_len = 10
         self.increment_indent()
         for_loop_with_reports(data_loader, len(data_loader), checkpoint_len,
                               self.evaluate_on_batch, self.progress_report)

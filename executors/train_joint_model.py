@@ -8,8 +8,7 @@ from models_src.textual_model_wrapper import TextualCountsModelWrapper
 class JointModelTrainer(Trainer):
 
     def __init__(self, timestamp, training_set, epoch_num, config, indent):
-        # super().__init__(training_set, epoch_num, 100, indent)
-        super().__init__(training_set, epoch_num, 10, indent)
+        super().__init__(training_set, epoch_num, 100, indent)
 
         self.visual_model = VisualModelWrapper(self.device, config, timestamp, indent+1)
         self.text_model = TextualCountsModelWrapper(self.device, config, timestamp, indent+1)

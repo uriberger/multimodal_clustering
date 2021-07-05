@@ -34,7 +34,7 @@ class JointModelEvaluator(Evaluator):
         """ First, go over the test set sample by sample, and evaluate using
         the single-sample metrics. """
         self.log_print('Evaluating single sample metrics')
-        single_dataloader = data.DataLoader(self.test_set, batch_size=2, shuffle=True)
+        single_dataloader = data.DataLoader(self.test_set, batch_size=100, shuffle=True)
         single_sample_metrics = [
             metrics.BBoxMetric(self.visual_model),
             metrics.NounIdentificationMetric(self.text_model, self.nlp),
@@ -45,7 +45,7 @@ class JointModelEvaluator(Evaluator):
         """ Next, go over the pairs of samples, and evaluate using
         the sample pair metrics. """
         self.log_print('Evaluating sample pair metrics')
-        pair_dataloader = data.DataLoader(self.test_set, batch_size=20, shuffle=True)
+        pair_dataloader = data.DataLoader(self.test_set, batch_size=100, shuffle=True)
         sample_pair_metrics = [
             metrics.SentenceImageMatchingMetric(self.visual_model, self.text_model)
         ]

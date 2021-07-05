@@ -28,9 +28,8 @@ class Trainer(Executor):
             self.log_print('Starting epoch ' + str(epoch_ind))
 
             dataloader = data.DataLoader(self.training_set, batch_size=self.batch_size, shuffle=True)
-            # dataloader = data.DataLoader(training_set, batch_size=5, shuffle=True)
 
-            checkpoint_len = 50
+            checkpoint_len = 500
             self.increment_indent()
             for_loop_with_reports(dataloader, len(dataloader), checkpoint_len,
                                   self.train_on_batch, self.progress_report)
