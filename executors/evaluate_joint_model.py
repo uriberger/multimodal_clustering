@@ -10,8 +10,7 @@ import metrics
 
 class JointModelEvaluator(Evaluator):
 
-    def __init__(self, timestamp, test_set, gt_classes_file_path, gt_bboxes_file_path,
-                 config, indent, model_name=None):
+    def __init__(self, timestamp, test_set, gt_classes_file_path, gt_bboxes_file_path, indent, model_name=None):
         super().__init__(test_set, gt_classes_file_path, gt_bboxes_file_path, indent)
 
         # Load datasets
@@ -25,9 +24,9 @@ class JointModelEvaluator(Evaluator):
             visual_model_dir = timestamp
             text_model_dir = timestamp
 
-        self.visual_model = VisualModelWrapper(self.device, config, visual_model_dir, indent+1, model_name)
+        self.visual_model = VisualModelWrapper(self.device, None, visual_model_dir, indent+1, model_name)
         self.visual_model.no_grad()
-        self.text_model = TextualCountsModelWrapper(self.device, config, text_model_dir, indent+1, model_name)
+        self.text_model = TextualCountsModelWrapper(self.device, None, text_model_dir, indent+1, model_name)
 
         self.nlp = spacy.load("en_core_web_sm")
 

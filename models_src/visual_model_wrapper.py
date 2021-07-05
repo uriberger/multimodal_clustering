@@ -32,19 +32,20 @@ class VisualModelWrapper(ModelWrapper):
             name = 'visual'
 
         super().__init__(device, config, model_dir, indent, name)
-        self.model = generate_visual_model(config.visual_model, config.concept_num,
-                                           config.pretrained_visual_base_model)
         self.model.to(self.device)
-        self.load_model_if_needed()
 
         self.generate_cam_extractor()
 
         self.criterion = nn.BCEWithLogitsLoss()
 
-        learning_rate = config.visual_learning_rate
+        learning_rate = self.config.visual_learning_rate
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
 
         self.cached_loss = None
+
+    def generate_model(self):
+        return generate_visual_model(self.config.visual_model, self.config.concept_num,
+                                     self.config.pretrained_visual_base_model)
 
     def generate_cam_extractor(self):
         if self.config.visual_model == 'resnet18':
@@ -86,8 +87,7 @@ class VisualModelWrapper(ModelWrapper):
     def no_grad(self):
         self.model.eval()
 
-    def dump(self):
-        self.dump_config()
+    def dump_model(self):
         torch.save(self.model.state_dict(), self.get_model_path())
 
     def load_model(self):

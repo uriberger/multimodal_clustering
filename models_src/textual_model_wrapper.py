@@ -30,9 +30,10 @@ class TextualCountsModelWrapper(TextualModelWrapper):
 
     def __init__(self, device, config, model_dir, indent, name=None):
         super().__init__(device, config, model_dir, indent, name)
-        self.model = generate_textual_counts_model(config.text_model, config.concept_num)
-        self.load_model_if_needed()
         self.model.calculate_probs()
+
+    def generate_model(self):
+        return generate_textual_counts_model(self.config.text_model, self.config.concept_num)
 
     def training_step(self, inputs, labels):
         batch_size = len(inputs)
@@ -69,8 +70,7 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         predictions_num = torch.sum(self.cached_output).item()
         return 'Predicted ' + str(predictions_num) + ' concepts according to text'
 
-    def dump(self):
-        self.dump_config()
+    def dump_model(self):
         torch.save(self.model, self.get_model_path())
 
     def load_model(self):
