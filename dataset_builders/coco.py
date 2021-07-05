@@ -99,27 +99,36 @@ class Coco(DatasetBuilder):
     def find_unwanted_images(self, slice_str):
         """ We want to filter images that are:
                 - Grayscale
-                - Contain multiple-words-named classes"""
-        img_classes_dataset, _ = self.generate_gt_classes_bboxes_data(slice_str)
+                - Contain multiple-words-named classes
+                - Without bbox or classes ground-truth data"""
+        caption_dataset = self.generate_caption_data(slice_str)
+        image_ids_by_caption_dataset = list(set([x['image_id'] for x in caption_dataset]))
+
+        img_classes_dataset, img_bboxes_dataset = self.generate_gt_classes_bboxes_data(slice_str)
         class_mapping = self.get_class_mapping()
 
         multiple_word_classes = [x for x in class_mapping.keys() if multiple_word_string(class_mapping[x])]
         self.log_print('Multiple word classes: ' + str([class_mapping[x] for x in multiple_word_classes]))
 
         self.unwanted_images_info = {
+            'img_classes_dataset': img_classes_dataset,
+            'img_bboxes_dataset': img_bboxes_dataset,
             'multiple_word_classes': multiple_word_classes,
             'grayscale_count': 0,
             'multiple_word_classes_count': 0,
+            'no_class_or_bbox_data_count': 0,
             'unwanted_image_ids': [],
             'slice_str': slice_str
         }
 
         self.increment_indent()
-        for_loop_with_reports(img_classes_dataset.items(), len(img_classes_dataset.items()),
+        for_loop_with_reports(image_ids_by_caption_dataset, len(image_ids_by_caption_dataset),
                               10000, self.is_unwanted_image, self.unwanted_images_progress_report)
         self.decrement_indent()
 
         self.log_print('Out of ' + str(len(img_classes_dataset)) + ' images:')
+        self.log_print('Found ' + str(self.unwanted_images_info['no_class_or_bbox_data_count']) +
+                       ' without class or bbox data')
         self.log_print('Found ' + str(self.unwanted_images_info['grayscale_count']) + ' grayscale images')
         self.log_print('Found ' + str(self.unwanted_images_info['multiple_word_classes_count']) +
                        ' multiple word classes')
@@ -127,8 +136,16 @@ class Coco(DatasetBuilder):
         return self.unwanted_images_info['unwanted_image_ids']
 
     def is_unwanted_image(self, index, item, print_info):
-        image_id = item[0]
-        gt_classes = item[1]
+        image_id = item
+
+        # No class or bbox data
+        if image_id not in self.unwanted_images_info['img_classes_dataset'] or \
+                image_id not in self.unwanted_images_info['img_bboxes_dataset']:
+            self.unwanted_images_info['unwanted_image_ids'].append(image_id)
+            self.unwanted_images_info['no_class_or_bbox_data_count'] += 1
+            return
+
+        gt_classes = self.unwanted_images_info['img_classes_dataset'][image_id]
 
         # Grayscale
         image_shape = get_image_shape_from_id(image_id, self.get_image_path, self.unwanted_images_info['slice_str'])
@@ -152,7 +169,8 @@ class Coco(DatasetBuilder):
     def filter_unwanted_images(self, slice_str):
         """ We want to filter images that are:
         - Grayscale
-        - Contain multiple-words-named classes"""
+        - Contain multiple-words-named classes
+        - Without bbox or classes ground-truth data"""
         unwanted_image_ids = self.find_unwanted_images(slice_str)
 
         caption_dataset = self.generate_caption_data(slice_str)
