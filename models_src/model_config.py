@@ -1,5 +1,5 @@
 wanted_image_size = (224, 224)
-models_dir = '../models'
+models_dir = 'models'
 
 
 class ModelConfig:
