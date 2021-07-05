@@ -70,7 +70,8 @@ class ModelWrapper(LoggableObject):
     def load_config(self):
         config_path = self.get_config_path()
         if not os.path.isfile(config_path):
-            self.log_print('Model was instantiated without configuration, and no config file was found!')
+            self.log_print('Model was instantiated without configuration, and no config file was found. Stopping!')
+            self.log_print('The config path was ' + config_path)
             assert False
         self.config = torch.load(config_path)
 
