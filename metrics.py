@@ -1,9 +1,7 @@
 import abc
 import torch
-from utils.visual_utils import calc_ious
+from utils.visual_utils import calc_ious, get_resized_gt_bboxes
 from utils.text_utils import noun_tags
-from models_src.model_config import wanted_image_size
-import numpy as np
 
 
 class Metric:
@@ -90,7 +88,9 @@ class BBoxMetric(SensitivitySpecificityMetric):
         batch_size = len(gt_bboxes)
         for sample_ind in range(batch_size):
             gt_bbox_num = len(gt_bboxes[sample_ind])
-            sample_gt_bboxes = torch.stack([torch.tensor(x) for x in gt_bboxes[sample_ind]])
+            sample_gt_bboxes = gt_bboxes[sample_ind]
+            sample_gt_bboxes = get_resized_gt_bboxes(sample_gt_bboxes, visual_metadata['orig_image_size'][sample_ind])
+            sample_gt_bboxes = torch.stack([torch.tensor(x) for x in sample_gt_bboxes])
             if len(predicted_bboxes[sample_ind]) > 0:
                 sample_predicted_bboxes = torch.stack([torch.tensor(x) for x in predicted_bboxes[sample_ind]])
                 ious = calc_ious(sample_gt_bboxes, sample_predicted_bboxes)
@@ -144,17 +144,21 @@ class NounIdentificationMetric(SensitivitySpecificityMetric):
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         predictions = self.text_model.predict_concept_insantiating_words(text_inputs)
         text_gt = self.prepare_ground_truth(text_inputs)
-        for i in range(len(text_inputs)):
-            is_noun_prediction = (predictions[i] == 1)
-            is_noun_gt = (text_gt[i] == 1)
-            if is_noun_prediction and is_noun_gt:
-                self.tp += 1
-            elif is_noun_prediction and (not is_noun_gt):
-                self.fp += 1
-            elif (not is_noun_prediction) and is_noun_gt:
-                self.fn += 1
-            else:
-                self.tn += 1
+
+        batch_size = len(text_inputs)
+        for sentence_ind in range(batch_size):
+            sentence_len = len(text_inputs[sentence_ind])
+            for i in range(sentence_len):
+                is_noun_prediction = (predictions[sentence_ind][i] == 1)
+                is_noun_gt = (text_gt[sentence_ind][i] == 1)
+                if is_noun_prediction and is_noun_gt:
+                    self.tp += 1
+                elif is_noun_prediction and (not is_noun_gt):
+                    self.fp += 1
+                elif (not is_noun_prediction) and is_noun_gt:
+                    self.fn += 1
+                else:
+                    self.tn += 1
 
     def report(self):
         return self.report_with_name('Noun prediction results')
