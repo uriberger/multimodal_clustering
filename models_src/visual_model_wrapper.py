@@ -4,10 +4,6 @@ import torch.nn as nn
 import torchvision.models as models
 from torchcam.cams import CAM
 from utils.visual_utils import predict_bbox
-from torchvision.transforms.functional import to_pil_image
-from models_src.model_config import wanted_image_size
-from PIL import ImageDraw
-import matplotlib.pyplot as plt
 
 
 def generate_visual_model(model_str, concept_num, pretrained_base):
@@ -84,7 +80,7 @@ class VisualModelWrapper(ModelWrapper):
     def print_info_on_loss(self):
         return 'Loss: ' + str(self.cached_loss)
 
-    def no_grad(self):
+    def eval(self):
         self.model.eval()
 
     def dump_model(self):
@@ -108,6 +104,8 @@ class VisualModelWrapper(ModelWrapper):
 
     def predict_bboxes(self, image_tensor):
         # We need to run inference on each image apart, because the cam extraction demands a single hooked tensor
+        old_cached_output = self.cached_output  # We don't want to change the cache
+
         batch_size = image_tensor.shape[0]
         predicted_bboxes = []
         for sample_ind in range(batch_size):
@@ -118,23 +116,7 @@ class VisualModelWrapper(ModelWrapper):
                 activation_map = self.extract_cam(predicted_class)
                 bbox = predict_bbox(activation_map)
                 predicted_bboxes[-1].append(bbox)
+
+        self.cached_output = old_cached_output
+
         return predicted_bboxes
-
-    def predict_and_draw_bounding_boxes(self, image_tensor, gt_bboxes=None):
-        self.inference(image_tensor)
-        predicted_concepts = self.predict_concept_indicators()
-        image_obj = to_pil_image(image_tensor.view(3, wanted_image_size[0], wanted_image_size[1]))
-        draw = ImageDraw.Draw(image_obj)
-
-        # Draw predicted boxes
-        for concept in predicted_concepts:
-            activation_map = self.extract_cam(concept)
-            bbox = predict_bbox(activation_map)
-            draw.rectangle(bbox, outline=(255, 0, 0))
-
-        # Draw gt boxes
-        for bbox in gt_bboxes:
-            draw.rectangle(bbox, outline=(0, 255, 0))
-
-        plt.imshow(image_obj)
-        plt.show()

@@ -22,7 +22,7 @@ class CamEvaluator(Evaluator):
             model_dir = timestamp
 
         self.model = VisualModelWrapper(self.device, config, model_dir, model_name, indent+1)
-        self.model.no_grad()
+        self.model.eval()
 
     def evaluate(self):
         self.log_print('Evaluating CAM model...')
@@ -33,3 +33,6 @@ class CamEvaluator(Evaluator):
         ]
         self.run_metrics_on_dataset(metric_list, dataloader)
         self.log_print('Finished evaluating CAM model')
+
+    def infer(self, visual_inputs, textual_inputs):
+        self.model.inference(visual_inputs)

@@ -215,9 +215,7 @@ class SentenceImageMatchingMetric(Metric):
         self.overall_count = 0
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        self.visual_model.inference(visual_inputs)
         concepts_by_image = self.visual_model.predict_concept_indicators()
-        self.text_model.inference(text_inputs)
         concepts_by_text = self.text_model.predict_concept_indicators()
 
         batch_size = len(text_inputs) // 2
@@ -274,7 +272,6 @@ class VisualKnownClassesClassificationMetric(VisualClassificationMetric):
     truth classes. """
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        self.visual_model.inference(visual_inputs)
         predicted_classes = self.visual_model.predict_concept_lists()
 
         gt_classes_str = visual_metadata['gt_classes']
@@ -293,15 +290,17 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
     labelled classes in a many-to-one manner, by maximizing the F1 score. """
 
     def __init__(self, visual_model):
-        super(VisualUnknownClassesClassificationMetric, self).__init__(visual_model, None)
+        super(VisualUnknownClassesClassificationMetric, self).__init__(visual_model)
 
         # Maintain a list of pairs of (predicted clusters, gt classes) for future calculations
         self.predicted_clusters_gt_classes = []
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        self.visual_model.inference(visual_inputs)
+        batch_size = len(text_inputs)
         predicted_classes = self.visual_model.predict_concept_lists()
-        self.predicted_clusters_gt_classes.append((predicted_classes, visual_metadata['gt_classes']))
+
+        self.predicted_clusters_gt_classes += \
+            [(predicted_classes[i], visual_metadata['gt_classes'][i]) for i in range(batch_size)]
 
     def evaluate(self):
         concept_num = self.visual_model.config.concept_num
@@ -319,10 +318,11 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
                     concept_class_co_occur[predicted_concept][gt_class] += 1
 
         # Now, for each concept, choose the class with which it co-occurred the most
-        concept_to_class = {
-            x: max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
+        concept_to_class = [
+            max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
+            if len(concept_class_co_occur[x]) > 0 else None
             for x in range(concept_num)
-        }
+        ]
 
         # Finally, go over the results again and use the mapping to evaluate
         for predicted_concepts, gt_classes in self.predicted_clusters_gt_classes:

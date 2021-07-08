@@ -215,6 +215,24 @@ def get_image_tensor_from_id(image_id, get_image_path_func, slice_str):
     return image_tensor, orig_image_size
 
 
+def get_resized_gt_bboxes(gt_bboxes, orig_image_size):
+    rel_gt_bboxes = [[
+        x[0] / orig_image_size[0],
+        x[1] / orig_image_size[1],
+        x[2] / orig_image_size[0],
+        x[3] / orig_image_size[1]
+    ] for x in gt_bboxes]
+
+    resized_gt_bboxes = [[
+        int(x[0] * wanted_image_size[0]),
+        int(x[1] * wanted_image_size[1]),
+        int(x[2] * wanted_image_size[0]),
+        int(x[3] * wanted_image_size[1])
+    ] for x in rel_gt_bboxes]
+
+    return resized_gt_bboxes
+
+
 def get_image_shape_from_id(image_id, get_image_path_func, slice_str):
     image_obj = Image.open(get_image_path_func(image_id, slice_str))
     return np.array(image_obj).shape

@@ -22,7 +22,7 @@ class TextualModelWrapper(ModelWrapper):
         super(TextualModelWrapper, self).__init__(device, config, model_dir, indent, name)
 
     @abc.abstractmethod
-    def predict_concept_insantiating_words(self, sentence):
+    def predict_concept_insantiating_words(self, sentences):
         return
 
 
