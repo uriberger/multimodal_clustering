@@ -23,6 +23,7 @@ def prepare_data(captions):
     for caption in captions:
         token_list = caption.split()
         token_list = [preprocess_token(token) for token in token_list]
+        token_list = [x for x in token_list if len(x) > 0]
         token_lists.append(token_list)
     return token_lists
 
