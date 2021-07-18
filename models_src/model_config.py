@@ -10,6 +10,8 @@ class ModelConfig:
                  visual_learning_rate=1e-4,
                  text_model='counts_generative',
                  noun_threshold=0.5,
+                 textual_learning_rate=1e-4,
+                 word_embed_dim=300,
                  concept_num=80
                  ):
         self.visual_model = visual_model
@@ -18,6 +20,8 @@ class ModelConfig:
         self.visual_learning_rate = visual_learning_rate
         self.text_model = text_model
         self.noun_threshold = noun_threshold
+        self.textual_learning_rate = textual_learning_rate
+        self.word_embed_dim = word_embed_dim
         self.concept_num = concept_num
 
     def __str__(self):

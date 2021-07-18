@@ -2,7 +2,7 @@ from utils.text_utils import prepare_data
 import torch
 from executors.trainer import Trainer
 from models_src.visual_model_wrapper import VisualModelWrapper
-from models_src.textual_model_wrapper import TextualCountsModelWrapper
+from models_src.textual_model_wrapper import generate_textual_model
 
 
 class JointModelTrainer(Trainer):
@@ -11,7 +11,7 @@ class JointModelTrainer(Trainer):
         super().__init__(training_set, epoch_num, 100, indent)
 
         self.visual_model = VisualModelWrapper(self.device, config, timestamp, indent+1)
-        self.text_model = TextualCountsModelWrapper(self.device, config, timestamp, indent+1)
+        self.text_model = generate_textual_model(self.device, config, timestamp, indent + 1)
 
         self.epoch_num = epoch_num
         self.training_set = training_set
