@@ -202,6 +202,6 @@ class TextualRNNModelWrapper(TextualModelWrapper):
         with torch.no_grad():
             prob_output = torch.sigmoid(self.cached_output)
             concepts_indicator = torch.zeros(prob_output.shape).to(self.device)
-            concepts_indicator[prob_output > self.config.object_threshold] = 1
+            concepts_indicator[prob_output > self.config.noun_threshold] = 1
 
         return concepts_indicator
