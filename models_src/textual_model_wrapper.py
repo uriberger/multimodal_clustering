@@ -183,6 +183,7 @@ class TextualRNNModelWrapper(TextualModelWrapper):
         # create an empty matrix with padding tokens
         pad_token_ind = self.word_to_idx['']
         input_tensor = torch.ones(batch_size, longest_sent_len, dtype=torch.long) * pad_token_ind
+        input_tensor = input_tensor.to(self.device)
 
         # copy over the actual sequences
         for i, sent_len in enumerate(input_lengths):
