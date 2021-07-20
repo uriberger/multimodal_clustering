@@ -206,3 +206,24 @@ class TextualRNNModelWrapper(TextualModelWrapper):
             concepts_indicator[prob_output > self.config.noun_threshold] = 1
 
         return concepts_indicator
+
+    def dump_model(self):
+        torch.save(self.model.state_dict(), self.get_model_path())
+
+    def load_model(self):
+        self.model.load_state_dict(torch.load(self.get_model_path(), map_location=torch.device(self.device)))
+
+    def predict_concept_insantiating_words(self, sentences):
+        res = []
+        for sent_ind in range(len(sentences)):
+            sentence = sentences[sent_ind]
+            res.append([])
+            for token_ind in range(len(sentence)):
+                concept_instantiating_token = \
+                    torch.max(self.cached_output[sent_ind, token_ind, :]) >= self.config.noun_threshold
+                if concept_instantiating_token:
+                    res[-1].append(1)
+                else:
+                    res[-1].append(0)
+
+        return res
