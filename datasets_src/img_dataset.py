@@ -20,7 +20,6 @@ class ImageDataset(data.Dataset):
 
         caption_data = torch.load(caption_file)
         self.image_ids = list(set([x['image_id'] for x in caption_data]))
-        self.image_ids = self.image_ids[:60]
 
         self.get_image_path_func = get_image_path_func
 
