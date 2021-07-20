@@ -4,6 +4,7 @@ from utils.general_utils import generate_dataset
 import torch
 from loggable_object import LoggableObject
 from datasets_src.img_captions_dataset import ImageCaptionDataset
+from datasets_src.img_dataset import ImageDataset
 
 
 class DatasetBuilder(LoggableObject):
@@ -77,6 +78,18 @@ class DatasetBuilder(LoggableObject):
                                 config), \
             gt_classes_file_path, \
             gt_bboxes_file_path
+
+    def build_image_only_dataset(self, config):
+        if config.slice_str not in self.slices:
+            self.log_print('No such data slice: ' + str(config.slice_str) +
+                           '. Please specify one of ' + str(self.slices))
+            assert False
+
+        file_paths = self.file_paths[config.slice_str]
+
+        self.generate_caption_data(config.slice_str)
+
+        return ImageDataset(file_paths['captions'], self.get_image_path, config)
 
     def build_selected_class_caption_dataset(self, class_list, only_single_class_images, slice_str):
         """ This function returns a dataset of (image, caption) pairs, where the dataset only contains

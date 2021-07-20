@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torchvision.transforms as transforms
 from models_src.model_config import wanted_image_size
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
@@ -249,8 +250,10 @@ def plot_bboxes(image_tensor, bbox_list):
     plt.show()
 
 
-def plot_heatmap(image_id, activation_map, explicitly_upsample):
-    image_obj = Image.open(get_image_path(image_id))
+def plot_heatmap(image_tensor, activation_map, explicitly_upsample):
+    trans = transforms.ToPILImage()
+    image_tensor = image_tensor.view(image_tensor.shape[1], image_tensor.shape[2], image_tensor.shape[3])
+    image_obj = trans(image_tensor)
     image_obj = image_obj.resize(wanted_image_size)
     if explicitly_upsample:
         heatmap = to_pil_image(resize_activation_map(activation_map), mode='F')
@@ -258,5 +261,4 @@ def plot_heatmap(image_id, activation_map, explicitly_upsample):
         heatmap = to_pil_image(activation_map, mode='F')
     result = overlay_mask(image_obj, heatmap)
 
-    plt.imshow(result)
-    plt.show()
+    return result

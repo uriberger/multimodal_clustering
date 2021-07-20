@@ -3,7 +3,8 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 from torchcam.cams import CAM
-from utils.visual_utils import predict_bbox
+from utils.visual_utils import predict_bbox, plot_heatmap
+import matplotlib.pyplot as plt
 
 
 def generate_visual_model(model_str, concept_num, pretrained_base):
@@ -120,3 +121,19 @@ class VisualModelWrapper(ModelWrapper):
         self.cached_output = old_cached_output
 
         return predicted_bboxes
+
+    def plot_heatmap(self, image_tensor):
+        old_cached_output = self.cached_output  # We don't want to change the cache
+
+        batch_size = image_tensor.shape[0]
+        for sample_ind in range(batch_size):
+            self.inference(image_tensor[[sample_ind], :, :, :])
+            predicted_class_list = self.predict_concept_lists()[0]
+            for predicted_class in predicted_class_list:
+                activation_map = self.extract_cam(predicted_class)
+                image_obj = plot_heatmap(image_tensor, activation_map, False)
+                plt.imshow(image_obj)
+                plt.title('Heatmap for class ' + str(predicted_class))
+                plt.show()
+
+        self.cached_output = old_cached_output
