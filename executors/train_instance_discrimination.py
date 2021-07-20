@@ -9,7 +9,7 @@ class InstanceDiscriminationTrainer(Trainer):
     def __init__(self, training_set, epoch_num, indent):
         super().__init__(training_set, epoch_num, 100, indent)
 
-        self.model = models.resnet18(pretrained=False)
+        self.model = models.resnet18(pretrained=False).to(self.device)
         instance_num = len(training_set)
         self.model.fc = nn.Linear(in_features=512, out_features=instance_num)
 
