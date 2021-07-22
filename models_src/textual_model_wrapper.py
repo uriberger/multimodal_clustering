@@ -5,14 +5,24 @@ from models_src.word_concept_count_model import WordConceptCountModel
 import abc
 
 
-def generate_textual_model(device, config, dir_name, indent):
+def generate_textual_model(device, config_or_str, dir_name, indent, model_name=None):
+    """ Generate a textual model.
+    Config can either be a model configuration, in case of a new model,
+    or a string representing the name of the model, in case we want to
+    load an existing model. """
     count_models = ['counts_generative', 'counts_discriminative']
     rnn_models = ['lstm', 'gru']
 
-    if config.text_model in count_models:
-        return TextualCountsModelWrapper(device, config, dir_name, indent)
-    elif config.text_model in rnn_models:
-        return TextualRNNModelWrapper(device, config, dir_name, indent)
+    if isinstance(config_or_str, str):
+        config = None
+        model_str = config_or_str
+    else:
+        config = config_or_str
+        model_str = config_or_str.text_model
+    if model_str in count_models:
+        return TextualCountsModelWrapper(device, config, dir_name, indent, model_name)
+    elif model_str in rnn_models:
+        return TextualRNNModelWrapper(device, config, dir_name, indent, model_name)
     else:
         return None
 
@@ -36,6 +46,10 @@ class TextualModelWrapper(ModelWrapper):
 
     @abc.abstractmethod
     def predict_concept_insantiating_words(self, sentences):
+        return
+
+    @abc.abstractmethod
+    def predict_concepts_for_word(self, word):
         return
 
     def print_info_on_inference(self):
@@ -113,6 +127,11 @@ class TextualCountsModelWrapper(TextualModelWrapper):
                     res[-1].append(0)
 
         return res
+
+    def predict_concepts_for_word(self, word):
+        concept_conditioned_on_word = self.model.get_concept_conditioned_on_word(word)
+        concept_indicators = [1 if x >= self.config.noun_threshold else 0 for x in concept_conditioned_on_word]
+        return concept_indicators
 
 
 class TextualRNNModelWrapper(TextualModelWrapper):
@@ -227,3 +246,12 @@ class TextualRNNModelWrapper(TextualModelWrapper):
                     res[-1].append(0)
 
         return res
+
+    def predict_concepts_for_word(self, word):
+        old_cached_output = self.cached_output
+
+        self.inference([[word]])
+        concept_indicators = self.cached_output[0, 0, :] >= self.config.noun_threshold
+
+        self.cached_loss = old_cached_output
+        return concept_indicators

@@ -50,6 +50,34 @@ class WordConceptCountModel:
             # Use uniform class distribution
             self.concept_prob = [1 / self.concept_num for _ in range(self.concept_num)]
 
+    def get_concept_conditioned_on_word(self, word):
+        concept_to_prob = [self.concept_to_word_prob[x][word]
+                           if word in self.concept_to_word_prob[x]
+                           else 0
+                           for x in range(self.concept_num)]
+
+        # word_occur_count = sum(
+        #     self.concept_to_word_co_occur[x][word]
+        #     if word in self.concept_to_word_co_occur[x]
+        #     else 0
+        #     for x in range(self.concept_num)
+        # )
+        # if word_occur_count == 0:
+        #     # print('Never encountered word \'' + word + '\'.')
+        #     return None
+        # word_prob = word_occur_count/self.overall_occur_num
+        #
+        # # Apply Bayes rule
+        # p_class_cond_word = [(class_to_prob[i]*self.concept_prob[i])/word_prob
+        #                      for i in range(self.concept_num)]
+        word_prob_sum = sum(concept_to_prob)
+        if word_prob_sum == 0:
+            # print('Never encountered word \'' + word + '\'.')
+            return None
+
+        p_concept_cond_word = [concept_to_prob[x] / word_prob_sum for x in range(self.concept_num)]
+        return p_concept_cond_word
+
     def predict_concept(self, word):
         if self.mode == 0:
             if word not in self.word_to_concept_co_occur:
@@ -62,32 +90,9 @@ class WordConceptCountModel:
             probability = highest_count / overall_count
             most_probable_class = highest_correlated_concept
         else:
-            concept_to_prob = [self.concept_to_word_prob[x][word]
-                               if word in self.concept_to_word_prob[x]
-                               else 0
-                               for x in range(self.concept_num)]
-
-            # word_occur_count = sum(
-            #     self.concept_to_word_co_occur[x][word]
-            #     if word in self.concept_to_word_co_occur[x]
-            #     else 0
-            #     for x in range(self.concept_num)
-            # )
-            # if word_occur_count == 0:
-            #     # print('Never encountered word \'' + word + '\'.')
-            #     return None
-            # word_prob = word_occur_count/self.overall_occur_num
-            #
-            # # Apply Bayes rule
-            # p_class_cond_word = [(class_to_prob[i]*self.concept_prob[i])/word_prob
-            #                      for i in range(self.concept_num)]
-            word_prob_sum = sum(concept_to_prob)
-            if word_prob_sum == 0:
-                # print('Never encountered word \'' + word + '\'.')
+            p_class_cond_word = self.get_concept_conditioned_on_word(word)
+            if p_class_cond_word is None:
                 return None
-
-            p_class_cond_word = [concept_to_prob[x] / word_prob_sum for x in range(self.concept_num)]
-
             probability = max(p_class_cond_word)
             most_probable_class = np.argmax(p_class_cond_word)
         return most_probable_class, probability
