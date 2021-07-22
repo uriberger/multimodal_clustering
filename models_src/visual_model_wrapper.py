@@ -122,7 +122,7 @@ class VisualModelWrapper(ModelWrapper):
 
         return predicted_bboxes
 
-    def plot_heatmap(self, image_tensor):
+    def plot_heatmap(self, image_tensor, concept_to_str):
         old_cached_output = self.cached_output  # We don't want to change the cache
 
         batch_size = image_tensor.shape[0]
@@ -130,10 +130,15 @@ class VisualModelWrapper(ModelWrapper):
             self.inference(image_tensor[[sample_ind], :, :, :])
             predicted_class_list = self.predict_concept_lists()[0]
             for predicted_class in predicted_class_list:
+                if predicted_class in concept_to_str:
+                    class_str = str(concept_to_str[predicted_class])
+                else:
+                    class_str = '[]'
                 activation_map = self.extract_cam(predicted_class)
                 image_obj = plot_heatmap(image_tensor, activation_map, False)
                 plt.imshow(image_obj)
-                plt.title('Heatmap for class ' + str(predicted_class))
+                plt.title('Heatmap for class ' + str(predicted_class) +
+                          class_str)
                 plt.show()
 
         self.cached_output = old_cached_output
