@@ -13,9 +13,6 @@ class JointModelTrainer(Trainer):
         self.visual_model = VisualModelWrapper(self.device, config, timestamp, indent+1)
         self.text_model = generate_textual_model(self.device, config, timestamp, indent + 1)
 
-        self.epoch_num = epoch_num
-        self.training_set = training_set
-
     def dump_models(self):
         self.visual_model.dump()
         self.text_model.dump()
