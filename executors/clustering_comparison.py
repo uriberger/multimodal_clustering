@@ -73,56 +73,61 @@ class ClusterComparator(Trainer):
         self.index_to_image_id = {}
 
     def dump_results(self):
-        torch.save([self.image_cluster_list, self.image_concept_mat], 'cluster_results')
+        torch.save([self.image_cluster_list, self.image_concept_mat, self.text_cluster_list, self.text_concept_mat],
+                   'cluster_results')
 
     def pre_training(self):
         return
 
     def outer_progress_report(self, index, dataset_size, time_from_prev):
-        self.log_print('Starting outer image index ' + str(index) +
-                       ' out of ' + str(dataset_size) +
-                       ', time from previous checkpoint ' + str(time_from_prev))
-
-    def inner_progress_report(self, index, dataset_size, time_from_prev):
-        self.log_print('Starting inner image index ' + str(index) +
+        self.log_print('Starting outer index ' + str(index) +
                        ' out of ' + str(dataset_size) +
                        ', time from previous checkpoint ' + str(time_from_prev))
 
     def outer_pair_loop(self, first_index, first_cluster, print_info):
-        self.first_index = first_index
-        self.first_cluster = first_cluster
-        checkpoint_len = 1000
-        self.increment_indent()
-        for_loop_with_reports(self.image_cluster_list[first_index+1:],
-                              len(self.image_cluster_list[first_index+1:]),
-                              checkpoint_len, self.inner_pair_loop, self.inner_progress_report)
-        self.decrement_indent()
+        for second_index in range(first_index, len(self.cluster_list)):
+            second_cluster = self.cluster_list[second_index]
+            shared_concept_num = self.shared_concept_num_mat[first_index, second_index]
 
-    def inner_pair_loop(self, second_index, second_cluster, print_info):
-        shared_concept_num = self.shared_concept_num_mat[self.first_index, second_index]
-
-        if self.first_cluster == second_cluster:
-            # Only according to image, these images are on the same cluster
-            if shared_concept_num == 0:
-                self.only_im_sim_with_text_diff.append((self.first_index, second_index))
-        else:
-            if shared_concept_num > 3:
-                self.only_im_diff_with_text_sim.append((self.first_index, second_index))
+            if first_cluster == second_cluster:
+                # Only according to image, these images are on the same cluster
+                if shared_concept_num == 0:
+                    self.only_im_sim_with_text_diff.append((first_index, second_index))
+            else:
+                if shared_concept_num > 3:
+                    self.only_im_diff_with_text_sim.append((first_index, second_index))
 
     def post_training(self):
-        kmeans = KMeans(n_clusters=65).fit(self.image_embedding_mat.detach().numpy())
-        self.image_cluster_list = list(kmeans.labels_)
+        visual_kmeans = KMeans(n_clusters=65).fit(self.image_embedding_mat.detach().numpy())
+        textual_kmeans = KMeans(n_clusters=65).fit(self.text_embedding_mat)
+        self.image_cluster_list = list(visual_kmeans.labels_)
+        self.text_cluster_list = list(textual_kmeans.labels_)
         self.dump_results()
 
+        self.log_print('Image:')
+        self.shared_concept_num_mat = torch.matmul(self.image_concept_mat,
+                                                   torch.transpose(self.image_concept_mat, 1, 0))
+        self.cluster_list = self.image_cluster_list
+        self.increment_indent()
+        self.pairs_diff()
+        self.decrement_indent()
+
+        self.log_print('Text:')
+        self.shared_concept_num_mat = torch.matmul(self.text_concept_mat,
+                                                   torch.transpose(self.text_concept_mat, 1, 0))
+        self.cluster_list = self.text_cluster_list
+        self.increment_indent()
+        self.pairs_diff()
+        self.decrement_indent()
+
+    def pairs_diff(self):
         # Go over all sample pairs and search for differences between clusters and concepts
         self.only_im_sim_with_text_diff = []
         self.only_im_diff_with_text_sim = []
 
-        self.shared_concept_num_mat = torch.matmul(self.image_concept_mat, torch.transpose(self.image_concept_mat, 1, 0))
-
         checkpoint_len = 100
         self.increment_indent()
-        for_loop_with_reports(self.image_cluster_list, len(self.image_cluster_list), checkpoint_len,
+        for_loop_with_reports(self.cluster_list, len(self.cluster_list), checkpoint_len,
                               self.outer_pair_loop, self.outer_progress_report)
         self.decrement_indent()
 
