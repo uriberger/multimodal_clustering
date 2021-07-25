@@ -50,6 +50,8 @@ class VisualModelWrapper(ModelWrapper):
     def generate_cam_extractor(self):
         if self.config.visual_model == 'resnet18':
             self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
+        elif self.config.visual_model == 'resnet101':
+            self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
         elif self.config.visual_model == 'vgg16':
             self.cam_extractor = CAM(self.model, target_layer='features', fc_layer='classifier')
         elif self.config.visual_model == 'googlenet':
