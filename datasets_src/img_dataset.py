@@ -33,6 +33,9 @@ class ImageDataset(data.Dataset):
     def __len__(self):
         return len(self.image_ids)
 
+    def slice_dataset(self, start_index, end_index):
+        self.image_ids = self.image_ids[start_index:end_index]
+
     def __getitem__(self, idx):
         if torch.is_tensor(idx):
             idx = idx.tolist()

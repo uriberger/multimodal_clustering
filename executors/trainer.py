@@ -6,12 +6,13 @@ import abc
 
 class Trainer(Executor):
 
-    def __init__(self, training_set, epoch_num, batch_size, indent):
+    def __init__(self, training_set, epoch_num, batch_size, indent, shuffle=True):
         super().__init__(indent)
 
         self.epoch_num = epoch_num
         self.training_set = training_set
         self.batch_size = batch_size
+        self.shuffle = shuffle
 
     @abc.abstractmethod
     def pre_training(self):
@@ -27,7 +28,7 @@ class Trainer(Executor):
         for epoch_ind in range(self.epoch_num):
             self.log_print('Starting epoch ' + str(epoch_ind))
 
-            dataloader = data.DataLoader(self.training_set, batch_size=self.batch_size, shuffle=True)
+            dataloader = data.DataLoader(self.training_set, batch_size=self.batch_size, shuffle=self.shuffle)
 
             checkpoint_len = 500
             self.increment_indent()

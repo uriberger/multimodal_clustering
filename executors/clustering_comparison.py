@@ -16,9 +16,9 @@ vectors_filename = 'word2vec_cache'
 
 
 def generate_all_word_vectors():
-    ''' Generate the word vectors of the top frequent 500,000 words, from the GoogleNews data set.
+    """ Generate the word vectors of the top frequent 500,000 words, from the GoogleNews data set.
     If there's a cache file- load it. Otherwise, generate from scrach, and save it to the cache
-    file. '''
+    file. """
     fname = get_tmpfile(vectors_filename)
     if os.path.exists(fname):
         word_vectors = KeyedVectors.load(fname, mmap='r')
@@ -33,7 +33,9 @@ def generate_all_word_vectors():
 class ClusterComparator(Trainer):
 
     def __init__(self, image_set, indent, model_name):
-        super().__init__(image_set, 1, 100, indent)
+        super().__init__(image_set, 1, 100, indent, shuffle=False)
+
+        self.dump_filename = 'cluster_results'
 
         visual_model_dir = os.path.join(self.models_dir, 'visual')
         textual_model_dir = os.path.join(self.models_dir, 'text')
@@ -46,6 +48,7 @@ class ClusterComparator(Trainer):
         self.image_embedder.fc = nn.Identity()
         image_embedding_dim = 512
         image_num = len(image_set)
+        self.image_embedder.eval()
 
         text_embedder = generate_all_word_vectors()
         text_embedding_dim = 300
@@ -55,26 +58,52 @@ class ClusterComparator(Trainer):
         word_num = len(vocab)
         concept_num = self.visual_model.config.concept_num
 
-        self.image_embedding_mat = torch.zeros(image_num, image_embedding_dim).to(self.device)
-        self.image_concept_mat = torch.zeros(image_num, concept_num).to(self.device)
+        if os.path.isfile(self.dump_filename):
+            self.starting_index = self.load_results()
+            self.training_set.slice_dataset(self.starting_index, len(self.training_set))
+        else:
+            with torch.no_grad():
+                self.starting_index = 0
 
-        self.text_embedding_mat = np.zeros((word_num, text_embedding_dim))
-        self.text_concept_mat = torch.zeros(word_num, concept_num).to(self.device)
-        word_ind = 0
-        for word in vocab:
-            if word in text_embedder.key_to_index:
-                word_index_in_word2vec = text_embedder.key_to_index[word]
-            else:
-                word_index_in_word2vec = 0
-            self.text_embedding_mat[word_ind, :] = text_embedder.vectors[word_index_in_word2vec, :]
-            self.text_concept_mat[word_ind, :] = torch.tensor(self.text_model.predict_concepts_for_word(word)).to(self.device)
-            word_ind += 1
+                self.image_embedding_mat = torch.zeros(image_num, image_embedding_dim).to(self.device)
+                self.image_concept_mat = torch.zeros(image_num, concept_num).to(self.device)
 
-        self.index_to_image_id = {}
+                self.text_embedding_mat = np.zeros((word_num, text_embedding_dim))
+                self.text_concept_mat = torch.zeros(word_num, concept_num).to(self.device)
+                word_ind = 0
+                for word in vocab:
+                    if word in text_embedder.key_to_index:
+                        word_index_in_word2vec = text_embedder.key_to_index[word]
+                    else:
+                        word_index_in_word2vec = 0
+                    self.text_embedding_mat[word_ind, :] = text_embedder.vectors[word_index_in_word2vec, :]
+                    self.text_concept_mat[word_ind, :] = torch.tensor(self.text_model.predict_concepts_for_word(word)).to(self.device)
+                    word_ind += 1
 
-    def dump_results(self):
-        torch.save([self.image_cluster_list, self.image_concept_mat, self.text_cluster_list, self.text_concept_mat],
-                   'cluster_results')
+                self.index_to_image_id = {}
+
+    def dump_results(self, index):
+        torch.save([
+            self.image_embedding_mat,
+            self.image_concept_mat,
+            self.text_embedding_mat,
+            self.text_concept_mat,
+            self.index_to_image_id,
+            index
+        ], self.dump_filename)
+
+    def load_results(self):
+        image_embedding_mat, image_concept_mat, text_embedding_mat, text_concept_mat, index_to_image_id, index = \
+            torch.load(self.dump_filename)
+
+        with torch.no_grad():
+            self.image_embedding_mat = image_embedding_mat
+            self.image_concept_mat = image_concept_mat
+            self.text_embedding_mat = text_embedding_mat
+            self.text_concept_mat = text_concept_mat
+            self.index_to_image_id = index_to_image_id
+
+        return index
 
     def pre_training(self):
         return
@@ -98,11 +127,11 @@ class ClusterComparator(Trainer):
                     self.only_im_diff_with_text_sim.append((first_index, second_index))
 
     def post_training(self):
+        self.dump_results(len(self.training_set)*self.batch_size + self.starting_index)
         visual_kmeans = KMeans(n_clusters=65).fit(self.image_embedding_mat.detach().numpy())
         textual_kmeans = KMeans(n_clusters=65).fit(self.text_embedding_mat)
         self.image_cluster_list = list(visual_kmeans.labels_)
         self.text_cluster_list = list(textual_kmeans.labels_)
-        self.dump_results()
 
         self.log_print('Image:')
         self.shared_concept_num_mat = torch.matmul(self.image_concept_mat,
@@ -143,22 +172,26 @@ class ClusterComparator(Trainer):
         self.log_print('List of pairs similar when clustering by image but different when adding text: '
                        + str(only_im_sim_with_text_diff[:10]))
         self.log_print('List of pairs different when clustering by image but similar when adding text: '
-                       + str(only_im_diff_with_text_sim))
+                       + str(only_im_diff_with_text_sim[:10]))
 
     def train_on_batch(self, index, sampled_batch, print_info):
+        if print_info:
+            self.dump_results(index*self.batch_size + self.starting_index)
+
         # Load data
         image_tensor = sampled_batch['image'].to(self.device)
         image_id = sampled_batch['image_id']
-        image_indices = sampled_batch['index']
+        image_indices = sampled_batch['index'] + self.starting_index
 
         # Infer
-        self.visual_model.inference(image_tensor)
+        with torch.no_grad():
+            self.visual_model.inference(image_tensor)
 
-        labels_by_visual = self.visual_model.predict_concept_indicators()
+            labels_by_visual = self.visual_model.predict_concept_indicators()
 
-        image_embedding = self.image_embedder(image_tensor)
-        self.image_embedding_mat[image_indices, :] = image_embedding
+            image_embedding = self.image_embedder(image_tensor)
+            self.image_embedding_mat[image_indices, :] = image_embedding
 
-        self.image_concept_mat[image_indices, :] = labels_by_visual
+            self.image_concept_mat[image_indices, :] = labels_by_visual
         for i in range(image_indices.shape[0]):
             self.index_to_image_id[image_indices[i].item()] = image_id[i].item()
