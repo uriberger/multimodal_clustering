@@ -11,7 +11,10 @@ def generate_visual_model(model_str, concept_num, pretrained_base):
     if model_str == 'resnet18':
         model = models.resnet18(pretrained=pretrained_base)
         model.fc = nn.Linear(512, concept_num)
-    if model_str == 'resnet101':
+    elif model_str == 'resnet34':
+        model = models.resnet34(pretrained=pretrained_base)
+        model.fc = nn.Linear(512, concept_num)
+    elif model_str == 'resnet101':
         model = models.resnet101(pretrained=pretrained_base)
         model.fc = nn.Linear(2048, concept_num)
     elif model_str == 'vgg16':
@@ -49,6 +52,8 @@ class VisualModelWrapper(UnimodalModelWrapper):
 
     def generate_cam_extractor(self):
         if self.config.visual_model == 'resnet18':
+            self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
+        elif self.config.visual_model == 'resnet34':
             self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
         elif self.config.visual_model == 'resnet101':
             self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
