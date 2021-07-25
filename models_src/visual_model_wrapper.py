@@ -11,6 +11,9 @@ def generate_visual_model(model_str, concept_num, pretrained_base):
     if model_str == 'resnet18':
         model = models.resnet18(pretrained=pretrained_base)
         model.fc = nn.Linear(512, concept_num)
+    if model_str == 'resnet101':
+        model = models.resnet101(pretrained=pretrained_base)
+        model.fc = nn.Linear(2048, concept_num)
     elif model_str == 'vgg16':
         model = models.vgg16(pretrained=pretrained_base)
         model.avgpool = nn.AdaptiveAvgPool2d((1, 1))
