@@ -1,4 +1,4 @@
-from models_src.model_wrapper import ModelWrapper
+from models_src.unimodal_model_wrapper import UnimodalModelWrapper
 import torch
 import torch.nn as nn
 from models_src.word_concept_count_model import WordConceptCountModel
@@ -36,7 +36,7 @@ def generate_textual_counts_model(model_str, concept_num):
     return model
 
 
-class TextualModelWrapper(ModelWrapper):
+class TextualModelWrapper(UnimodalModelWrapper):
 
     def __init__(self, device, config, model_dir, indent, name=None):
         if name is None:

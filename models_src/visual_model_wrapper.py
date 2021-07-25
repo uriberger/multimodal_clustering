@@ -1,4 +1,4 @@
-from models_src.model_wrapper import ModelWrapper
+from models_src.unimodal_model_wrapper import UnimodalModelWrapper
 import torch
 import torch.nn as nn
 import torchvision.models as models
@@ -25,7 +25,7 @@ def generate_visual_model(model_str, concept_num, pretrained_base):
     return model
 
 
-class VisualModelWrapper(ModelWrapper):
+class VisualModelWrapper(UnimodalModelWrapper):
 
     def __init__(self, device, config, model_dir, indent, name=None):
         if name is None:
