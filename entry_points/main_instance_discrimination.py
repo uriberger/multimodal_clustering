@@ -20,7 +20,7 @@ log_print(function_name, 0, 'Generating dataset files...')
 coco_dir = os.path.join('..', 'datasets', 'COCO')
 coco = Coco(coco_dir, 1)
 
-training_set_config = DatasetConfig(1)
+training_set_config = DatasetConfig(1, use_transformations=True)
 training_set = coco.build_image_only_dataset(training_set_config)
 test_set_config = DatasetConfig(1, slice_str='val', include_gt_classes=True, include_gt_bboxes=True)
 test_set = coco.build_image_only_dataset(test_set_config)
