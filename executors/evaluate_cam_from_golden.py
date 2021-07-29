@@ -34,5 +34,5 @@ class CamEvaluator(Evaluator):
         self.run_metrics_on_dataset(metric_list, dataloader)
         self.log_print('Finished evaluating CAM model')
 
-    def infer(self, visual_inputs, textual_inputs):
+    def infer(self, visual_metadata, visual_inputs, textual_inputs):
         self.model.inference(visual_inputs)

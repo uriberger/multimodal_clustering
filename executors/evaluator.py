@@ -19,7 +19,7 @@ class Evaluator(Executor):
         return
 
     @abc.abstractmethod
-    def infer(self, visual_inputs, textual_inputs):
+    def infer(self, visual_metadata, visual_inputs, textual_inputs):
         return
 
     def run_metrics_on_dataset(self, metric_list, data_loader):
@@ -61,7 +61,7 @@ class Evaluator(Executor):
             token_lists = prepare_data(captions)
 
             # Infer
-            self.infer(image_tensor, token_lists)
+            self.infer(visual_metadata, image_tensor, token_lists)
 
             for metric in self.metric_list:
                 metric.predict_and_document(visual_metadata, image_tensor, token_lists)
