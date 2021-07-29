@@ -2,6 +2,7 @@ import abc
 import torch
 from utils.visual_utils import calc_ious, get_resized_gt_bboxes
 from utils.text_utils import noun_tags
+import statistics
 
 
 class Metric:
@@ -15,11 +16,13 @@ class Metric:
 
     """ Predicts the output of the model for a specific input, compares
     to ground-truth, and documents the current evaluation. """
+
     @abc.abstractmethod
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         return
 
     """ Reports some aggregation of evaluation of all inputs. """
+
     @abc.abstractmethod
     def report(self):
         return
@@ -71,7 +74,6 @@ class SensitivitySpecificityMetric(Metric):
 
 
 class BBoxMetric(SensitivitySpecificityMetric):
-
     """ This metric predicts bounding boxes, compares the prediction to the
     ground-truth bounding boxes (using intersection-over-union), and reports
     the results. """
@@ -175,13 +177,17 @@ class ConcretenessPredictionMetric(Metric):
         super(ConcretenessPredictionMetric, self).__init__(None, text_model)
         self.concreteness_dataset = concreteness_dataset
         self.absolute_error_sum = 0
+        self.absolute_error_sum_for_conc_words = 0
+        self.absolute_error_sum_for_non_conc_words = 0
         self.count = 0
+        self.conc_words_count = 0
+        self.non_conc_words_count = 0
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         concept_inst_predictions = self.text_model.predict_concept_insantiating_words(text_inputs)
         ''' Concreteness should be between 1 and 5. We have a number between
         0 and 1. So we scale it to the range [1, 5] '''
-        concreteness_predictions = [[1 + 4*x for x in y] for y in concept_inst_predictions]
+        concreteness_predictions = [[1 + 4 * x for x in y] for y in concept_inst_predictions]
 
         batch_size = len(text_inputs)
         for sample_ind in range(batch_size):
@@ -193,11 +199,22 @@ class ConcretenessPredictionMetric(Metric):
                 self.count += 1
                 gt_concreteness = self.concreteness_dataset[token]
                 predicted_concreteness = concreteness_predictions[sample_ind][i]
-                self.absolute_error_sum += abs(gt_concreteness - predicted_concreteness)
+                absolute_error = abs(gt_concreteness - predicted_concreteness)
+                self.absolute_error_sum += absolute_error
+                if predicted_concreteness == 1:  # Non concrete
+                    self.non_conc_words_count += 1
+                    self.absolute_error_sum_for_non_conc_words += absolute_error
+                else:  # Concrete
+                    self.conc_words_count += 1
+                    self.absolute_error_sum_for_conc_words += absolute_error
 
     def report(self):
         mae = self.absolute_error_sum / self.count
-        return 'Concreteness mean squared error: ' + str(mae)
+        mae_for_conc = self.absolute_error_sum_for_conc_words / self.conc_words_count
+        mae_for_non_conc = self.absolute_error_sum_for_non_conc_words / self.non_conc_words_count
+        return 'Concreteness mean absolute error: ' + str(mae) + \
+               ' overall, ' + str(mae_for_conc) + ' for concrete-predicted words, ' + \
+               str(mae_for_non_conc) + ' for non-concrete-predicted words'
 
 
 class SentenceImageMatchingMetric(Metric):
@@ -310,9 +327,19 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
         for _ in range(concept_num):
             concept_class_co_occur.append({})
 
+        predicted_concept_count = {x: 0 for x in range(concept_num)}
+        gt_class_count = {}
         for predicted_concepts, gt_classes in self.predicted_clusters_gt_classes:
             for predicted_concept in predicted_concepts:
+                # Increment count
+                predicted_concept_count[predicted_concept] += 1
+                # Go over gt classes
                 for gt_class in gt_classes:
+                    # Increment count
+                    if gt_class not in gt_class_count:
+                        gt_class_count[gt_class] = 0
+                    gt_class_count[gt_class] += 1
+                    # Document co-occurrence
                     if gt_class not in concept_class_co_occur[predicted_concept]:
                         concept_class_co_occur[predicted_concept][gt_class] = 0
                     concept_class_co_occur[predicted_concept][gt_class] += 1
@@ -329,8 +356,19 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
             predicted_classes = [concept_to_class[x] for x in predicted_concepts]
             self.evaluate_classification(predicted_classes, gt_classes)
 
+        # Apart from the classification results, we want to measure the intersection of our classes and the gt classes
+        intersections = [concept_class_co_occur[x][concept_to_class[x]] for x in range(concept_num)]
+        unions = [predicted_concept_count[x] +  # Concept count
+                  gt_class_count[concept_to_class[x]] -  # Class count
+                  intersections[x]  # Intersection count
+                  for x in range(concept_num)]
+        self.ious = [intersections[x] / unions[x] if unions[x] > 0 else 0
+                     for x in range(concept_num)]
+
     def report(self):
         """In this metric we have post analysis, we'll do it in the report function as this function is
         executed after all calculations are done."""
         self.evaluate()
-        return self.report_with_name('Visual classification results')
+        return self.report_with_name('Visual classification results') + \
+            ', iou max ' + str(max(self.ious)) + ' min ' + str(min(self.ious)) + \
+            ' mean ' + str(statistics.mean(self.ious)) + ' median ' + str(statistics.median(self.ious))
