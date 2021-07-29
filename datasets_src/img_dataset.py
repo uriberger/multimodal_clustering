@@ -47,7 +47,8 @@ class ImageDataset(data.Dataset):
         if self.config.normalize_images:
             image_tensor = self.normalizer(image_tensor)
 
-        image_tensor = self.transforms(image_tensor)
+        if self.config.use_transformations:
+            image_tensor = self.transforms(image_tensor)
 
         sample = {
             'image_id': image_id,
