@@ -3,29 +3,8 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 from torchcam.cams import CAM
-from utils.visual_utils import predict_bbox, plot_heatmap
+from utils.visual_utils import predict_bbox, plot_heatmap, generate_visual_model
 import matplotlib.pyplot as plt
-
-
-def generate_visual_model(model_str, concept_num, pretrained_base):
-    if model_str == 'resnet18':
-        model = models.resnet18(pretrained=pretrained_base)
-        model.fc = nn.Linear(512, concept_num)
-    elif model_str == 'resnet34':
-        model = models.resnet34(pretrained=pretrained_base)
-        model.fc = nn.Linear(512, concept_num)
-    elif model_str == 'resnet101':
-        model = models.resnet101(pretrained=pretrained_base)
-        model.fc = nn.Linear(2048, concept_num)
-    elif model_str == 'vgg16':
-        model = models.vgg16(pretrained=pretrained_base)
-        model.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        model.classifier = nn.Linear(512, concept_num)
-    elif model_str == 'googlenet':
-        model = models.googlenet(pretrained=pretrained_base, aux_logits=False)
-        model.fc = nn.Linear(1024, concept_num)
-
-    return model
 
 
 class VisualModelWrapper(UnimodalModelWrapper):

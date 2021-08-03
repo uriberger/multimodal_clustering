@@ -22,6 +22,10 @@ class Trainer(Executor):
     def post_training(self):
         return
 
+    @abc.abstractmethod
+    def post_loop(self):
+        return
+
     def train(self):
         self.pre_training()
 
@@ -35,6 +39,8 @@ class Trainer(Executor):
             for_loop_with_reports(dataloader, len(dataloader), checkpoint_len,
                                   self.train_on_batch, self.progress_report)
             self.decrement_indent()
+
+            self.post_loop()
 
         self.post_training()
 

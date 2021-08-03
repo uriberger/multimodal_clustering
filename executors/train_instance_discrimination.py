@@ -38,5 +38,8 @@ class InstanceDiscriminationTrainer(Trainer):
     def pre_training(self):
         return
 
+    def post_loop(self):
+        torch.save(self.model.state_dict(), 'image_embedder')
+
     def post_training(self):
         torch.save(self.model.state_dict(), 'image_embedder')

@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from models_src.word_concept_count_model import WordConceptCountModel
 import abc
+from utils.text_utils import generate_text_model
 
 
 def generate_textual_model(device, config_or_str, dir_name, indent, model_name=None):
@@ -159,22 +160,7 @@ class TextualRNNModelWrapper(TextualModelWrapper):
         concept_num = self.config.concept_num
         word_embed_dim = self.config.word_embed_dim
 
-        # We don't know what the size of the vocabulary will be, so let's take some large value
-        vocab_size = 50000
-        num_layers = 2
-
-        if model_str == 'lstm':
-            model = nn.Sequential(
-                nn.Embedding(vocab_size, word_embed_dim),
-                nn.LSTM(word_embed_dim, concept_num, num_layers, batch_first=True)
-            )
-        elif model_str == 'gru':
-            model = nn.Sequential(
-                nn.Embedding(vocab_size, word_embed_dim),
-                nn.GRU(word_embed_dim, concept_num, num_layers, batch_first=True)
-            )
-
-        return model
+        return generate_text_model(model_str, concept_num, word_embed_dim)
 
     def training_step(self, inputs, labels):
         loss = self.criterion(self.cached_output, labels)

@@ -11,6 +11,7 @@ from gensim.models import KeyedVectors
 from sklearn.cluster import KMeans
 import numpy as np
 from utils.general_utils import for_loop_with_reports
+from random import sample
 
 vectors_filename = 'word2vec_cache'
 
@@ -32,7 +33,7 @@ def generate_all_word_vectors():
 
 class ClusterComparator(Trainer):
 
-    def __init__(self, image_set, indent, model_name):
+    def __init__(self, image_set, indent, model_name, visual_embedder_path=None):
         super().__init__(image_set, 1, 100, indent, shuffle=False)
 
         self.dump_filename = 'cluster_results'
@@ -44,7 +45,12 @@ class ClusterComparator(Trainer):
         self.text_model = generate_textual_model(self.device, 'counts_generative', textual_model_dir, indent + 1,
                                                  model_name)
 
-        self.image_embedder = models.resnet18(pretrained=True).to(self.device)
+        if visual_embedder_path is None:
+            self.image_embedder = models.resnet18(pretrained=True).to(self.device)
+        else:
+            self.image_embedder = models.resnet18(pretrained=False).to(self.device)
+            self.image_embedder.fc = nn.Linear(in_features=512, out_features=56402)
+            self.image_embedder.load_state_dict(torch.load(visual_embedder_path))
         self.image_embedder.fc = nn.Identity()
         image_embedding_dim = 512
         image_num = len(image_set)
@@ -68,6 +74,7 @@ class ClusterComparator(Trainer):
                 self.image_embedding_mat = torch.zeros(image_num, image_embedding_dim).to(self.device)
                 self.image_concept_mat = torch.zeros(image_num, concept_num).to(self.device)
 
+                self.index_to_word = {}
                 self.text_embedding_mat = np.zeros((word_num, text_embedding_dim))
                 self.text_concept_mat = torch.zeros(word_num, concept_num).to(self.device)
                 word_ind = 0
@@ -77,7 +84,9 @@ class ClusterComparator(Trainer):
                     else:
                         word_index_in_word2vec = 0
                     self.text_embedding_mat[word_ind, :] = text_embedder.vectors[word_index_in_word2vec, :]
-                    self.text_concept_mat[word_ind, :] = torch.tensor(self.text_model.predict_concepts_for_word(word)).to(self.device)
+                    self.text_concept_mat[word_ind, :] = torch.tensor(
+                        self.text_model.predict_concepts_for_word(word)).to(self.device)
+                    self.index_to_word[word_ind] = word
                     word_ind += 1
 
                 self.index_to_image_id = {}
@@ -89,12 +98,14 @@ class ClusterComparator(Trainer):
             self.text_embedding_mat,
             self.text_concept_mat,
             self.index_to_image_id,
+            self.index_to_word,
             index
         ], self.dump_filename)
 
     def load_results(self):
-        image_embedding_mat, image_concept_mat, text_embedding_mat, text_concept_mat, index_to_image_id, index = \
-            torch.load(self.dump_filename)
+        image_embedding_mat, image_concept_mat, text_embedding_mat, \
+         text_concept_mat, index_to_image_id, index_to_word, index = \
+         torch.load(self.dump_filename)
 
         with torch.no_grad():
             self.image_embedding_mat = image_embedding_mat
@@ -102,6 +113,7 @@ class ClusterComparator(Trainer):
             self.text_embedding_mat = text_embedding_mat
             self.text_concept_mat = text_concept_mat
             self.index_to_image_id = index_to_image_id
+            self.index_to_word = index_to_word
 
         return index
 
@@ -121,15 +133,20 @@ class ClusterComparator(Trainer):
             if first_cluster == second_cluster:
                 # Only according to image, these images are on the same cluster
                 if shared_concept_num == 0:
-                    self.only_im_sim_with_text_diff.append((first_index, second_index))
+                    self.baseline_sim_concept_diff.append((first_index, second_index))
             else:
-                if shared_concept_num > 3:
-                    self.only_im_diff_with_text_sim.append((first_index, second_index))
+                if shared_concept_num > self.sim_threshold:
+                    self.baseline_diff_concept_sim.append((first_index, second_index))
 
     def post_training(self):
-        self.dump_results(len(self.training_set)*self.batch_size + self.starting_index)
-        visual_kmeans = KMeans(n_clusters=65).fit(self.image_embedding_mat.detach().numpy())
-        textual_kmeans = KMeans(n_clusters=65).fit(self.text_embedding_mat)
+        self.dump_results(len(self.training_set) * self.batch_size + self.starting_index)
+
+        concept_num = self.visual_model.config.concept_num
+        visual_cluster_num = len([x for x in range(concept_num) if torch.sum(self.image_concept_mat[:, x]).item() > 0])
+        textual_cluster_num = len([x for x in range(concept_num) if torch.sum(self.text_concept_mat[:, x]).item() > 0])
+
+        visual_kmeans = KMeans(n_clusters=visual_cluster_num).fit(self.image_embedding_mat.detach().numpy())
+        textual_kmeans = KMeans(n_clusters=textual_cluster_num).fit(self.text_embedding_mat)
         self.image_cluster_list = list(visual_kmeans.labels_)
         self.text_cluster_list = list(textual_kmeans.labels_)
 
@@ -137,6 +154,8 @@ class ClusterComparator(Trainer):
         self.shared_concept_num_mat = torch.matmul(self.image_concept_mat,
                                                    torch.transpose(self.image_concept_mat, 1, 0))
         self.cluster_list = self.image_cluster_list
+        self.index_to_item = self.index_to_image_id
+        self.sim_threshold = 3
         self.increment_indent()
         self.pairs_diff()
         self.decrement_indent()
@@ -145,38 +164,40 @@ class ClusterComparator(Trainer):
         self.shared_concept_num_mat = torch.matmul(self.text_concept_mat,
                                                    torch.transpose(self.text_concept_mat, 1, 0))
         self.cluster_list = self.text_cluster_list
+        self.index_to_item = self.index_to_word
+        self.sim_threshold = 6
         self.increment_indent()
         self.pairs_diff()
         self.decrement_indent()
 
     def pairs_diff(self):
         # Go over all sample pairs and search for differences between clusters and concepts
-        self.only_im_sim_with_text_diff = []
-        self.only_im_diff_with_text_sim = []
+        self.baseline_sim_concept_diff = []
+        self.baseline_diff_concept_sim = []
 
-        checkpoint_len = 100
+        checkpoint_len = 300
         self.increment_indent()
         for_loop_with_reports(self.cluster_list, len(self.cluster_list), checkpoint_len,
                               self.outer_pair_loop, self.outer_progress_report)
         self.decrement_indent()
 
-        self.log_print('Number of pairs similar when clustering by image but different when adding text: '
-                       + str(len(self.only_im_sim_with_text_diff)))
-        self.log_print('Number of pairs different when clustering by image but similar when adding text: '
-                       + str(len(self.only_im_diff_with_text_sim)))
+        self.log_print('Number of pairs similar when clustering by baseline but different when clustering by concepts: '
+                       + str(len(self.baseline_sim_concept_diff)))
+        self.log_print('Number of pairs different when clustering by baseline but similar when clustering by concepts: '
+                       + str(len(self.baseline_diff_concept_sim)))
 
-        only_im_sim_with_text_diff = [(self.index_to_image_id[x[0]], self.index_to_image_id[x[1]])
-                                      for x in self.only_im_sim_with_text_diff]
-        only_im_diff_with_text_sim = [(self.index_to_image_id[x[0]], self.index_to_image_id[x[1]])
-                                      for x in self.only_im_diff_with_text_sim]
-        self.log_print('List of pairs similar when clustering by image but different when adding text: '
-                       + str(only_im_sim_with_text_diff[:10]))
-        self.log_print('List of pairs different when clustering by image but similar when adding text: '
-                       + str(only_im_diff_with_text_sim[:10]))
+        baseline_sim_concept_diff = [(self.index_to_item[x[0]], self.index_to_item[x[1]])
+                                      for x in self.baseline_sim_concept_diff]
+        baseline_diff_concept_sim = [(self.index_to_item[x[0]], self.index_to_item[x[1]])
+                                      for x in self.baseline_diff_concept_sim]
+        self.log_print('List of pairs similar when clustering by baseline but different when clustering by concepts: '
+                       + str(sample(baseline_sim_concept_diff, 10)))
+        self.log_print('List of pairs different when clustering by baseline but similar when clustering by concepts: '
+                       + str(sample(baseline_diff_concept_sim, 10)))
 
     def train_on_batch(self, index, sampled_batch, print_info):
         if print_info:
-            self.dump_results(index*self.batch_size + self.starting_index)
+            self.dump_results(index * self.batch_size + self.starting_index)
 
         # Load data
         image_tensor = sampled_batch['image'].to(self.device)

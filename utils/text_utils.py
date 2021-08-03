@@ -1,3 +1,6 @@
+import torch.nn as nn
+
+
 noun_tags = [
     'NN',
     'NNP',
@@ -30,3 +33,22 @@ def prepare_data(captions):
 
 def multiple_word_string(my_str):
     return len(my_str.split()) > 1
+
+
+def generate_text_model(model_str, output_size, word_embed_dim):
+    # We don't know what the size of the vocabulary will be, so let's take some large value
+    vocab_size = 50000
+    num_layers = 2
+
+    if model_str == 'lstm':
+        model = nn.Sequential(
+            nn.Embedding(vocab_size, word_embed_dim),
+            nn.LSTM(word_embed_dim, output_size, num_layers, batch_first=True)
+        )
+    elif model_str == 'gru':
+        model = nn.Sequential(
+            nn.Embedding(vocab_size, word_embed_dim),
+            nn.GRU(word_embed_dim, output_size, num_layers, batch_first=True)
+        )
+
+    return model

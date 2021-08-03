@@ -8,7 +8,7 @@ class DatasetConfig(LoggableObject):
                  normalize_images=False,
                  include_gt_classes=False,
                  include_gt_bboxes=False,
-                 use_tranformations=False,
+                 use_transformations=False,
                  slice_str='train'
                  ):
         super(DatasetConfig, self).__init__(indent)
@@ -22,5 +22,5 @@ class DatasetConfig(LoggableObject):
         self.normalize_images = normalize_images
         self.include_gt_classes = include_gt_classes
         self.include_gt_bboxes = include_gt_bboxes
-        self.use_tranformations = use_tranformations
+        self.use_transformations = use_transformations
         self.slice_str = slice_str

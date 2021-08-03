@@ -43,6 +43,6 @@ class JointModelEvaluator(Evaluator):
         ]
         self.run_metrics_on_dataset(metric_list, dataloader)
 
-    def infer(self, visual_inputs, textual_inputs):
+    def infer(self, visual_metadata, visual_inputs, textual_inputs):
         self.visual_model.inference(visual_inputs)
         self.text_model.inference(textual_inputs)
