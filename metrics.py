@@ -81,17 +81,15 @@ class BBoxMetric(SensitivitySpecificityMetric):
     def __init__(self, visual_model):
         super(BBoxMetric, self).__init__(visual_model, None)
 
-    def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        predicted_bboxes = self.visual_model.predict_bboxes(visual_inputs)
-        iou_threshold = self.visual_model.config.object_threshold
-
-        gt_bboxes = visual_metadata['gt_bboxes']
+    def document(self, orig_image_sizes, predicted_bboxes, gt_bboxes):
+        # iou_threshold = self.visual_model.config.object_threshold
+        iou_threshold = 0
 
         batch_size = len(gt_bboxes)
         for sample_ind in range(batch_size):
             gt_bbox_num = len(gt_bboxes[sample_ind])
             sample_gt_bboxes = gt_bboxes[sample_ind]
-            sample_gt_bboxes = get_resized_gt_bboxes(sample_gt_bboxes, visual_metadata['orig_image_size'][sample_ind])
+            sample_gt_bboxes = get_resized_gt_bboxes(sample_gt_bboxes, orig_image_sizes[sample_ind])
             sample_gt_bboxes = torch.stack([torch.tensor(x) for x in sample_gt_bboxes])
             if len(predicted_bboxes[sample_ind]) > 0:
                 sample_predicted_bboxes = torch.stack([torch.tensor(x) for x in predicted_bboxes[sample_ind]])
@@ -113,6 +111,16 @@ class BBoxMetric(SensitivitySpecificityMetric):
             self.tp += tp
             self.fp += fp
             self.fn += fn
+
+    def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
+        predicted_bboxes = self.visual_model.predict_bboxes(visual_inputs)
+        gt_bboxes = visual_metadata['gt_bboxes']
+        orig_image_sizes = visual_metadata['orig_image_size']
+        self.document(orig_image_sizes, predicted_bboxes, gt_bboxes)
+
+    def document_with_loaded_results(self, orig_image_sizes, activation_maps, gt_bboxes):
+        predicted_bboxes = self.visual_model.predict_bboxes_with_activation_maps(activation_maps)
+        self.document(orig_image_sizes, predicted_bboxes, gt_bboxes)
 
     def report(self):
         return self.report_with_name('bbox results')
@@ -272,8 +280,7 @@ class VisualClassificationMetric(SensitivitySpecificityMetric):
         cur_tp = len(list(set(predicted_classes).intersection(gt_classes)))
         cur_fp = predicted_num - cur_tp
 
-        class_num = self.visual_model.config.concept_num
-        non_predicted_num = class_num - predicted_num
+        non_predicted_num = self.class_num - predicted_num
         cur_fn = len(list(set(gt_classes).difference(predicted_classes)))
         cur_tn = non_predicted_num - cur_fn
 
@@ -287,6 +294,10 @@ class VisualKnownClassesClassificationMetric(VisualClassificationMetric):
     """ This metric is only for models trained with labels of classes.
     We train a visual model to predict the classes on an image, and evaluate its predictions, given the ground
     truth classes. """
+
+    def __init__(self, visual_model, class_num):
+        super(VisualKnownClassesClassificationMetric, self).__init__(visual_model)
+        self.class_num = class_num
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         predicted_classes = self.visual_model.predict_concept_lists()
@@ -313,21 +324,24 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
         self.predicted_clusters_gt_classes = []
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        batch_size = len(text_inputs)
         predicted_classes = self.visual_model.predict_concept_lists()
+        self.document(predicted_classes, visual_metadata['gt_classes'])
 
+    def document(self, predicted_classes, gt_classes):
+        batch_size = len(gt_classes)
         self.predicted_clusters_gt_classes += \
-            [(predicted_classes[i], visual_metadata['gt_classes'][i]) for i in range(batch_size)]
+            [(predicted_classes[i], gt_classes[i]) for i in range(batch_size)]
 
     def evaluate(self):
-        concept_num = self.visual_model.config.concept_num
+        # Get a unique list of concepts
+        concepts_with_repetition = [x[0] for x in self.predicted_clusters_gt_classes]
+        concept_list = list(set([inner for outer in concepts_with_repetition for inner in outer]))
+        self.class_num = len(concept_list)
 
         # First, document for each concept how many times each class co-occurred with it
-        concept_class_co_occur = []
-        for _ in range(concept_num):
-            concept_class_co_occur.append({})
+        concept_class_co_occur = {x: {} for x in concept_list}
 
-        predicted_concept_count = {x: 0 for x in range(concept_num)}
+        predicted_concept_count = {x: 0 for x in concept_list}
         gt_class_count = {}
         for predicted_concepts, gt_classes in self.predicted_clusters_gt_classes:
             for predicted_concept in predicted_concepts:
@@ -348,7 +362,7 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
         concept_to_class = [
             max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
             if len(concept_class_co_occur[x]) > 0 else None
-            for x in range(concept_num)
+            for x in concept_list
         ]
 
         # Finally, go over the results again and use the mapping to evaluate
@@ -357,13 +371,13 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
             self.evaluate_classification(predicted_classes, gt_classes)
 
         # Apart from the classification results, we want to measure the intersection of our classes and the gt classes
-        intersections = [concept_class_co_occur[x][concept_to_class[x]] for x in range(concept_num)]
+        intersections = [concept_class_co_occur[x][concept_to_class[x]] for x in concept_list]
         unions = [predicted_concept_count[x] +  # Concept count
                   gt_class_count[concept_to_class[x]] -  # Class count
                   intersections[x]  # Intersection count
-                  for x in range(concept_num)]
+                  for x in concept_list]
         self.ious = [intersections[x] / unions[x] if unions[x] > 0 else 0
-                     for x in range(concept_num)]
+                     for x in concept_list]
 
     def report(self):
         """In this metric we have post analysis, we'll do it in the report function as this function is
