@@ -1,7 +1,6 @@
 from models_src.unimodal_model_wrapper import UnimodalModelWrapper
 import torch
 import torch.nn as nn
-import torchvision.models as models
 from torchcam.cams import CAM
 from utils.visual_utils import predict_bbox, plot_heatmap, generate_visual_model
 import matplotlib.pyplot as plt
@@ -92,22 +91,37 @@ class VisualModelWrapper(UnimodalModelWrapper):
 
         return concepts_indicator
 
-    def predict_bboxes(self, image_tensor):
+    def predict_activation_maps(self, image_tensor):
         # We need to run inference on each image apart, because the cam extraction demands a single hooked tensor
         old_cached_output = self.cached_output  # We don't want to change the cache
 
         batch_size = image_tensor.shape[0]
-        predicted_bboxes = []
+        activation_maps = []
         for sample_ind in range(batch_size):
-            predicted_bboxes.append([])
+            activation_maps.append([])
             self.inference(image_tensor[[sample_ind], :, :, :])
             predicted_class_list = self.predict_concept_lists()[0]
             for predicted_class in predicted_class_list:
                 activation_map = self.extract_cam(predicted_class)
-                bbox = predict_bbox(activation_map)
-                predicted_bboxes[-1].append(bbox)
+                activation_maps[-1].append(activation_map)
 
         self.cached_output = old_cached_output
+
+        return activation_maps
+
+    def predict_bboxes(self, image_tensor):
+        activation_maps = self.predict_activation_maps(image_tensor)
+        predicted_bboxes = self.predict_bboxes_with_activation_maps(activation_maps)
+
+        return predicted_bboxes
+
+    def predict_bboxes_with_activation_maps(self, activation_maps):
+        predicted_bboxes = []
+        for sample_activation_maps in activation_maps:
+            predicted_bboxes.append([])
+            for predicted_class_activation_map in sample_activation_maps:
+                bbox = predict_bbox(predicted_class_activation_map)
+                predicted_bboxes[-1].append(bbox)
 
         return predicted_bboxes
 
