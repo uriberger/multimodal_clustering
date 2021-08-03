@@ -86,10 +86,22 @@ class DatasetBuilder(LoggableObject):
             assert False
 
         file_paths = self.file_paths[config.slice_str]
+        if config.include_gt_classes:
+            self.generate_gt_classes_data(config.slice_str)
+            gt_classes_file_path = file_paths['gt_classes']
+        else:
+            gt_classes_file_path = None
+        if config.include_gt_bboxes:
+            self.generate_gt_bboxes_data(config.slice_str)
+            gt_bboxes_file_path = file_paths['gt_bboxes']
+        else:
+            gt_bboxes_file_path = None
 
         self.generate_caption_data(config.slice_str)
 
-        return ImageDataset(file_paths['captions'], self.get_image_path, config)
+        return ImageDataset(file_paths['captions'], self.get_image_path, config), \
+            gt_classes_file_path, \
+            gt_bboxes_file_path
 
     def build_selected_class_caption_dataset(self, class_list, only_single_class_images, slice_str):
         """ This function returns a dataset of (image, caption) pairs, where the dataset only contains
