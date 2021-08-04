@@ -376,13 +376,21 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
                   gt_class_count[concept_to_class[x]] -  # Class count
                   intersections[x]  # Intersection count
                   for x in concept_list}
-        self.ious = [intersections[x] / unions[x] if unions[x] > 0 else 0
-                     for x in concept_list]
+        self.ious = {x: intersections[x] / unions[x] if unions[x] > 0 else 0
+                     for x in concept_list}
+        self.concept_to_class = concept_to_class
 
     def report(self):
         """In this metric we have post analysis, we'll do it in the report function as this function is
         executed after all calculations are done."""
         self.evaluate()
-        return self.report_with_name('Visual classification results') + \
-            ', iou max ' + str(max(self.ious)) + ' min ' + str(min(self.ious)) + \
-            ' mean ' + str(statistics.mean(self.ious)) + ' median ' + str(statistics.median(self.ious))
+
+        res = self.report_with_name('Visual classification results')
+        res += ', iou max ' + str(max(self.ious.values())) + ' min ' + str(min(self.ious.values())) + \
+               ' mean ' + str(statistics.mean(self.ious)) + ' median ' + str(statistics.median(self.ious)) + '\n'
+        res += 'Concept class pairs: '
+        for concept_ind, iou in self.ious.items():
+            class_ind = self.concept_to_class[concept_ind]
+            res += '(' + str(concept_ind) + ',' + str(class_ind) + ',' + "{:.2f}".format(iou) + ') '
+
+        return res
