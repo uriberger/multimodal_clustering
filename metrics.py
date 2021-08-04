@@ -359,11 +359,11 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
                     concept_class_co_occur[predicted_concept][gt_class] += 1
 
         # Now, for each concept, choose the class with which it co-occurred the most
-        concept_to_class = [
-            max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
+        concept_to_class = {
+            x: max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
             if len(concept_class_co_occur[x]) > 0 else None
             for x in concept_list
-        ]
+        }
 
         # Finally, go over the results again and use the mapping to evaluate
         for predicted_concepts, gt_classes in self.predicted_clusters_gt_classes:
@@ -371,11 +371,11 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
             self.evaluate_classification(predicted_classes, gt_classes)
 
         # Apart from the classification results, we want to measure the intersection of our classes and the gt classes
-        intersections = [concept_class_co_occur[x][concept_to_class[x]] for x in concept_list]
-        unions = [predicted_concept_count[x] +  # Concept count
+        intersections = {x: concept_class_co_occur[x][concept_to_class[x]] for x in concept_list}
+        unions = {x: predicted_concept_count[x] +  # Concept count
                   gt_class_count[concept_to_class[x]] -  # Class count
                   intersections[x]  # Intersection count
-                  for x in concept_list]
+                  for x in concept_list}
         self.ious = [intersections[x] / unions[x] if unions[x] > 0 else 0
                      for x in concept_list]
 
