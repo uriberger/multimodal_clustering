@@ -82,8 +82,7 @@ class BBoxMetric(SensitivitySpecificityMetric):
         super(BBoxMetric, self).__init__(visual_model, None)
 
     def document(self, orig_image_sizes, predicted_bboxes, gt_bboxes):
-        # iou_threshold = self.visual_model.config.object_threshold
-        iou_threshold = 0
+        iou_threshold = self.visual_model.config.object_threshold
 
         batch_size = len(gt_bboxes)
         for sample_ind in range(batch_size):
@@ -387,7 +386,8 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
 
         res = self.report_with_name('Visual classification results')
         res += ', iou max ' + str(max(self.ious.values())) + ' min ' + str(min(self.ious.values())) + \
-               ' mean ' + str(statistics.mean(self.ious)) + ' median ' + str(statistics.median(self.ious)) + '\n'
+               ' mean ' + str(statistics.mean(self.ious.values())) + ' median ' + \
+               str(statistics.median(self.ious.values())) + '\n'
         res += 'Concept class pairs: '
         for concept_ind, iou in self.ious.items():
             class_ind = self.concept_to_class[concept_ind]
