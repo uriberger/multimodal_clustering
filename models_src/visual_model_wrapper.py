@@ -15,6 +15,13 @@ class VisualModelWrapper(UnimodalModelWrapper):
         super().__init__(device, config, model_dir, indent, name)
         self.model.to(self.device)
 
+        if config.freeze_parameters:
+            for param in self.model.parameters():
+                param.requires_grad = False
+            last_layer = list(self.model.modules())[-1]
+            last_layer.weight.requires_grad = True
+            last_layer.bias.requires_grad = True
+
         self.generate_cam_extractor()
 
         self.criterion = nn.BCEWithLogitsLoss()

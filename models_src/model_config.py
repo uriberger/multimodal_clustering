@@ -6,6 +6,7 @@ class ModelConfig:
     def __init__(self,
                  visual_model='resnet18',
                  pretrained_visual_base_model=True,
+                 freeze_parameters=False,
                  object_threshold=0.5,
                  visual_learning_rate=1e-4,
                  text_model='counts_generative',
@@ -16,6 +17,7 @@ class ModelConfig:
                  ):
         self.visual_model = visual_model
         self.pretrained_visual_base_model = pretrained_visual_base_model
+        self.freeze_parameters = freeze_parameters
         self.object_threshold = object_threshold
         self.visual_learning_rate = visual_learning_rate
         self.text_model = text_model
