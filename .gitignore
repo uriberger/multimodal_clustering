@@ -4,11 +4,17 @@ embedding_models
 venv
 __pycache__
 
+
 *.mdl
 2021-*
+image_embedder_*
 
 # Old files that I don't want on git
 fast_rcnn_model.py
 fast_rcnn_prepare_data.py
 train_fast_rcnn_from_golden.py
 train_rcnn_from_golden.py
+
+# Large downloaded files I don't want on git
+Concreteness_ratings_Brysbaert_et_al_BRM.txt
+word2vec-google-news-300.gz
