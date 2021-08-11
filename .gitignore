@@ -1,5 +1,6 @@
 models
 cached_dataset_files
+embedding_models
 venv
 __pycache__
 
