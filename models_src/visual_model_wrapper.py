@@ -15,7 +15,7 @@ class VisualModelWrapper(UnimodalModelWrapper):
         super().__init__(device, config, model_dir, indent, name)
         self.model.to(self.device)
 
-        if config.freeze_parameters:
+        if config is not None and config.freeze_parameters:
             for param in self.model.parameters():
                 param.requires_grad = False
             last_layer = list(self.model.modules())[-1]
