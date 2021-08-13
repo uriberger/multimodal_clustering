@@ -1,5 +1,5 @@
 import torch
-from utils.general_utils import  for_loop_with_reports
+from utils.general_utils import for_loop_with_reports
 from utils.text_utils import prepare_data
 from executors.executor import Executor
 import abc
