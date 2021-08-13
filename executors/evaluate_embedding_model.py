@@ -1,7 +1,6 @@
 import torch
 import torch.utils.data as data
 import torch.nn as nn
-import torchvision.models as models
 from utils.general_utils import generate_dataset, for_loop_with_reports
 from utils.visual_utils import generate_visual_model
 from metrics import VisualUnknownClassesClassificationMetric
