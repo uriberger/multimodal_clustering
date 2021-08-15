@@ -1,6 +1,6 @@
 import torch.utils.data as data
 import torchvision.transforms as transforms
-from models_src.model_config import wanted_image_size
+from utils.visual_utils import tensor_trans
 
 
 class MatrixBasedImageDataset(data.Dataset):
@@ -21,12 +21,6 @@ class MatrixBasedImageDataset(data.Dataset):
         std_tuple = (0.26862954, 0.26130258, 0.27577711)
         self.normalizer = transforms.Normalize(mean_tuple, std_tuple)
 
-        n_px = wanted_image_size[0]
-        self.transforms = transforms.Compose([
-            transforms.Resize(n_px, interpolation=transforms.InterpolationMode.BICUBIC),
-            transforms.CenterCrop(n_px)
-        ])
-
     def __len__(self):
         return len(self.label_list)
 
@@ -34,10 +28,7 @@ class MatrixBasedImageDataset(data.Dataset):
         image_tensor = self.image_tensor[idx].float()
         label = self.label_list[idx]
 
-        image_tensor = self.transforms(image_tensor)
-
-        if self.config.normalize_images:
-            image_tensor = self.normalizer(image_tensor)
+        image_tensor = tensor_trans(image_tensor)
 
         sample = {
             'image': image_tensor,

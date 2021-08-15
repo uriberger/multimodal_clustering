@@ -1,7 +1,3 @@
-wanted_image_size = (224, 224)
-models_dir = 'models'
-
-
 class ModelConfig:
     def __init__(self,
                  visual_model='resnet18',

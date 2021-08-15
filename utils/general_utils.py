@@ -5,6 +5,8 @@ import time
 write_to_log = False
 log_fp = None
 
+models_dir = 'models'
+
 
 def set_write_to_log(output_dir):
     global write_to_log

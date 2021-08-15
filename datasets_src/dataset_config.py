@@ -5,7 +5,6 @@ class DatasetConfig(LoggableObject):
     def __init__(self,
                  indent,
                  simplified_captions=False,
-                 normalize_images=False,
                  include_gt_classes=False,
                  include_gt_bboxes=False,
                  use_transformations=False,
@@ -19,7 +18,6 @@ class DatasetConfig(LoggableObject):
             assert False
 
         self.simplified_captions = simplified_captions
-        self.normalize_images = normalize_images
         self.include_gt_classes = include_gt_classes
         self.include_gt_bboxes = include_gt_bboxes
         self.use_transformations = use_transformations

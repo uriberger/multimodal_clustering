@@ -1,5 +1,5 @@
 import torch
-from models_src.model_config import models_dir
+from utils.general_utils import models_dir
 from loggable_object import LoggableObject
 
 

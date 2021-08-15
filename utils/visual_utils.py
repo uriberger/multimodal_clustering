@@ -2,12 +2,24 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as transforms
-from models_src.model_config import wanted_image_size
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 from torchvision.transforms.functional import to_pil_image
 from torchcam.utils import overlay_mask
 import numpy as np
+
+
+wanted_image_size = (224, 224)
+mean_tuple = (0.48145466, 0.4578275, 0.40821073)
+std_tuple = (0.26862954, 0.26130258, 0.27577711)
+pil_image_trans = transforms.Compose([
+    transforms.Resize(wanted_image_size),
+    transforms.ToTensor(),
+    transforms.Normalize(mean_tuple, std_tuple)
+])
+tensor_trans = transforms.Compose([
+    transforms.Resize(wanted_image_size)
+])
 
 
 def calc_ious(box1, box2):
@@ -205,16 +217,6 @@ def predict_bbox(activation_map, segment_threshold_rate=0.5):
     bbox = [left_edge, upper_edge, right_edge, lower_edge]
 
     return bbox
-
-
-def get_image_tensor_from_id(image_id, get_image_path_func, slice_str):
-    image_obj = Image.open(get_image_path_func(image_id, slice_str))
-    orig_image_size = image_obj.size
-    image_obj = image_obj.resize(wanted_image_size)
-    image_tensor = torch.from_numpy(np.array(image_obj)) / 255
-    image_tensor = image_tensor.permute(2, 0, 1).float()
-
-    return image_tensor, orig_image_size
 
 
 def get_resized_gt_bboxes(gt_bboxes, orig_image_size):

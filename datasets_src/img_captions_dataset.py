@@ -1,7 +1,8 @@
 import torch.utils.data as data
 import torch
 import torchvision.transforms as transforms
-from utils.visual_utils import get_image_tensor_from_id
+from utils.visual_utils import pil_image_trans
+from PIL import Image
 
 
 class ImageCaptionDataset(data.Dataset):
@@ -50,11 +51,9 @@ class ImageCaptionDataset(data.Dataset):
 
         # Image
         image_id = item_caption_data['image_id']
-        image_tensor, orig_image_size = get_image_tensor_from_id(image_id,
-                                                                 self.get_image_path_func,
-                                                                 self.config.slice_str)
-        if self.config.normalize_images:
-            image_tensor = self.normalizer(image_tensor)
+        image_obj = Image.open(self.get_image_path_func,(image_id, self.config.slice_str))
+        orig_image_size = image_obj.size
+        image_tensor = pil_image_trans(image_obj)
 
         # Caption
         if self.config.simplified_captions:

@@ -4,9 +4,8 @@ import os
 import torch
 from PIL import ImageDraw
 from torchvision.transforms.functional import to_pil_image
-from models_src.model_config import wanted_image_size
 import matplotlib.pyplot as plt
-from utils.visual_utils import get_resized_gt_bboxes
+from utils.visual_utils import get_resized_gt_bboxes, wanted_image_size
 
 
 class BboxDemonstrator(Demonstrator):
