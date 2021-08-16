@@ -1,4 +1,4 @@
-from executors.demonstrator import Demonstrator
+from executors.demonstrators.demonstrator import Demonstrator
 from models_src.visual_model_wrapper import VisualModelWrapper
 import os
 import torch

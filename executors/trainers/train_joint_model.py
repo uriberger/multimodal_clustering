@@ -1,6 +1,6 @@
 from utils.text_utils import prepare_data
 import torch
-from executors.trainer import Trainer
+from executors.trainers.trainer import Trainer
 from models_src.visual_model_wrapper import VisualModelWrapper
 from models_src.textual_model_wrapper import generate_textual_model
 

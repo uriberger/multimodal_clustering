@@ -1,5 +1,5 @@
 from utils.text_utils import prepare_data
-from executors.trainer import Trainer
+from executors.trainers.trainer import Trainer
 from models_src.multimodal_model_wrapper import MultimodalModelWrapper
 
 

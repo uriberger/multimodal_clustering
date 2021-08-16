@@ -1,4 +1,4 @@
-from executors.demonstrator import Demonstrator
+from executors.demonstrators.demonstrator import Demonstrator
 from models_src.visual_model_wrapper import VisualModelWrapper
 from models_src.textual_model_wrapper import generate_textual_model
 import os

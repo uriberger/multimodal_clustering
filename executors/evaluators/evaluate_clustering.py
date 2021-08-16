@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from utils.visual_utils import generate_visual_model
-from executors.evaluate_embedding_model import EmbeddingModelEvaluator
+from executors.evaluators.evaluate_embedding_model import EmbeddingModelEvaluator
 from models_src.visual_model_wrapper import VisualModelWrapper
 from models_src.simclr import SimCLRModel, clean_state_dict
 import clip

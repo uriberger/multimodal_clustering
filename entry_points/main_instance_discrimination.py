@@ -8,7 +8,7 @@ from dataset_builders.coco import Coco
 from datasets_src.dataset_config import DatasetConfig
 
 # Executors
-from executors.train_instance_discrimination import InstanceDiscriminationTrainer
+from executors.trainers.train_instance_discrimination import InstanceDiscriminationTrainer
 
 
 timestamp = str(datetime.now()).replace(' ', '_')

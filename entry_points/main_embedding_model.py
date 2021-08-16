@@ -3,19 +3,18 @@ from utils.general_utils import log_print, set_write_to_log
 from datetime import datetime
 
 # Dataset
-from dataset_builders.cifar import Cifar10, Cifar100
-from dataset_builders.imagenet import ImageNet
+from dataset_builders.cifar import Cifar10
 from datasets_src.dataset_config import DatasetConfig
 
 # Executors
-from executors.evaluate_clustering import ClusteringEvaluator
-from executors.evaluate_prompt import PromptEvaluator
+from executors.evaluators.evaluate_clustering import ClusteringEvaluator
+from executors.evaluators.evaluate_prompt import PromptEvaluator
 
 
 timestamp = str(datetime.now()).replace(' ', '_')
 function_name = 'main_embedding_model'
 os.mkdir(timestamp)
-# set_write_to_log(timestamp)
+set_write_to_log(timestamp)
 
 log_print(function_name, 0, 'Generating dataset_files...')
 cifar10_dir = os.path.join('..', 'datasets', 'cifar-10')

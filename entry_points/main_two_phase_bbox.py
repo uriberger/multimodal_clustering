@@ -8,13 +8,13 @@ from dataset_builders.coco import Coco
 from datasets_src.dataset_config import DatasetConfig
 
 # Executors
-from executors.two_phase_evaluator import TwoPhaseBBoxEvaluator
+from executors.evaluators.two_phase_evaluator import TwoPhaseBBoxEvaluator
 
 
 timestamp = str(datetime.now()).replace(' ', '_')
 function_name = 'main_two_phase_bbox'
 os.mkdir(timestamp)
-# set_write_to_log(timestamp)
+set_write_to_log(timestamp)
 
 log_print(function_name, 0, 'Generating dataset_files...')
 coco_dir = os.path.join('..', 'datasets', 'COCO')

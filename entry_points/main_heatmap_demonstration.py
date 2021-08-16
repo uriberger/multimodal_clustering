@@ -1,6 +1,6 @@
 # General
 import os
-from utils.general_utils import log_print
+from utils.general_utils import log_print, set_write_to_log
 from datetime import datetime
 
 # Dataset
@@ -8,13 +8,13 @@ from dataset_builders.coco import Coco
 from datasets_src.dataset_config import DatasetConfig
 
 # Executors
-from executors.heatmap_demonstrator import HeatmapDemonstrator
+from executors.demonstrators.heatmap_demonstrator import HeatmapDemonstrator
 
 
 timestamp = str(datetime.now()).replace(' ', '_')
 function_name = 'main_heatmap_demonstration'
 os.mkdir(timestamp)
-# set_write_to_log(timestamp)
+set_write_to_log(timestamp)
 
 model_name = 'resnet_non_pretrained_noun_th_0.06_conc_num_65'
 

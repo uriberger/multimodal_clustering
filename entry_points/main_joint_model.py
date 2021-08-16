@@ -11,8 +11,8 @@ from datasets_src.dataset_config import DatasetConfig
 from models_src.model_config import ModelConfig
 
 # Executors
-from executors.train_joint_model import JointModelTrainer
-from executors.evaluate_joint_model import JointModelEvaluator
+from executors.trainers.train_joint_model import JointModelTrainer
+from executors.evaluators.evaluate_joint_model import JointModelEvaluator
 
 
 timestamp = str(datetime.now()).replace(' ', '_')
@@ -23,9 +23,11 @@ set_write_to_log(timestamp)
 model_config = ModelConfig(
     visual_model='resnet18',
     text_model='counts_generative',
-    concept_num=65,
-    noun_threshold=0.016,
-    pretrained_visual_base_model=True
+    concept_num=100,
+    object_threshold=0.215,
+    noun_threshold=0.03,
+    pretrained_visual_base_model=False,
+    freeze_parameters=False
 )
 log_print(function_name, 0, str(model_config))
 
@@ -46,5 +48,6 @@ log_print(function_name, 0, 'Finished training model')
 
 log_print(function_name, 0, 'Testing models...')
 evaluator = JointModelEvaluator(timestamp, test_set, gt_classes_file_path, gt_bboxes_file_path, 1)
+# evaluator = JointModelEvaluator(timestamp, test_set, gt_classes_file_path, gt_bboxes_file_path, 1, 'resnet_non_pretrained_noun_th_0.03_conc_num_100')
 evaluator.evaluate()
 log_print(function_name, 0, 'Finished testing model')

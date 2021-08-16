@@ -11,14 +11,14 @@ from datasets_src.dataset_config import DatasetConfig
 from models_src.model_config import ModelConfig
 
 # Executors
-from executors.train_multimodal_model import MultimodalModelTrainer
+from executors.trainers.train_multimodal_model import MultimodalModelTrainer
 # from executors.evaluate_joint_model import JointModelEvaluator
 
 
 timestamp = str(datetime.now()).replace(' ', '_')
 function_name = 'main_joint_model'
 os.mkdir(timestamp)
-# set_write_to_log(timestamp)
+set_write_to_log(timestamp)
 
 model_config = ModelConfig(
     visual_model='resnet18',

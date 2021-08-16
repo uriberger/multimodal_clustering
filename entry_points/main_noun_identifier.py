@@ -1,6 +1,6 @@
 # General
 import os
-from utils.general_utils import log_print
+from utils.general_utils import log_print, set_write_to_log
 from datetime import datetime
 
 # Dataset
@@ -11,14 +11,14 @@ from datasets_src.dataset_config import DatasetConfig
 from models_src.model_config import ModelConfig
 
 # Executors
-from executors.train_noun_identifier_from_golden import NounIdentifierTrainer
-from executors.evaluate_noun_identifier_from_golden import NounIdentifierEvaluator
+from executors.trainers.train_noun_identifier_from_golden import NounIdentifierTrainer
+from executors.evaluators.evaluate_noun_identifier_from_golden import NounIdentifierEvaluator
 
 
 timestamp = str(datetime.now()).replace(' ', '_')
 function_name = 'main_noun_identifier'
 os.mkdir(timestamp)
-# set_write_to_log(timestamp)
+set_write_to_log(timestamp)
 
 log_print(function_name, 0, 'Generating dataset_files...')
 coco_dir = os.path.join('..', 'datasets', 'COCO')

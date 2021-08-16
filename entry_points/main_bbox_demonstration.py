@@ -1,6 +1,6 @@
 # General
 import os
-from utils.general_utils import log_print
+from utils.general_utils import log_print, set_write_to_log
 from datetime import datetime
 
 # Dataset
@@ -8,13 +8,13 @@ from dataset_builders.coco import Coco
 from datasets_src.dataset_config import DatasetConfig
 
 # Executors
-from executors.bbox_demonstrator import BboxDemonstrator
+from executors.demonstrators.bbox_demonstrator import BboxDemonstrator
 
 
 timestamp = str(datetime.now()).replace(' ', '_')
 function_name = 'main_bbox_demonstration'
 os.mkdir(timestamp)
-# set_write_to_log(timestamp)
+set_write_to_log(timestamp)
 
 model_name = 'resnet_pretrained_noun_th_0.06_conc_num_65'
 

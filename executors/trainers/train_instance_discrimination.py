@@ -1,5 +1,5 @@
 import torch
-from executors.trainer import Trainer
+from executors.trainers.trainer import Trainer
 import torchvision.models as models
 import torch.nn as nn
 

@@ -1,4 +1,4 @@
-from executors.evaluator import Evaluator
+from executors.evaluators.evaluator import Evaluator
 from dataset_builders.concreteness_dataset import generate_concreteness_dataset
 import os
 import spacy
