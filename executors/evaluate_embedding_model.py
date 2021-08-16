@@ -1,19 +1,15 @@
 import torch
 import torch.utils.data as data
-import torch.nn as nn
 from utils.general_utils import generate_dataset, for_loop_with_reports
-from utils.visual_utils import generate_visual_model
+from utils.visual_utils import wanted_image_size
 from metrics import VisualUnknownClassesClassificationMetric
 from executors.executor import Executor
 import os
-from models_src.visual_model_wrapper import VisualModelWrapper
-from models_src.model_config import wanted_image_size
-import clip
-from sklearn.cluster import KMeans
+import abc
 
 
 class EmbeddingModelEvaluator(Executor):
-    """ Evaluate an embedding pre-trained model for self-supervised clustering. """
+    """ Evaluate an embedding pre-trained model for self-supervised classification. """
     root_dir = 'embedding_models'
     if not os.path.isdir(root_dir):
         os.mkdir(root_dir)
@@ -22,7 +18,7 @@ class EmbeddingModelEvaluator(Executor):
     embedding_mat_dir = os.path.join(root_dir, 'embedding_mat')
 
     def __init__(self, test_set, class_mapping, model_type, model_str, indent):
-        super().__init__(indent)
+        super(EmbeddingModelEvaluator, self).__init__(indent)
 
         self.test_set = test_set
 
@@ -33,6 +29,7 @@ class EmbeddingModelEvaluator(Executor):
 
         self.metric = VisualUnknownClassesClassificationMetric(None)
         model_name = model_type + '_' + model_str
+        model_name = model_name.replace('/', '-')
         self.embedding_mat_path = os.path.join(self.embedding_mat_dir, model_name)
         if not os.path.isdir(self.embedding_mat_dir):
             os.mkdir(self.embedding_mat_dir)
@@ -45,33 +42,18 @@ class EmbeddingModelEvaluator(Executor):
         self.embedding_mat = torch.zeros(len(self.test_set), embedding_dim)
         self.batch_size = 100
 
-        # Get gt classes num
-        self.gt_classes_num = len(class_mapping)
+        self.class_mapping = class_mapping
 
+    @abc.abstractmethod
     def generate_embedding_model(self, model_type, model_str):
-        if model_type == 'pretrained':
-            model = generate_visual_model(model_str, 1, True)
-            model.fc = nn.Identity()
-            inference_func = model.forward
-        elif model_type == 'clip':
-            model, _ = clip.load(model_str, self.device)
-            inference_func = model.encode_image
-        elif model_type == 'unimodal':
-            model_wrapper = VisualModelWrapper(self.device, None, 'models/visual', self.indent + 1, model_str)
-            model = model_wrapper.model
-            model.fc = nn.Identity()
-            inference_func = model.forward
-        else:
-            # No such model type
-            assert False
-        return model, inference_func
+        return
 
     def evaluate(self):
         # Create embedding matrix
-        embedding_mat = generate_dataset(self.embedding_mat_path, self.create_embedding_mat)
+        self.embedding_mat = generate_dataset(self.embedding_mat_path, self.create_embedding_mat)
 
-        # Cluster
-        self.cluster(embedding_mat)
+        # Calculate things we need before we can estimate the metric
+        self.metric_pre_calculations()
 
         # Calculate the metric
         self.metric_on_dataset()
@@ -105,15 +87,9 @@ class EmbeddingModelEvaluator(Executor):
         output = self.inference_func(image_tensor)
         self.embedding_mat[batch_start:batch_end, :] = output
 
-    def cluster(self, embedding_mat, soft_clustering=False):
-        if soft_clustering:
-            return
-        else:
-            kmeans = KMeans(n_clusters=self.gt_classes_num).fit(embedding_mat.detach().numpy())
-            cluster_list = list(kmeans.labels_)
-            self.image_id_to_label = {
-                x: cluster_list[x] for x in range(len(cluster_list))
-            }
+    @abc.abstractmethod
+    def metric_pre_calculations(self):
+        return
 
     def metric_on_dataset(self):
         self.log_print('Running metric on entire dataset')
@@ -121,14 +97,17 @@ class EmbeddingModelEvaluator(Executor):
         checkpoint_len = 10000
         self.increment_indent()
         for_loop_with_reports(dataloader, len(dataloader), checkpoint_len,
-                              self.metrics_on_batch, self.progress_report)
+                              self.metric_on_batch, self.progress_report)
         self.decrement_indent()
 
-    def metrics_on_batch(self, index, sampled_batch, print_info):
-        # Load data
+    def metric_on_batch(self, index, sampled_batch, print_info):
         label = sampled_batch['label'].to(self.device)
-        predicted_class = self.image_id_to_label[index]
+        predicted_class = self.predict_class(index)
         self.metric.document([[predicted_class]], [[label.item()]])
+
+    @abc.abstractmethod
+    def predict_class(self, sample_ind):
+        return
 
     def report_results(self):
         self.log_print('Results:')
