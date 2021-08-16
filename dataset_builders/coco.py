@@ -4,10 +4,10 @@ import json
 from utils.general_utils import generate_dataset, for_loop_with_reports
 from utils.visual_utils import get_image_shape_from_id
 from utils.text_utils import multiple_word_string
-from dataset_builders.dataset_builder import DatasetBuilder
+from dataset_builders.img_caption_dataset_builder import ImageCaptionDatasetBuilder
 
 
-class Coco(DatasetBuilder):
+class Coco(ImageCaptionDatasetBuilder):
 
     def __init__(self, root_dir_path, indent):
         super(Coco, self).__init__('coco', indent)

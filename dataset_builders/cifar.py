@@ -4,10 +4,10 @@ import torch
 from utils.general_utils import generate_dataset
 import pickle
 from datasets_src.matrix_based_img_dataset import MatrixBasedImageDataset
-from loggable_object import LoggableObject
+from dataset_builders.dataset_builder import DatasetBuilder
 
 
-class Cifar(LoggableObject):
+class Cifar(DatasetBuilder):
 
     def __init__(self, root_dir_path, data_dir_name, name, dict_key_mapping, indent):
         super(Cifar, self).__init__(indent)
