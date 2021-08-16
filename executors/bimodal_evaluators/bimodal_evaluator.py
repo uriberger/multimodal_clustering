@@ -5,7 +5,7 @@ from executors.executor import Executor
 import abc
 
 
-class Evaluator(Executor):
+class BimodalEvaluator(Executor):
 
     def __init__(self, test_set, gt_classes_file, gt_bboxes_file, indent):
         super().__init__(indent)

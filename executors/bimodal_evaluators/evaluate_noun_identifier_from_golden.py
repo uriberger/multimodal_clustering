@@ -1,11 +1,11 @@
-from evaluator import Evaluator
+from bimodal_evaluator import BimodalEvaluator
 import torch.utils.data as data
 import metrics
 import os
 from models_src.textual_model_wrapper import TextualCountsModelWrapper
 
 
-class NounIdentifierEvaluator(Evaluator):
+class NounIdentifierEvaluator(BimodalEvaluator):
 
     def __init__(self, timestamp, test_set, gt_classes_file_path, gt_bboxes_file_path,
                  config, indent, model_name=None):

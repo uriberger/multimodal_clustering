@@ -1,11 +1,11 @@
-from evaluator import Evaluator
+from bimodal_evaluator import BimodalEvaluator
 import torch.utils.data as data
 import metrics
 import os
 from models_src.visual_model_wrapper import VisualModelWrapper
 
 
-class CamEvaluator(Evaluator):
+class CamEvaluator(BimodalEvaluator):
 
     def __init__(self, timestamp, test_set, config,
                  generate_bboxes_dataset_func, indent,

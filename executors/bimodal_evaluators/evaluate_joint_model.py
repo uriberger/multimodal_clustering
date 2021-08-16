@@ -1,4 +1,4 @@
-from executors.evaluators.evaluator import Evaluator
+from executors.bimodal_evaluators.bimodal_evaluator import BimodalEvaluator
 from dataset_builders.concreteness_dataset import generate_concreteness_dataset
 import os
 import spacy
@@ -8,7 +8,7 @@ import torch.utils.data as data
 import metrics
 
 
-class JointModelEvaluator(Evaluator):
+class JointModelEvaluator(BimodalEvaluator):
 
     def __init__(self, timestamp, test_set, gt_classes_file_path, gt_bboxes_file_path, indent, model_name=None):
         super().__init__(test_set, gt_classes_file_path, gt_bboxes_file_path, indent)
