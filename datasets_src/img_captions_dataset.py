@@ -51,7 +51,7 @@ class ImageCaptionDataset(data.Dataset):
 
         # Image
         image_id = item_caption_data['image_id']
-        image_obj = Image.open(self.get_image_path_func,(image_id, self.config.slice_str))
+        image_obj = Image.open(self.get_image_path_func(image_id, self.config.slice_str))
         orig_image_size = image_obj.size
         image_tensor = pil_image_trans(image_obj)
 
