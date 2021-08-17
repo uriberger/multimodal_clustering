@@ -1,8 +1,9 @@
-from executors.evaluators.evaluate_embedding_model import EmbeddingModelEvaluator
+from executors.embedding_evaluators.evaluate_embedding_model import EmbeddingModelEvaluator
 from models_src.visual_model_wrapper import VisualModelWrapper
 from models_src.textual_model_wrapper import TextualCountsModelWrapper
 import clip
 import torch
+import abc
 
 
 def clip_similarity_func(image_features, text_features):
@@ -63,15 +64,14 @@ class PromptEvaluator(EmbeddingModelEvaluator):
 
     def metric_pre_calculations(self):
         prompts = {x: 'a photo of a ' + self.class_mapping[x] for x in self.class_mapping.keys()}
+        # prompts = {x: self.class_mapping[x] for x in self.class_mapping.keys()}
         self.class_ind_to_embedding = {x: self.text_inference_func(prompts[x])
                                        for x in self.class_mapping.keys()}
 
-    def predict_class(self, sample_ind):
-        sample_embedding = self.embedding_mat[sample_ind, :]
-        similarity_with_classes = {
-            x: self.im_txt_similarity_func(sample_embedding, self.class_ind_to_embedding[x])
-            for x in self.class_mapping.keys()
-        }
-        predicted_class = max(similarity_with_classes, key=similarity_with_classes.get)
+    @abc.abstractmethod
+    def get_labels_from_batch(self, batch):
+        return
 
-        return predicted_class
+    @abc.abstractmethod
+    def predict_classes(self, sample_ind):
+        return

@@ -12,7 +12,7 @@ from models_src.model_config import ModelConfig
 
 # Executors
 from executors.trainers.train_joint_model import JointModelTrainer
-from executors.evaluators.evaluate_joint_model import JointModelEvaluator
+from executors.bimodal_evaluators.evaluate_joint_model import JointModelEvaluator
 
 
 timestamp = str(datetime.now()).replace(' ', '_')

@@ -101,12 +101,16 @@ class EmbeddingModelEvaluator(Executor):
         self.decrement_indent()
 
     def metric_on_batch(self, index, sampled_batch, print_info):
-        label = sampled_batch['label'].to(self.device)
-        predicted_class = self.predict_class(index)
-        self.metric.document([[predicted_class]], [[label.item()]])
+        labels = self.get_labels_from_batch(sampled_batch)
+        predicted_classes = self.predict_classes(index)
+        self.metric.document([predicted_classes], [labels])
 
     @abc.abstractmethod
-    def predict_class(self, sample_ind):
+    def get_labels_from_batch(self, batch):
+        return
+
+    @abc.abstractmethod
+    def predict_classes(self, sample_ind):
         return
 
     def report_results(self):
