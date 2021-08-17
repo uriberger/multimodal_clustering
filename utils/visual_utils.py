@@ -274,6 +274,9 @@ def generate_visual_model(model_str, concept_num, pretrained_base):
     elif model_str == 'resnet34':
         model = models.resnet34(pretrained=pretrained_base)
         model.fc = nn.Linear(512, concept_num)
+    elif model_str == 'resnet50':
+        model = models.resnet50(pretrained=pretrained_base)
+        model.fc = nn.Linear(2048, concept_num)
     elif model_str == 'resnet101':
         model = models.resnet101(pretrained=pretrained_base)
         model.fc = nn.Linear(2048, concept_num)
