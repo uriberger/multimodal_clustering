@@ -40,6 +40,8 @@ class VisualModelWrapper(UnimodalModelWrapper):
             self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
         elif self.config.visual_model == 'resnet34':
             self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
+        elif self.config.visual_model == 'resnet50':
+            self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
         elif self.config.visual_model == 'resnet101':
             self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
         elif self.config.visual_model == 'vgg16':
