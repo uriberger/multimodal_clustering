@@ -27,7 +27,6 @@ class EmbeddingModelEvaluator(Executor):
         self.inference_func = inference_func
         self.model.eval()
 
-        self.metric = VisualUnknownClassesClassificationMetric(None)
         model_name = model_type + '_' + model_str
         model_name = model_name.replace('/', '-')
         self.embedding_mat_path = os.path.join(self.embedding_mat_dir, model_name)

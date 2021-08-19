@@ -4,6 +4,7 @@ from models_src.textual_model_wrapper import TextualCountsModelWrapper
 import clip
 import torch
 import abc
+from metrics import VisualKnownClassesClassificationMetric
 
 
 def clip_similarity_func(image_features, text_features):
@@ -25,6 +26,9 @@ class PromptEvaluator(EmbeddingModelEvaluator):
     class names c1, c2, ..., cn, embed the image and the following n sentences: 'an
     image of a ci' for i in {1,...,n}, and classify the image to be the class with which
     the dot product is the highest. """
+    def __init__(self, test_set, class_mapping, model_type, model_str, indent):
+        super(PromptEvaluator, self).__init__(test_set, class_mapping, model_type, model_str, indent)
+        self.metric = VisualKnownClassesClassificationMetric(None, len(class_mapping))
 
     def predict_visual_concepts_from_input(self, inputs):
         self.model.inference(inputs)

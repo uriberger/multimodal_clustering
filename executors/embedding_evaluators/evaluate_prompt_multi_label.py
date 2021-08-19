@@ -1,10 +1,16 @@
 from executors.embedding_evaluators.evaluate_prompt import PromptEvaluator
 from torch.utils import data
 from utils.general_utils import for_loop_with_reports
+import torch
 
 
 class PromptMultiLabelEvaluator(PromptEvaluator):
     """ Evaluate prompt for multi-label datasets. """
+
+    def __init__(self, test_set, class_mapping, gt_classes_file, model_type, model_str, indent):
+        super(PromptMultiLabelEvaluator, self).__init__(test_set, class_mapping, model_type, model_str, indent)
+
+        self.gt_classes_data = torch.load(gt_classes_file)
 
     def metric_pre_calculations(self):
         """ In multi-label prompt evaluation, there's a heavy pre-calculation stage.
@@ -31,9 +37,9 @@ class PromptMultiLabelEvaluator(PromptEvaluator):
 
         self.choose_similarity_threshold()
 
-    def collect_similarity_and_gt(self, index, sampled_batch, print_info):
+    def collect_similarity_and_gt(self, sample_ind, sampled_batch, print_info):
         # Calculate similarity with each text class
-        sample_embedding = self.embedding_mat[index, :]
+        sample_embedding = self.embedding_mat[sample_ind, :]
         similarity_with_classes = {
             x: self.im_txt_similarity_func(sample_embedding, self.class_ind_to_embedding[x])
             for x in self.class_mapping.keys()
@@ -46,7 +52,7 @@ class PromptMultiLabelEvaluator(PromptEvaluator):
         gt_classes = self.gt_classes_data[image_id]
 
         for class_ind, similarity in similarity_with_classes.items():
-            self.similarity_gt_list.append((similarity, class_ind in gt_classes, index))
+            self.similarity_gt_list.append((similarity.item(), class_ind in gt_classes, sample_ind, class_ind))
 
     def choose_similarity_threshold(self):
         """ The similarity gt list is a sorted list of pairs of similarity of the embedding of the image in a specific
@@ -61,10 +67,10 @@ class PromptMultiLabelEvaluator(PromptEvaluator):
         similarities_num = len(self.similarity_gt_list)
 
         # First traverse
-        gt_non_gt_count_before_element = self.collect_gt_non_gt_relative_to_element(0, similarities_num, 1)
+        gt_non_gt_count_before_element = self.collect_gt_non_gt_relative_to_element(False)
 
         # Second traverse
-        gt_non_gt_count_after_element = self.collect_gt_non_gt_relative_to_element(similarities_num, 0, -1)
+        gt_non_gt_count_after_element = self.collect_gt_non_gt_relative_to_element(True)
 
         # F1 calculation for each threshold
         best_F1 = -1
@@ -75,49 +81,85 @@ class PromptMultiLabelEvaluator(PromptEvaluator):
             tp = gt_non_gt_count_after_element[i][0]
             fp = gt_non_gt_count_after_element[i][1]
             fn = gt_non_gt_count_before_element[i][0]
-            f1 = tp/(tp + 0.5*(fp + fn))  # This is the definition of F1
+            f1 = tp / (tp + 0.5 * (fp + fn))  # This is the definition of F1
             if f1 > best_F1:
                 best_threshold = self.similarity_gt_list[i][0]
                 best_F1 = f1
 
-        self.similarity_threshold = best_threshold
+        self.sample_ind_to_predicted_classes = {}
+        for similarity, _, sample_ind, class_ind in self.similarity_gt_list:
+            if sample_ind not in self.sample_ind_to_predicted_classes:
+                self.sample_ind_to_predicted_classes[sample_ind] = []
+            if similarity >= best_threshold:
+                self.sample_ind_to_predicted_classes[sample_ind].append(class_ind)
 
-    def collect_gt_non_gt_relative_to_element(self, ind_start, ind_end, step):
+    def collect_gt_non_gt_relative_to_element(self, reverse):
+        similarities_num = len(self.similarity_gt_list)
+        if reverse:
+            ind_start = similarities_num - 1
+            ind_end = -1
+            step = -1
+        else:
+            ind_start = 0
+            ind_end = similarities_num
+            step = 1
+
         gt_non_gt_count_relative_to_element = []
         gt_count_so_far = 0
         non_gt_count_so_far = 0
         gt_count_from_last_different_similarity = 0
         non_gt_count_from_last_different_similarity = 0
-        prev_similarity = None
+        cur_similarity_count = 0
         for i in range(ind_start, ind_end, step):
-            similarity, is_gt, _ = self.similarity_gt_list[i]
-            if step > 0: # In this case we're going in the normal direction, so add the new count to the end of the list
-                gt_non_gt_count_relative_to_element.append((gt_count_so_far, non_gt_count_so_far))
-            else: # We're going from the end to the beginning, so add the new count to the beginning of the list
-                gt_non_gt_count_relative_to_element.insert((gt_count_so_far, non_gt_count_so_far), 0)
+            similarity, is_gt, _, _ = self.similarity_gt_list[i]
+            if i == ind_start:
+                prev_similarity = similarity
+
+            if similarity != prev_similarity:
+                if not reverse:
+                    ''' In case we're going in normal direction, we don't want to include the gt and non-gt count of the
+                     current similarity in the list. Also, we'll add the new count at the end of the list. '''
+                    gt_non_gt_count_relative_to_element = \
+                        gt_non_gt_count_relative_to_element + \
+                        [(gt_count_so_far, non_gt_count_so_far)] * cur_similarity_count
+                gt_count_so_far += gt_count_from_last_different_similarity
+                non_gt_count_so_far += non_gt_count_from_last_different_similarity
+                if reverse:
+                    ''' In case we're going in reverse order, we want to include the gt and non-gt count of the current
+                    similarity in the list. Also, we'll add the new count at the beginning of the list. '''
+                    gt_non_gt_count_relative_to_element = \
+                        [(gt_count_so_far, non_gt_count_so_far)] * cur_similarity_count + \
+                        gt_non_gt_count_relative_to_element
+                gt_count_from_last_different_similarity = 0
+                non_gt_count_from_last_different_similarity = 0
+                prev_similarity = similarity
+                cur_similarity_count = 0
+
             if is_gt:
                 gt_count_from_last_different_similarity += 1
             else:
                 non_gt_count_from_last_different_similarity += 1
-            if similarity != prev_similarity:
-                gt_count_so_far += gt_count_from_last_different_similarity
-                non_gt_count_so_far += non_gt_count_from_last_different_similarity
-                gt_count_from_last_different_similarity = 0
-                non_gt_count_from_last_different_similarity = 0
-                prev_similarity = similarity
+
+            cur_similarity_count += 1
+
+        # In the end, we'll have the last batch of equal similarities, need to update for those as well
+        if not reverse:
+            gt_non_gt_count_relative_to_element = \
+                gt_non_gt_count_relative_to_element + \
+                [(gt_count_so_far, non_gt_count_so_far)] * cur_similarity_count
+        else:
+            gt_count_so_far += gt_count_from_last_different_similarity
+            non_gt_count_so_far += non_gt_count_from_last_different_similarity
+            gt_non_gt_count_relative_to_element = \
+                [(gt_count_so_far, non_gt_count_so_far)] * cur_similarity_count + \
+                gt_non_gt_count_relative_to_element
 
         return gt_non_gt_count_relative_to_element
 
-
     def predict_classes(self, sample_ind):
-        sample_embedding = self.embedding_mat[sample_ind, :]
-        similarity_with_classes = {
-            x: self.im_txt_similarity_func(sample_embedding, self.class_ind_to_embedding[x])
-            for x in self.class_mapping.keys()
-        }
-        predicted_class = max(similarity_with_classes, key=similarity_with_classes.get)
-
-        return [predicted_class]
+        return self.sample_ind_to_predicted_classes[sample_ind]
 
     def get_labels_from_batch(self, batch):
-        return [batch['label'].to(self.device).item()]
+        image_id = batch['image_id'][0].item()
+        gt_classes = self.gt_classes_data[image_id]
+        return gt_classes

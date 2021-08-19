@@ -275,18 +275,26 @@ class VisualClassificationMetric(SensitivitySpecificityMetric):
         super(VisualClassificationMetric, self).__init__(visual_model, None)
 
     def evaluate_classification(self, predicted_classes, gt_classes):
-        predicted_num = len(predicted_classes)
-        cur_tp = len(list(set(predicted_classes).intersection(gt_classes)))
-        cur_fp = predicted_num - cur_tp
+        batch_size = len(predicted_classes)
+        for sample_ind in range(batch_size):
+            sample_predicted = predicted_classes[sample_ind]
+            sample_gt = gt_classes[sample_ind]
+            predicted_num = len(sample_predicted)
+            cur_tp = len(list(set(sample_predicted).intersection(sample_gt)))
+            cur_fp = predicted_num - cur_tp
 
-        non_predicted_num = self.class_num - predicted_num
-        cur_fn = len(list(set(gt_classes).difference(predicted_classes)))
-        cur_tn = non_predicted_num - cur_fn
+            non_predicted_num = self.class_num - predicted_num
+            cur_fn = len(list(set(sample_gt).difference(sample_predicted)))
+            cur_tn = non_predicted_num - cur_fn
 
-        self.tp += cur_tp
-        self.fp += cur_fp
-        self.fn += cur_fn
-        self.tn += cur_tn
+            self.tp += cur_tp
+            self.fp += cur_fp
+            self.fn += cur_fn
+            self.tn += cur_tn
+
+    @abc.abstractmethod
+    def document(self, predicted_classes, gt_classes):
+        return
 
 
 class VisualKnownClassesClassificationMetric(VisualClassificationMetric):
@@ -303,7 +311,9 @@ class VisualKnownClassesClassificationMetric(VisualClassificationMetric):
 
         gt_classes_str = visual_metadata['gt_classes']
         gt_classes = [int(x) for x in gt_classes_str.split(',')]
+        self.document(predicted_classes, gt_classes)
 
+    def document(self, predicted_classes, gt_classes):
         self.evaluate_classification(predicted_classes, gt_classes)
 
     def report(self):
@@ -367,7 +377,7 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
         # Finally, go over the results again and use the mapping to evaluate
         for predicted_concepts, gt_classes in self.predicted_clusters_gt_classes:
             predicted_classes = [concept_to_class[x] for x in predicted_concepts]
-            self.evaluate_classification(predicted_classes, gt_classes)
+            self.evaluate_classification([predicted_classes], [gt_classes])
 
         # Apart from the classification results, we want to measure the intersection of our classes and the gt classes
         intersections = {x: concept_class_co_occur[x][concept_to_class[x]] for x in concept_list}

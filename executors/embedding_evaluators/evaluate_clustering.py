@@ -7,10 +7,15 @@ from models_src.simclr import SimCLRModel, clean_state_dict
 import clip
 from sklearn.cluster import KMeans
 import os
+from metrics import VisualUnknownClassesClassificationMetric
 
 
 class ClusteringEvaluator(EmbeddingModelEvaluator):
     """ Evaluate an embedding pre-trained model for self-supervised classification using clustering. """
+
+    def __init__(self, test_set, class_mapping, model_type, model_str, indent):
+        super(ClusteringEvaluator, self).__init__(test_set, class_mapping, model_type, model_str, indent)
+        self.metric = VisualUnknownClassesClassificationMetric(None)
 
     def generate_embedding_model(self, model_type, model_str):
         if model_type == 'pretrained':
