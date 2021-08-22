@@ -289,7 +289,7 @@ def generate_visual_model(model_str, concept_num, pretrained_base):
         model = models.googlenet(pretrained=pretrained_base, aux_logits=False)
         model.fc = nn.Linear(1024, concept_num)
     elif model_str == 'simclr':
-        model = SimCLRModel(output_projection=False)
+        model = SimCLRModel(output_encoder=False)
         model.g = nn.Linear(2048, concept_num)
 
     return model

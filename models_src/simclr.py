@@ -5,7 +5,7 @@ from torchvision.models.resnet import resnet50
 
 
 class SimCLRModel(nn.Module):
-    def __init__(self, output_projection=True, feature_dim=128):
+    def __init__(self, output_encoder=True, feature_dim=128):
         super(SimCLRModel, self).__init__()
 
         self.f = []
@@ -21,16 +21,16 @@ class SimCLRModel(nn.Module):
         self.g = nn.Sequential(nn.Linear(2048, 512, bias=False), nn.BatchNorm1d(512),
                                nn.ReLU(inplace=True), nn.Linear(512, feature_dim, bias=True))
 
-        self.output_projection = output_projection
+        self.output_encoder = output_encoder
 
     def forward(self, x):
         x = self.f(x)
         feature = torch.flatten(x, start_dim=1)
-        if self.output_projection:
-            out = self.g(feature)
+        out = self.g(feature)
+        if self.output_encoder:
             return F.normalize(feature, dim=-1), F.normalize(out, dim=-1)
         else:
-            return F.normalize(feature, dim=-1)
+            return F.normalize(out, dim=-1)
 
 
 def clean_state_dict(messy_state_dict):
