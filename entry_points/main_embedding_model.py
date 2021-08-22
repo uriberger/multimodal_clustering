@@ -9,9 +9,10 @@ from dataset_builders.coco import Coco
 from datasets_src.dataset_config import DatasetConfig
 
 # Executors
-from executors.embedding_evaluators.evaluate_clustering import ClusteringEvaluator
-from executors.embedding_evaluators.evaluate_prompt_single_label import PromptSingleLabelEvaluator
-from executors.embedding_evaluators.evaluate_prompt_multi_label import PromptMultiLabelEvaluator
+from executors.embedding_evaluators.clustering_evaluators.evaluate_clustering_single_label import ClusteringSingleLabelEvaluator
+from executors.embedding_evaluators.clustering_evaluators.evaluate_clustering_multi_label import ClusteringMultiLabelEvaluator
+from executors.embedding_evaluators.prompt_evaluators.evaluate_prompt_single_label import PromptSingleLabelEvaluator
+from executors.embedding_evaluators.prompt_evaluators.evaluate_prompt_multi_label import PromptMultiLabelEvaluator
 
 
 timestamp = str(datetime.now()).replace(' ', '_')
@@ -20,7 +21,7 @@ os.mkdir(timestamp)
 set_write_to_log(timestamp)
 
 log_print(function_name, 0, 'Generating dataset_files...')
-dataset_name = 'ImageNet'
+dataset_name = 'COCO'
 root_dir = os.path.join('..', 'datasets', dataset_name)
 if dataset_name == 'cifar-10':
     dataset_generator = Cifar10(root_dir, 1)
@@ -60,12 +61,14 @@ log_print(function_name, 0, 'Testing...')
 # model_str = 'resnet_non_pretrained_noun_th_0.03_conc_num_100'
 model_type = 'simclr'
 model_str = 'simclr_resnet_15_epochs'
-# model_str = 'simclr_15_epochs'
 
 evaluate_method = 'clustering'
 # evaluate_method = 'prompt'
 if evaluate_method == 'clustering':
-    evaluator = ClusteringEvaluator(test_set, class_mapping, model_type, model_str, 1)
+    if multi_label:
+        evaluator = ClusteringMultiLabelEvaluator(test_set, class_mapping, gt_classes_file, model_type, model_str, 1)
+    else:
+        evaluator = ClusteringSingleLabelEvaluator(test_set, class_mapping, model_type, model_str, 1)
 elif evaluate_method == 'prompt':
     if multi_label:
         evaluator = PromptMultiLabelEvaluator(test_set, class_mapping, gt_classes_file, model_type, model_str, 1)
