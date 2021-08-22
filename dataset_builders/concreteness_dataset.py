@@ -23,8 +23,17 @@ class ConcretenessCollector(LoggableObject):
             return
 
         split_line = line.split()
-        word = split_line[0]
-        concreteness = float(split_line[2])
+        for token in split_line:
+            if len(token) > 0 and not token[0].isalpha():
+                break
+        bigram_indicator = int(token)
+        if bigram_indicator == 1:
+            word = split_line[0] + ' ' + split_line[1]
+            concreteness = float(split_line[3])
+        else:
+            word = split_line[0]
+            concreteness = float(split_line[2])
+
         self.concreteness_dataset[word] = concreteness
 
     def file_progress_report(self, index, dataset_size, time_from_prev):
