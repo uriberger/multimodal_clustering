@@ -1,4 +1,4 @@
-from executors.embedding_evaluators.clustering_evaluators.evaluate_clustering import ClusteringEvaluator
+from executors.visual_evaluators.clustering_evaluators.evaluate_clustering import ClusteringEvaluator
 from utils.multi_label_threshold_finder import generate_sample_to_predicted_classes_mapping
 import torch
 import numpy as np
@@ -20,17 +20,21 @@ class ClusteringMultiLabelEvaluator(ClusteringEvaluator):
         """ In multi-label clustering evaluation, there's a heavy pre-calculation stage.
         First, we need to create fuzzy clusters: to map samples to probability of being included in our made-up
         clusters. """
+        self.log_print('Creating fuzzy clusters...')
         self.create_fuzzy_clusters()
 
         """ Next, we need to map each cluster to which class it represents (many to one mapping). We'll use the
         following heuristic: for each cluster, we'll choose the class with the highest sum of probabilities (over all
         samples). """
+        self.log_print('Creating cluster to class mapping...')
         self.map_cluster_to_class()
 
         """ Next, we calculate the probability over classes for each sample. """
+        self.log_print('Collecting prob and gt...')
         self.collect_prob_and_gt()
 
         """ Finally, we need to choose the probability threshold using the multi-label threshold utility. """
+        self.log_print('Generating sample to  predicted class mapping...')
         self.sample_to_predicted_classes = generate_sample_to_predicted_classes_mapping(self.prob_gt_list)
 
     def create_fuzzy_clusters(self):

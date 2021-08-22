@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from utils.visual_utils import generate_visual_model
-from executors.embedding_evaluators.evaluate_embedding_model import EmbeddingModelEvaluator
+from executors.visual_evaluators.evaluate_visual_model import VisualModelEvaluator
 from models_src.visual_model_wrapper import VisualModelWrapper
 from models_src.simclr import SimCLRModel, clean_state_dict
 import clip
@@ -10,14 +10,14 @@ import os
 from metrics import VisualUnknownClassesClassificationMetric
 
 
-class ClusteringEvaluator(EmbeddingModelEvaluator):
+class ClusteringEvaluator(VisualModelEvaluator):
     """ Evaluate an embedding pre-trained model for self-supervised classification using clustering. """
 
     def __init__(self, test_set, class_mapping, model_type, model_str, indent):
         super(ClusteringEvaluator, self).__init__(test_set, class_mapping, model_type, model_str, indent)
         self.metric = VisualUnknownClassesClassificationMetric(None)
 
-    def generate_embedding_model(self, model_type, model_str):
+    def generate_model(self, model_type, model_str):
         if model_type == 'pretrained':
             model = generate_visual_model(model_str, 1, True)
             model.fc = nn.Identity()
@@ -35,7 +35,7 @@ class ClusteringEvaluator(EmbeddingModelEvaluator):
             To solve this, we need the following line: '''
             torch.set_flush_denormal(True)
             model = SimCLRModel()
-            model_path = os.path.join(EmbeddingModelEvaluator.root_dir, model_str)
+            model_path = os.path.join(VisualModelEvaluator.root_dir, model_str)
             model.load_state_dict(clean_state_dict(torch.load(model_path, map_location=self.device)))
             inference_func = lambda x: model.forward(x)[0]
         else:

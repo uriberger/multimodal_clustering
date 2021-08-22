@@ -110,6 +110,9 @@ class VisualModelWrapper(UnimodalModelWrapper):
 
         return concepts_indicator
 
+    def predict_classes(self):
+        return torch.max(self.cached_output, dim=1).indices.tolist()
+
     def predict_activation_maps(self, image_tensor):
         # We need to run inference on each image apart, because the cam extraction demands a single hooked tensor
         old_cached_output = self.cached_output  # We don't want to change the cache

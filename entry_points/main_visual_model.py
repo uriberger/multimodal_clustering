@@ -9,10 +9,11 @@ from dataset_builders.coco import Coco
 from datasets_src.dataset_config import DatasetConfig
 
 # Executors
-from executors.embedding_evaluators.clustering_evaluators.evaluate_clustering_single_label import ClusteringSingleLabelEvaluator
-from executors.embedding_evaluators.clustering_evaluators.evaluate_clustering_multi_label import ClusteringMultiLabelEvaluator
-from executors.embedding_evaluators.prompt_evaluators.evaluate_prompt_single_label import PromptSingleLabelEvaluator
-from executors.embedding_evaluators.prompt_evaluators.evaluate_prompt_multi_label import PromptMultiLabelEvaluator
+from executors.visual_evaluators.clustering_evaluators.evaluate_clustering_single_label import ClusteringSingleLabelEvaluator
+from executors.visual_evaluators.clustering_evaluators.evaluate_clustering_multi_label import ClusteringMultiLabelEvaluator
+from executors.visual_evaluators.prompt_evaluators.evaluate_prompt_single_label import PromptSingleLabelEvaluator
+from executors.visual_evaluators.prompt_evaluators.evaluate_prompt_multi_label import PromptMultiLabelEvaluator
+from executors.visual_evaluators.evaluate_concepts_visual_model import VisualConceptEvaluator
 
 
 timestamp = str(datetime.now()).replace(' ', '_')
@@ -21,7 +22,7 @@ os.mkdir(timestamp)
 set_write_to_log(timestamp)
 
 log_print(function_name, 0, 'Generating dataset_files...')
-dataset_name = 'COCO'
+dataset_name = 'cifar-10'
 root_dir = os.path.join('..', 'datasets', dataset_name)
 if dataset_name == 'cifar-10':
     dataset_generator = Cifar10(root_dir, 1)
@@ -57,13 +58,14 @@ log_print(function_name, 0, 'Testing...')
 # model_type = 'clip'
 # model_str = 'RN50'
 # model_str = 'ViT-B/32'
-# model_type = 'unimodal'
-# model_str = 'resnet_non_pretrained_noun_th_0.03_conc_num_100'
-model_type = 'simclr'
-model_str = 'simclr_resnet_15_epochs'
+model_type = 'unimodal'
+model_str = 'resnet_50_non_pretrained_noun_th_0.06_conc_num_65'
+# model_type = 'simclr'
+# model_str = 'simclr_resnet_15_epochs'
 
-evaluate_method = 'clustering'
+# evaluate_method = 'clustering'
 # evaluate_method = 'prompt'
+evaluate_method = 'concepts'
 if evaluate_method == 'clustering':
     if multi_label:
         evaluator = ClusteringMultiLabelEvaluator(test_set, class_mapping, gt_classes_file, model_type, model_str, 1)
@@ -74,6 +76,10 @@ elif evaluate_method == 'prompt':
         evaluator = PromptMultiLabelEvaluator(test_set, class_mapping, gt_classes_file, model_type, model_str, 1)
     else:
         evaluator = PromptSingleLabelEvaluator(test_set, class_mapping, model_type, model_str, 1)
+elif evaluate_method == 'concepts':
+    if not multi_label:
+        gt_classes_file = None
+    evaluator = VisualConceptEvaluator(test_set, class_mapping, gt_classes_file, model_str, 1)
 
 evaluator.evaluate()
 log_print(function_name, 0, 'Finished testing')

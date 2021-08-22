@@ -1,4 +1,4 @@
-from executors.embedding_evaluators.evaluate_embedding_model import EmbeddingModelEvaluator
+from executors.visual_evaluators.evaluate_visual_model import VisualModelEvaluator
 from models_src.visual_model_wrapper import VisualModelWrapper
 from models_src.textual_model_wrapper import TextualCountsModelWrapper
 import clip
@@ -20,7 +20,7 @@ def concept_similarity_func(image_concepts, text_concepts):
     return concept_num - hamming_dist
 
 
-class PromptEvaluator(EmbeddingModelEvaluator):
+class PromptEvaluator(VisualModelEvaluator):
     """ Evaluate a multi-modal model, that embeds images and text, by classifying
     using the method described in Radford et al.: given an image and a set of possible
     class names c1, c2, ..., cn, embed the image and the following n sentences: 'an
@@ -42,7 +42,7 @@ class PromptEvaluator(EmbeddingModelEvaluator):
         model_inputs = clip.tokenize(inputs)
         return self.model.encode_text(model_inputs)
 
-    def generate_embedding_model(self, model_type, model_str):
+    def generate_model(self, model_type, model_str):
         if model_type == 'clip':
             model, _ = clip.load(model_str, self.device)
             inference_func = model.encode_image

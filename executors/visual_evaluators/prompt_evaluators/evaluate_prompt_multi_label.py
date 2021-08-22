@@ -1,4 +1,4 @@
-from executors.embedding_evaluators.prompt_evaluators.evaluate_prompt import PromptEvaluator
+from executors.visual_evaluators.prompt_evaluators.evaluate_prompt import PromptEvaluator
 from torch.utils import data
 from utils.general_utils import for_loop_with_reports
 from utils.multi_label_threshold_finder import generate_sample_to_predicted_classes_mapping

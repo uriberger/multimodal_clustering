@@ -7,9 +7,9 @@ import os
 import abc
 
 
-class EmbeddingModelEvaluator(Executor):
-    """ Evaluate an embedding pre-trained model for self-supervised classification. """
-    root_dir = 'embedding_models'
+class VisualModelEvaluator(Executor):
+    """ Evaluate a visual pre-trained model for self-supervised classification. """
+    root_dir = 'visual_models_evaluation'
     if not os.path.isdir(root_dir):
         os.mkdir(root_dir)
 
@@ -17,11 +17,11 @@ class EmbeddingModelEvaluator(Executor):
     embedding_mat_dir = os.path.join(root_dir, 'embedding_mat')
 
     def __init__(self, test_set, class_mapping, model_type, model_str, indent):
-        super(EmbeddingModelEvaluator, self).__init__(indent)
+        super(VisualModelEvaluator, self).__init__(indent)
 
         self.test_set = test_set
 
-        model, inference_func = self.generate_embedding_model(model_type, model_str)
+        model, inference_func = self.generate_model(model_type, model_str)
         self.model = model
         self.inference_func = inference_func
         self.model.eval()
@@ -43,7 +43,7 @@ class EmbeddingModelEvaluator(Executor):
         self.class_mapping = class_mapping
 
     @abc.abstractmethod
-    def generate_embedding_model(self, model_type, model_str):
+    def generate_model(self, model_type, model_str):
         return
 
     def evaluate(self):

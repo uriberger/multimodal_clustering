@@ -1,6 +1,6 @@
 models
 cached_dataset_files
-embedding_models
+visual_models_evaluation
 venv
 __pycache__
 

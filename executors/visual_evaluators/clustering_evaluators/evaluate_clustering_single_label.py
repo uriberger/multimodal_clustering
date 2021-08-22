@@ -1,5 +1,5 @@
 import torch
-from executors.embedding_evaluators.clustering_evaluators.evaluate_clustering import ClusteringEvaluator
+from executors.visual_evaluators.clustering_evaluators.evaluate_clustering import ClusteringEvaluator
 
 
 class ClusteringSingleLabelEvaluator(ClusteringEvaluator):
