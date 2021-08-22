@@ -4,6 +4,7 @@ import torch.nn as nn
 from torchcam.cams import CAM
 from utils.visual_utils import predict_bbox, plot_heatmap, generate_visual_model
 import matplotlib.pyplot as plt
+from models_src.simclr import clean_state_dict, adjust_projection_in_state_dict
 
 
 class VisualModelWrapper(UnimodalModelWrapper):
@@ -15,12 +16,19 @@ class VisualModelWrapper(UnimodalModelWrapper):
         super().__init__(device, config, model_dir, indent, name)
         self.model.to(self.device)
 
-        if config is not None and config.freeze_parameters:
-            for param in self.model.parameters():
-                param.requires_grad = False
-            last_layer = list(self.model.modules())[-1]
-            last_layer.weight.requires_grad = True
-            last_layer.bias.requires_grad = True
+        if config is not None:
+            if config.visual_model_path:
+                orig_state_dict = torch.load(config.visual_model_path, map_location=self.device)
+                cleaned_state_dict = clean_state_dict(orig_state_dict)
+                adjusted_state_dict = adjust_projection_in_state_dict(cleaned_state_dict, config.concept_num)
+                self.model.load_state_dict(adjusted_state_dict)
+
+            if config.freeze_parameters:
+                for param in self.model.parameters():
+                    param.requires_grad = False
+                last_layer = list(self.model.modules())[-1]
+                last_layer.weight.requires_grad = True
+                last_layer.bias.requires_grad = True
 
         self.generate_cam_extractor()
 
@@ -48,6 +56,8 @@ class VisualModelWrapper(UnimodalModelWrapper):
             self.cam_extractor = CAM(self.model, target_layer='features', fc_layer='classifier')
         elif self.config.visual_model == 'googlenet':
             self.cam_extractor = CAM(self.model, target_layer='inception5b', fc_layer='fc')
+        elif self.config.visual_model == 'simclr':
+            self.cam_extractor = CAM(self.model, target_layer='f.7', fc_layer='g')
 
     def training_step(self, inputs, labels):
         loss = self.criterion(self.cached_output, labels)

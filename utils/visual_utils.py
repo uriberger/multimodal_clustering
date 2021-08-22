@@ -2,10 +2,11 @@ import torch
 import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as transforms
+from torchvision.transforms.functional import to_pil_image
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
-from torchvision.transforms.functional import to_pil_image
 from torchcam.utils import overlay_mask
+from models_src.simclr import SimCLRModel
 import numpy as np
 
 
@@ -287,5 +288,8 @@ def generate_visual_model(model_str, concept_num, pretrained_base):
     elif model_str == 'googlenet':
         model = models.googlenet(pretrained=pretrained_base, aux_logits=False)
         model.fc = nn.Linear(1024, concept_num)
+    elif model_str == 'simclr':
+        model = SimCLRModel(output_projection=False)
+        model.g = nn.Linear(2048, concept_num)
 
     return model
