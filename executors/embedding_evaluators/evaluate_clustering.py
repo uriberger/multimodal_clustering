@@ -16,6 +16,7 @@ class ClusteringEvaluator(EmbeddingModelEvaluator):
     def __init__(self, test_set, class_mapping, model_type, model_str, indent):
         super(ClusteringEvaluator, self).__init__(test_set, class_mapping, model_type, model_str, indent)
         self.metric = VisualUnknownClassesClassificationMetric(None)
+        self.multi_label = False
 
     def generate_embedding_model(self, model_type, model_str):
         if model_type == 'pretrained':
@@ -31,6 +32,9 @@ class ClusteringEvaluator(EmbeddingModelEvaluator):
             model.fc = nn.Identity()
             inference_func = model.forward
         elif model_type == 'simclr':
+            ''' We have some issue of unnormalized weights for the simclr model, which causes it to be very slow.
+            To solve this, we need the following line: '''
+            torch.set_flush_denormal(True)
             model = SimCLRModel()
             model_path = os.path.join(EmbeddingModelEvaluator.root_dir, model_str)
             model.load_state_dict(clean_state_dict(torch.load(model_path, map_location=self.device)))
@@ -57,5 +61,5 @@ class ClusteringEvaluator(EmbeddingModelEvaluator):
                 x: cluster_list[x] for x in range(len(cluster_list))
             }
 
-    def predict_class(self, sample_ind):
-        return self.image_id_to_label[sample_ind]
+    def predict_classes(self, sample_ind):
+        return [self.image_id_to_label[sample_ind]]

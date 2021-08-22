@@ -2,7 +2,6 @@ import torch
 import torch.utils.data as data
 from utils.general_utils import generate_dataset, for_loop_with_reports
 from utils.visual_utils import wanted_image_size
-from metrics import VisualUnknownClassesClassificationMetric
 from executors.executor import Executor
 import os
 import abc
@@ -104,9 +103,13 @@ class EmbeddingModelEvaluator(Executor):
         predicted_classes = self.predict_classes(index)
         self.metric.document([predicted_classes], [labels])
 
-    @abc.abstractmethod
     def get_labels_from_batch(self, batch):
-        return
+        if self.multi_label:
+            image_id = batch['image_id'][0].item()
+            gt_classes = self.gt_classes_data[image_id]
+            return gt_classes
+        else:
+            return [batch['label'].to(self.device).item()]
 
     @abc.abstractmethod
     def predict_classes(self, sample_ind):

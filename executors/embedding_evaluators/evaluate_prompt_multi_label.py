@@ -11,6 +11,7 @@ class PromptMultiLabelEvaluator(PromptEvaluator):
         super(PromptMultiLabelEvaluator, self).__init__(test_set, class_mapping, model_type, model_str, indent)
 
         self.gt_classes_data = torch.load(gt_classes_file)
+        self.multi_label = True
 
     def metric_pre_calculations(self):
         """ In multi-label prompt evaluation, there's a heavy pre-calculation stage.
@@ -158,8 +159,3 @@ class PromptMultiLabelEvaluator(PromptEvaluator):
 
     def predict_classes(self, sample_ind):
         return self.sample_ind_to_predicted_classes[sample_ind]
-
-    def get_labels_from_batch(self, batch):
-        image_id = batch['image_id'][0].item()
-        gt_classes = self.gt_classes_data[image_id]
-        return gt_classes

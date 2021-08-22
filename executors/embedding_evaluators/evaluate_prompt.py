@@ -73,9 +73,5 @@ class PromptEvaluator(EmbeddingModelEvaluator):
                                        for x in self.class_mapping.keys()}
 
     @abc.abstractmethod
-    def get_labels_from_batch(self, batch):
-        return
-
-    @abc.abstractmethod
     def predict_classes(self, sample_ind):
         return
