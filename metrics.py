@@ -226,7 +226,7 @@ class ConcretenessPredictionMetric(Metric):
         mae_for_conc = self.absolute_error_sum_for_conc_words / self.conc_words_count
         mae_for_non_conc = self.absolute_error_sum_for_non_conc_words / self.non_conc_words_count
         gt_and_predictions = np.array([self.gt_list, self.prediction_list])
-        pearson_corr = np.corrcoef(gt_and_predictions)
+        pearson_corr = np.corrcoef(gt_and_predictions)[0, 1]
         return 'Concreteness mean absolute error: ' + str(mae) + \
                ' overall, ' + str(mae_for_conc) + ' for concrete-predicted words, ' + \
                str(mae_for_non_conc) + ' for non-concrete-predicted words, ' + \
