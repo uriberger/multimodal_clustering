@@ -9,4 +9,4 @@ numpy~=1.20.1
 clip~=1.0
 scikit-learn~=0.24.1
 tqdm~=4.57.0
-fuzzy-c-means
+scikit-fuzzy~=0.4.2
