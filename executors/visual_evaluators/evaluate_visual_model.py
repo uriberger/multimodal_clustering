@@ -33,7 +33,7 @@ class VisualModelEvaluator(Executor):
             os.mkdir(self.embedding_mat_dir)
 
         # Get embedding dimension
-        dummy_image = torch.zeros(1, 3, wanted_image_size[0], wanted_image_size[1])
+        dummy_image = torch.zeros(1, 3, wanted_image_size[0], wanted_image_size[1]).to(self.device)
         dummy_output = self.inference_func(dummy_image)
         embedding_dim = dummy_output.shape[1]
 
