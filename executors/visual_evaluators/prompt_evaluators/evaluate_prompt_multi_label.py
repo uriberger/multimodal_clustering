@@ -27,6 +27,7 @@ class PromptMultiLabelEvaluator(PromptEvaluator):
         considered negative, so gt instances will be counted as false negative, and non-gt instanced will be counted
         as true negative (and equivalently for similarities larger than x with true positive and false positive).
         This will enable us to choose the best threshold for the F1 score. '''
+        self.log_print('Collecting similarity and gt list...')
         self.similarity_gt_list = []
         dataloader = data.DataLoader(self.test_set, batch_size=1, shuffle=False)
         checkpoint_len = 10000
@@ -35,6 +36,7 @@ class PromptMultiLabelEvaluator(PromptEvaluator):
                               self.collect_similarity_and_gt, self.progress_report)
         self.decrement_indent()
 
+        self.log_print('Generating sample to prediced class mapping...')
         self.sample_to_predicted_classes = generate_sample_to_predicted_classes_mapping(self.similarity_gt_list)
 
     def collect_similarity_and_gt(self, sample_ind, sampled_batch, print_info):

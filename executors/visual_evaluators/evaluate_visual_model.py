@@ -47,12 +47,15 @@ class VisualModelEvaluator(Executor):
         return
 
     def evaluate(self):
+        self.log_print('Creating embedding matrix...')
         # Create embedding matrix
         self.embedding_mat = generate_dataset(self.embedding_mat_path, self.create_embedding_mat)
 
+        self.log_print('Metric pre-calculations...')
         # Calculate things we need before we can estimate the metric
         self.metric_pre_calculations()
 
+        self.log_print('Running metric on dataset...')
         # Calculate the metric
         self.metric_on_dataset()
 
