@@ -2,7 +2,7 @@ from executors.visual_evaluators.clustering_evaluators.evaluate_clustering impor
 from utils.multi_label_threshold_finder import generate_sample_to_predicted_classes_mapping
 import torch
 import numpy as np
-from fcmeans import FCM
+import skfuzzy as fuzz
 import torch.utils.data as data
 
 
@@ -44,9 +44,9 @@ class ClusteringMultiLabelEvaluator(ClusteringEvaluator):
             emb_norm = torch.norm(self.embedding_mat, p=2, dim=1).view(sample_num, 1)
             normalized_embedding_mat = self.embedding_mat / emb_norm
 
-        fcm = FCM(n_clusters=gt_class_num)
-        fcm.fit(normalized_embedding_mat.detach().numpy())
-        self.predicted_cluster_probs = torch.tensor(np.array(fcm.u))
+        _, u, _, _, _, _, _ = fuzz.cluster.cmeans(
+            data=normalized_embedding_mat.detach().numpy().transpose(), c=gt_class_num, m=2, error=0.005, maxiter=1000, init=None)
+        self.predicted_cluster_probs = torch.tensor(np.array(u).transpose())
 
     def map_cluster_to_class(self):
         gt_class_num = len(self.class_mapping)
@@ -92,14 +92,13 @@ class ClusteringMultiLabelEvaluator(ClusteringEvaluator):
             self.class_to_clusters[class_ind].append(cluster_ind)
 
     def collect_prob_and_gt(self):
-        gt_class_num = len(self.class_mapping)
         self.prob_gt_list = []
 
         dataloader = data.DataLoader(self.test_set, batch_size=1, shuffle=False)
         for sample_ind, sampled_batch in enumerate(dataloader):
             predicted_cluster_probs_for_sample = self.predicted_cluster_probs[sample_ind]
             gt_classes = self.get_labels_from_batch(sampled_batch)
-            for class_ind in range(gt_class_num):
+            for class_ind in self.class_mapping.keys():
                 relevant_clusters = self.class_to_clusters[class_ind]
                 class_predicted_prob = torch.sum(predicted_cluster_probs_for_sample[relevant_clusters]).item()
                 if class_predicted_prob > 0:
