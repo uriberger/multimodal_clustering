@@ -24,10 +24,6 @@ class ImageCaptionDataset(data.Dataset):
                  config):
         self.config = config
 
-        mean_tuple = (0.471, 0.4474, 0.4078)
-        std_tuple = (0.2718, 0.2672, 0.2826)
-        self.normalizer = transforms.Normalize(mean_tuple, std_tuple)
-
         self.caption_data = torch.load(caption_file)
 
         if gt_classes_file is None:
