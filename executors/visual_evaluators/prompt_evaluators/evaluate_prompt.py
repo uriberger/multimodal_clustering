@@ -18,9 +18,9 @@ class PromptEvaluator(VisualModelEvaluator):
         self.metric = VisualKnownClassesClassificationMetric(None, len(class_mapping))
 
     def clip_similarity_func(self, image_features, text_features):
-        norm_image_features = image_features / image_features.norm(dim=-1, keepdim=True).to(self.device)
-        norm_text_features = text_features / text_features.norm(dim=-1, keepdim=True).to(self.device)
-
+        norm_image_features = image_features / image_features.norm(dim=-1, keepdim=True)
+        norm_text_features = text_features / text_features.norm(dim=-1, keepdim=True)
+        
         return norm_image_features @ norm_text_features.T
 
     def concept_similarity_func(self, image_concepts, text_concepts):
@@ -38,7 +38,7 @@ class PromptEvaluator(VisualModelEvaluator):
 
     def clip_text_inference(self, inputs):
         model_inputs = clip.tokenize(inputs).to(self.device)
-        return self.model.encode_text(model_inputs)
+        return self.model.encode_text(model_inputs).float()
 
     def generate_model(self, model_type, model_str):
         if model_type == 'clip':
