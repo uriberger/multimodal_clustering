@@ -39,7 +39,7 @@ class PromptEvaluator(VisualModelEvaluator):
         return self.text_model.predict_concept_indicators()
 
     def clip_text_inference(self, inputs):
-        model_inputs = clip.tokenize(inputs)
+        model_inputs = clip.tokenize(inputs).to(self.device)
         return self.model.encode_text(model_inputs)
 
     def generate_model(self, model_type, model_str):
