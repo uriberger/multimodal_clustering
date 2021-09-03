@@ -2,7 +2,7 @@ from models_src.unimodal_model_wrapper import UnimodalModelWrapper
 import torch
 import torch.nn as nn
 from torchcam.cams import CAM
-from utils.visual_utils import predict_bbox, plot_heatmap, generate_visual_model
+from utils.visual_utils import predict_bbox, plot_heatmap, generate_visual_model, unnormalize_trans
 import matplotlib.pyplot as plt
 from models_src.simclr import clean_state_dict, adjust_projection_in_state_dict
 
@@ -160,7 +160,8 @@ class VisualModelWrapper(UnimodalModelWrapper):
                 else:
                     class_str = '[]'
                 activation_map = self.extract_cam(predicted_class)
-                image_obj = plot_heatmap(image_tensor, activation_map, False)
+                unnormalized_image_tensor = unnormalize_trans(image_tensor)
+                image_obj = plot_heatmap(unnormalized_image_tensor, activation_map, False)
                 plt.imshow(image_obj)
                 plt.title('Heatmap for class ' + str(predicted_class) +
                           class_str)

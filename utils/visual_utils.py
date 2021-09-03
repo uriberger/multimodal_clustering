@@ -21,6 +21,9 @@ pil_image_trans = transforms.Compose([
 tensor_trans = transforms.Compose([
     transforms.Resize(wanted_image_size)
 ])
+reverse_mean = ((-1)*mean_tuple[0]/std_tuple[0], (-1)*mean_tuple[1]/std_tuple[1], (-1)*mean_tuple[2]/std_tuple[2])
+reverse_std = (1/std_tuple[0], 1/std_tuple[1], 1/std_tuple[2])
+unnormalize_trans = transforms.Normalize(reverse_mean, reverse_std)
 
 
 def calc_ious(box1, box2):
