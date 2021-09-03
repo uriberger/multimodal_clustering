@@ -37,7 +37,7 @@ class VisualModelEvaluator(Executor):
         dummy_output = self.inference_func(dummy_image)
         embedding_dim = dummy_output.shape[1]
 
-        self.embedding_mat = torch.zeros(len(self.test_set), embedding_dim)
+        self.embedding_mat = torch.zeros(len(self.test_set), embedding_dim).to(self.device)
         self.batch_size = 100
 
         self.class_mapping = class_mapping
@@ -49,7 +49,7 @@ class VisualModelEvaluator(Executor):
     def evaluate(self):
         self.log_print('Creating embedding matrix...')
         # Create embedding matrix
-        self.embedding_mat = generate_dataset(self.embedding_mat_path, self.create_embedding_mat)
+        self.embedding_mat = generate_dataset(self.embedding_mat_path, self.create_embedding_mat).to(self.device)
 
         self.log_print('Metric pre-calculations...')
         # Calculate things we need before we can estimate the metric
