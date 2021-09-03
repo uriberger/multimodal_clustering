@@ -376,26 +376,73 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
                         concept_class_co_occur[predicted_concept][gt_class] = 0
                     concept_class_co_occur[predicted_concept][gt_class] += 1
 
+        ''' Two possible heuristics for choosing concept to class mapping:
+        First, for each concept choose the class with which it co-occurred the most.
+        Second, for each concept choose the class with which it has the largest IoU. '''
+        # First option: for each concept, choose the class with which it co-occurred the most
+        # concept_to_class = {
+        #     x: max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
+        #     if len(concept_class_co_occur[x]) > 0 else None
+        #     for x in concept_list
+        # }
+
+        # # Finally, go over the results again and use the mapping to evaluate
+        # for predicted_concepts, gt_classes in self.predicted_clusters_gt_classes:
+        #     predicted_classes = [concept_to_class[x] for x in predicted_concepts]
+        #     self.evaluate_classification([predicted_classes], [gt_classes])
+        #
+        # # Apart from the classification results, we want to measure the intersection of our classes and the gt classes
+        # intersections = {x: concept_class_co_occur[x][concept_to_class[x]] for x in concept_list}
+        # unions = {x: predicted_concept_count[x] +  # Concept count
+        #           gt_class_count[concept_to_class[x]] -  # Class count
+        #           intersections[x]  # Intersection count
+        #           for x in concept_list}
+        # self.ious = {x: intersections[x] / unions[x] if unions[x] > 0 else 0
+        #              for x in concept_list}
+        #
+        # concept_to_class = {
+        #     x: max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
+        #     if len(concept_class_co_occur[x]) > 0 else None
+        #     for x in concept_list
+        # }
+
+        # Second option: for each concept choose the class with which it has the largest IoU
+        intersections = concept_class_co_occur
+        unions = {
+            concept_ind: {
+                class_ind:
+                    predicted_concept_count[concept_ind] +  # Concept count
+                    gt_class_count[class_ind] -  # Class count
+                    intersections[concept_ind][class_ind]  # Intersection count
+                if class_ind in intersections[concept_ind] else 0
+                for class_ind in gt_class_count.keys()
+            }
+            for concept_ind in concept_list
+        }
+        ious = {
+            concept_ind: {
+                class_ind:
+                    intersections[concept_ind][class_ind] / unions[concept_ind][class_ind]
+                    if unions[concept_ind][class_ind] > 0 else 0
+                for class_ind in gt_class_count.keys()
+            }
+            for concept_ind in concept_list
+        }
+
         # Now, for each concept, choose the class with which it co-occurred the most
         concept_to_class = {
-            x: max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
-            if len(concept_class_co_occur[x]) > 0 else None
+            x: max(ious[x], key=ious[x].get)
+            if len(ious[x]) > 0 else None
             for x in concept_list
         }
+
+        self.ious = {concept_ind: ious[concept_ind][concept_to_class[concept_ind]] for concept_ind in concept_list}
 
         # Finally, go over the results again and use the mapping to evaluate
         for predicted_concepts, gt_classes in self.predicted_clusters_gt_classes:
             predicted_classes = [concept_to_class[x] for x in predicted_concepts]
             self.evaluate_classification([predicted_classes], [gt_classes])
 
-        # Apart from the classification results, we want to measure the intersection of our classes and the gt classes
-        intersections = {x: concept_class_co_occur[x][concept_to_class[x]] for x in concept_list}
-        unions = {x: predicted_concept_count[x] +  # Concept count
-                  gt_class_count[concept_to_class[x]] -  # Class count
-                  intersections[x]  # Intersection count
-                  for x in concept_list}
-        self.ious = {x: intersections[x] / unions[x] if unions[x] > 0 else 0
-                     for x in concept_list}
         self.concept_to_class = concept_to_class
 
     def report(self):
