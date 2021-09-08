@@ -4,6 +4,12 @@ from dataset_builders.dataset_builder import DatasetBuilder
 
 
 class MyImageNet(datasets.ImageNet):
+    def __init__(self, root_dir_path, split, transform):
+        super(MyImageNet, self).__init__(root=root_dir_path, split=split, transform=transform)
+
+        one_word_classes = list(set([x[1] for x in self.class_to_idx.items() if ' ' not in x[0]]))
+        self.samples = [x for x in self.samples if x[1] in one_word_classes]
+
     def __getitem__(self, idx):
         """ Imagenet original implementation returns list of two items: the first is the images, and the second is
         the labels. To fit our other datasets, we want a mapping instead of a list. """
@@ -23,7 +29,9 @@ class ImageNet(DatasetBuilder):
         self.slices = ['train', 'val']
 
     def get_class_mapping(self):
-        class_mapping = {self.imagenet_dataset.class_to_idx[x]: x for x in self.imagenet_dataset.class_to_idx.keys()}
+        imagenet_class_to_idx_one_word = {x[0]: x[1] for x in self.imagenet_dataset.class_to_idx.items()
+                                          if ' ' not in x[0]}
+        class_mapping = {imagenet_class_to_idx_one_word[x]: x for x in imagenet_class_to_idx_one_word.keys()}
 
         return class_mapping
 

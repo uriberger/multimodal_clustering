@@ -40,9 +40,10 @@ class VisualConceptEvaluator(VisualModelEvaluator):
         return visual_model, inference_func
 
     def metric_pre_calculations(self):
-        gt_class_to_concept = {i: self.text_model.model.predict_concept(self.class_mapping[i])[0]
-                               for i in self.class_mapping.keys()
-                               if ' ' not in self.class_mapping[i]}
+        gt_class_to_prediction = {i: self.text_model.model.predict_concept(self.class_mapping[i])
+                                  for i in self.class_mapping.keys()
+                                  if ' ' not in self.class_mapping[i]}
+        gt_class_to_concept = {x[0]: x[1][0] for x in gt_class_to_prediction.items() if x[1] is not None}
         concept_num = self.model.config.concept_num
         concept_to_gt_class = {concept_ind: [] for concept_ind in range(concept_num)}
         for gt_class_ind, concept_ind in gt_class_to_concept.items():
