@@ -13,7 +13,7 @@ from executors.evaluate_textual_model import TextualModelEvaluator
 timestamp = str(datetime.now()).replace(' ', '_')
 function_name = 'main_textual_model'
 os.mkdir(timestamp)
-# set_write_to_log(timestamp)
+set_write_to_log(timestamp)
 
 log_print(function_name, 0, 'Generating dataset_files...')
 dataset_name = 'COCO'
