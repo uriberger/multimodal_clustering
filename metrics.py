@@ -194,14 +194,12 @@ class ConcretenessPredictionMetric(Metric):
         self.prediction_list = []
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        """ We make both predictions and estimations of concreteness; predictions are binary while estimations
-        are numeric. """
         concept_inst_predictions = self.text_model.predict_concept_insantiating_words(text_inputs)
         ''' Concreteness should be between 1 and 5. We have a number between
         0 and 1. So we scale it to the range [1, 5] '''
         concreteness_predictions = [[1 + 4 * x for x in y] for y in concept_inst_predictions]
         
-        concreteness_estimation = self.text_model.estimate_concept_instantiation_per_word(text_inputs)
+        #concreteness_estimation = self.text_model.estimate_concept_instantiation_per_word(text_inputs)
 
         batch_size = len(text_inputs)
         for sample_ind in range(batch_size):
@@ -223,7 +221,7 @@ class ConcretenessPredictionMetric(Metric):
                     self.absolute_error_sum_for_conc_words += absolute_error
 
                 self.gt_list.append(gt_concreteness)
-                self.prediction_list.append(concreteness_estimation[sample_ind][i])
+                self.prediction_list.append(predicted_concreteness)
 
     def report(self):
         mae = self.absolute_error_sum / self.count
