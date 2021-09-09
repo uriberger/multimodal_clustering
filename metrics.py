@@ -190,6 +190,7 @@ class ConcretenessPredictionMetric(Metric):
         self.count = 0
         self.conc_words_count = 0
         self.non_conc_words_count = 0
+        self.visited_tokens = {}
         self.gt_list = []
         self.prediction_list = []
 
@@ -208,6 +209,9 @@ class ConcretenessPredictionMetric(Metric):
                 token = token_list[i]
                 if token not in self.concreteness_dataset:
                     continue
+                if token in self.visited_tokens:
+                    continue
+                self.visited_tokens[token] = True
                 self.count += 1
                 gt_concreteness = self.concreteness_dataset[token]
                 predicted_concreteness = concreteness_predictions[sample_ind][i]
@@ -232,7 +236,8 @@ class ConcretenessPredictionMetric(Metric):
         return 'Concreteness mean absolute error: ' + str(mae) + \
                ' overall, ' + str(mae_for_conc) + ' for concrete-predicted words, ' + \
                str(mae_for_non_conc) + ' for non-concrete-predicted words, ' + \
-               'Pearson correlation coefficient: ' + str(pearson_corr)
+               'Pearson correlation coefficient: ' + str(pearson_corr) + \
+               ', number of tokens: ' + str(self.count)
 
 
 class SentenceImageMatchingMetric(Metric):
