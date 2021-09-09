@@ -53,6 +53,10 @@ class TextualModelWrapper(UnimodalModelWrapper):
     def predict_concepts_for_word(self, word):
         return
 
+    @abc.abstractmethod
+    def estimate_concept_instantiation_per_word(self, sentences):
+        return
+
     def print_info_on_inference(self):
         predictions_num = torch.sum(self.predict_concept_indicators()).item()
         return 'Predicted ' + str(predictions_num) + ' concepts according to text'
@@ -133,6 +137,21 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         concept_conditioned_on_word = self.model.get_concept_conditioned_on_word(word)
         concept_indicators = [1 if x >= self.config.noun_threshold else 0 for x in concept_conditioned_on_word]
         return concept_indicators
+
+    def estimate_concept_instantiation_per_word(self, sentences):
+        res = []
+        for sentence in sentences:
+            res.append([])
+            for token in sentence:
+                prediction_res = self.model.predict_concept(token)
+                if prediction_res is None:
+                    # Never seen this token before
+                    res[-1].append(0)
+                else:
+                    predicted_concept, prob = prediction_res
+                    res[-1].append(prob)
+
+        return res
 
 
 class TextualRNNModelWrapper(TextualModelWrapper):
