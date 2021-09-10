@@ -1,6 +1,8 @@
 import abc
 import os
-from utils.general_utils import generate_dataset
+from utils.general_utils import generate_dataset, for_loop_with_reports
+from utils.text_utils import multiple_word_string
+from utils.visual_utils import get_image_shape_from_id
 import torch
 from datasets_src.img_captions_dataset import ImageCaptionDataset
 from datasets_src.img_dataset import ImageDataset
@@ -15,21 +17,23 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
         self.name = name
 
         self.slices = ['train', 'val']
+        self.cached_dataset_files_dir = 'cached_dataset_files'
         self.file_paths = {}
         for slice_str in self.slices:
             self.file_paths[slice_str] = self.get_filepaths_for_slice(slice_str)
 
     def get_filepaths_for_slice(self, slice_str):
-        cached_dataset_files_dir = os.path.join('cached_dataset_files')
-
         return {
-            'captions': os.path.join(cached_dataset_files_dir, self.name + '_captions_' + slice_str),
-            'gt_classes': os.path.join(cached_dataset_files_dir, self.name + '_gt_classes_' + slice_str),
-            'gt_bboxes': os.path.join(cached_dataset_files_dir, self.name + '_gt_bboxes_' + slice_str)
+            'captions': os.path.join(self.cached_dataset_files_dir, self.name + '_captions_' + slice_str),
+            'gt_classes': os.path.join(self.cached_dataset_files_dir, self.name + '_gt_classes_' + slice_str),
+            'gt_bboxes': os.path.join(self.cached_dataset_files_dir, self.name + '_gt_bboxes_' + slice_str)
         }
 
-    @abc.abstractmethod
     def generate_caption_data(self, slice_str):
+        return generate_dataset(self.file_paths[slice_str]['captions'], self.generate_caption_data_internal, slice_str)
+
+    @abc.abstractmethod
+    def generate_caption_data_internal(self, slice_str):
         return
 
     @abc.abstractmethod
@@ -41,12 +45,106 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
         return
 
     @abc.abstractmethod
+    def generate_gt_classes_bboxes_data(slice_str):
+        return
+
+    @abc.abstractmethod
     def get_class_mapping(self):
         return
 
     @abc.abstractmethod
     def get_image_path(self, image_id, slice_str):
         return
+
+    def find_unwanted_images(self, slice_str):
+        """ We want to filter images that are:
+                - Grayscale
+                - Contain multiple-words-named classes
+                - Without bbox or classes ground-truth data"""
+        caption_dataset = self.generate_caption_data(slice_str)
+        image_ids_by_caption_dataset = list(set([x['image_id'] for x in caption_dataset]))
+
+        img_classes_dataset, img_bboxes_dataset = self.generate_gt_classes_bboxes_data(slice_str)
+        class_mapping = self.get_class_mapping()
+
+        multiple_word_classes = [x for x in class_mapping.keys() if multiple_word_string(class_mapping[x])]
+        self.log_print('Multiple word classes: ' + str([class_mapping[x] for x in multiple_word_classes]))
+
+        self.unwanted_images_info = {
+            'img_classes_dataset': img_classes_dataset,
+            'img_bboxes_dataset': img_bboxes_dataset,
+            'multiple_word_classes': multiple_word_classes,
+            'grayscale_count': 0,
+            'multiple_word_classes_count': 0,
+            'no_class_or_bbox_data_count': 0,
+            'unwanted_image_ids': [],
+            'slice_str': slice_str
+        }
+
+        self.increment_indent()
+        for_loop_with_reports(image_ids_by_caption_dataset, len(image_ids_by_caption_dataset),
+                              10000, self.is_unwanted_image, self.unwanted_images_progress_report)
+        self.decrement_indent()
+
+        self.log_print('Out of ' + str(len(img_classes_dataset)) + ' images:')
+        self.log_print('Found ' + str(self.unwanted_images_info['no_class_or_bbox_data_count']) +
+                       ' without class or bbox data')
+        self.log_print('Found ' + str(self.unwanted_images_info['grayscale_count']) + ' grayscale images')
+        self.log_print('Found ' + str(self.unwanted_images_info['multiple_word_classes_count']) +
+                       ' multiple word classes')
+
+        return self.unwanted_images_info['unwanted_image_ids']
+
+    def is_unwanted_image(self, index, item, print_info):
+        image_id = item
+
+        # No class or bbox data
+        if image_id not in self.unwanted_images_info['img_classes_dataset'] or \
+                image_id not in self.unwanted_images_info['img_bboxes_dataset']:
+            self.unwanted_images_info['unwanted_image_ids'].append(image_id)
+            self.unwanted_images_info['no_class_or_bbox_data_count'] += 1
+            return
+
+        gt_classes = self.unwanted_images_info['img_classes_dataset'][image_id]
+
+        # Grayscale
+        image_shape = get_image_shape_from_id(image_id, self.get_image_path, self.unwanted_images_info['slice_str'])
+        if len(image_shape) == 2:
+            # Grayscale images only has 2 dims
+            self.unwanted_images_info['unwanted_image_ids'].append(image_id)
+            self.unwanted_images_info['grayscale_count'] += 1
+            return
+
+        # Multiple word classes
+        if len(set(gt_classes).intersection(self.unwanted_images_info['multiple_word_classes'])) > 0:
+            self.unwanted_images_info['unwanted_image_ids'].append(image_id)
+            self.unwanted_images_info['multiple_word_classes_count'] += 1
+            return
+
+    def unwanted_images_progress_report(self, index, dataset_size, time_from_prev):
+        self.log_print('Starting image ' + str(index) +
+                       ' out of ' + str(dataset_size) +
+                       ', time from previous checkpoint ' + str(time_from_prev))
+
+    def filter_unwanted_images(self, slice_str):
+        """ We want to filter images that are:
+        - Grayscale
+        - Contain multiple-words-named classes
+        - Without bbox or classes ground-truth data"""
+        unwanted_image_ids = self.find_unwanted_images(slice_str)
+
+        caption_dataset = self.generate_caption_data(slice_str)
+        img_classes_dataset, img_bboxes_dataset = self.generate_gt_classes_bboxes_data(slice_str)
+
+        new_caption_dataset = [x for x in caption_dataset if x['image_id'] not in unwanted_image_ids]
+        new_img_classes_dataset = {x: img_classes_dataset[x] for x in img_classes_dataset.keys()
+                                   if x not in unwanted_image_ids}
+        new_img_bboxes_dataset = {x: img_bboxes_dataset[x] for x in img_bboxes_dataset.keys()
+                                  if x not in unwanted_image_ids}
+
+        torch.save(new_caption_dataset, self.file_paths[slice_str]['captions'])
+        torch.save(new_img_classes_dataset, self.file_paths[slice_str]['gt_classes'])
+        torch.save(new_img_bboxes_dataset, self.file_paths[slice_str]['gt_bboxes'])
 
     def build_dataset(self, config):
         if config.slice_str not in self.slices:
