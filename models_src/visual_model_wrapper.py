@@ -1,6 +1,5 @@
 from models_src.unimodal_model_wrapper import UnimodalModelWrapper
 import torch
-import torch.nn as nn
 from torchcam.cams import CAM
 from utils.visual_utils import predict_bbox, plot_heatmap, generate_visual_model, unnormalize_trans
 import matplotlib.pyplot as plt
@@ -32,12 +31,8 @@ class VisualModelWrapper(UnimodalModelWrapper):
 
         self.generate_cam_extractor()
 
-        self.criterion = nn.BCEWithLogitsLoss()
-
         learning_rate = self.config.visual_learning_rate
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
-
-        self.cached_loss = None
 
     def generate_model(self):
         return generate_visual_model(self.config.visual_model, self.config.concept_num,
@@ -84,9 +79,6 @@ class VisualModelWrapper(UnimodalModelWrapper):
             [len([i for i in range(batch_size) if torch.argmax(output[i, :]).item() == j])
              for j in range(concept_num)])).item()
         return 'Best winner won ' + str(best_winner) + ' times out of ' + str(batch_size)
-
-    def print_info_on_loss(self):
-        return 'Loss: ' + str(self.cached_loss)
 
     def eval(self):
         self.model.eval()

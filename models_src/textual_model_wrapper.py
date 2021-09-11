@@ -72,6 +72,10 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         return generate_textual_counts_model(self.config.text_model, self.config.concept_num)
 
     def training_step(self, inputs, labels):
+        loss = self.criterion(self.cached_output, labels)
+        loss_val = loss.item()
+        self.cached_loss = loss_val
+
         batch_size = len(inputs)
 
         for caption_ind in range(batch_size):
@@ -88,16 +92,14 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         with torch.no_grad():
             output_tensor = torch.zeros(batch_size, self.config.concept_num).to(self.device)
             for caption_ind in range(batch_size):
-                predicted_concept_list = []
                 for token in inputs[caption_ind]:
                     prediction_res = self.model.predict_concept(token)
                     if prediction_res is None:
                         # Never seen this token before
                         continue
                     predicted_concept, prob = prediction_res
-                    if prob >= self.config.noun_threshold:
-                        predicted_concept_list.append(predicted_concept)
-                output_tensor[caption_ind, torch.tensor(predicted_concept_list).long()] = 1.0
+                    if output_tensor[caption_ind, predicted_concept] < prob:
+                        output_tensor[caption_ind, predicted_concept] = prob
 
         self.cached_output = output_tensor
         return output_tensor
@@ -109,7 +111,9 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         self.model = torch.load(self.get_model_path())
 
     def predict_concept_indicators(self):
-        return self.cached_output
+        concept_indicators = torch.zeros(self.cached_output.shape).to(self.device)
+        concept_indicators[self.cached_output > self.config.noun_threshold] = 1
+        return concept_indicators
 
     def predict_concept_insantiating_words(self, sentences):
         res = []
@@ -163,12 +167,8 @@ class TextualRNNModelWrapper(TextualModelWrapper):
         super().__init__(device, config, model_dir, indent, name)
         self.model.to(self.device)
 
-        self.criterion = nn.BCEWithLogitsLoss()
-
         learning_rate = self.config.textual_learning_rate
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
-
-        self.cached_loss = None
 
         # We need to keep a dictionary that will tell us the index of each word in the embedding matrix
         self.word_to_idx = {}

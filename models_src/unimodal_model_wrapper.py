@@ -1,5 +1,6 @@
 import abc
 from models_src.model_wrapper import ModelWrapper
+import torch.nn as nn
 
 
 class UnimodalModelWrapper(ModelWrapper):
@@ -9,6 +10,8 @@ class UnimodalModelWrapper(ModelWrapper):
         saved instances (when config is None). """
         super(UnimodalModelWrapper, self).__init__(device, config, model_dir, indent, name)
         self.cached_output = None
+        self.criterion = nn.BCEWithLogitsLoss()
+        self.cached_loss = None
 
     @abc.abstractmethod
     def generate_model(self):
@@ -40,3 +43,6 @@ class UnimodalModelWrapper(ModelWrapper):
                                    for i in range(concept_indicators.shape[0])]
 
         return predicted_concept_lists
+
+    def print_info_on_loss(self):
+        return 'Loss: ' + str(self.cached_loss)

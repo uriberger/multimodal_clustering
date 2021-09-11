@@ -14,6 +14,8 @@ class Trainer(Executor):
         self.batch_size = batch_size
         self.shuffle = shuffle
 
+        self.loss_history = []
+
     @abc.abstractmethod
     def pre_training(self):
         return

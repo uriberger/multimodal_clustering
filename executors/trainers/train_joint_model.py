@@ -13,6 +13,11 @@ class JointModelTrainer(Trainer):
         self.visual_model = VisualModelWrapper(self.device, config, timestamp, indent+1)
         self.text_model = generate_textual_model(self.device, config, timestamp, indent + 1)
 
+        self.visual_loss_history = []
+        self.text_loss_history = []
+
+        self.prev_checkpoint_batch_ind = 0
+
     def dump_models(self):
         self.visual_model.dump()
         self.text_model.dump()
@@ -54,5 +59,21 @@ class JointModelTrainer(Trainer):
 
         # 2. Use the result to train visual model
         self.visual_model.training_step(image_tensor, labels_by_text)
+
+        # Document loss
+        loss = self.text_model.cached_loss + self.visual_model.cached_loss
+        self.loss_history.append(loss)
+        self.text_loss_history.append(self.text_model.cached_loss)
+        self.visual_loss_history.append(self.visual_model.cached_loss)
         if print_info:
-            self.log_print(self.visual_model.print_info_on_loss())
+            batch_count_from_prev_checkpoint = len(self.loss_history) - self.prev_checkpoint_batch_ind
+            mean_loss = \
+                sum(self.loss_history[self.prev_checkpoint_batch_ind:])/batch_count_from_prev_checkpoint
+            mean_text_loss = \
+                sum(self.text_loss_history[self.prev_checkpoint_batch_ind:]) / batch_count_from_prev_checkpoint
+            mean_visual_loss = \
+                sum(self.visual_loss_history[self.prev_checkpoint_batch_ind:]) / batch_count_from_prev_checkpoint
+            self.log_print('Mean loss: ' + str(mean_loss) +
+                           ', mean text loss: ' + str(mean_text_loss) +
+                           ', mean visual loss: ' + str(mean_visual_loss))
+            self.prev_checkpoint_batch_ind = len(self.loss_history)
