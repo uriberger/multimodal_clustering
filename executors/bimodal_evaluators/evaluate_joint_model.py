@@ -1,5 +1,6 @@
 from executors.bimodal_evaluators.bimodal_evaluator import BimodalEvaluator
 from dataset_builders.concreteness_dataset import generate_concreteness_dataset
+from dataset_builders.category_dataset import generate_category_dataset
 import os
 import spacy
 from models_src.visual_model_wrapper import VisualModelWrapper
@@ -15,6 +16,7 @@ class JointModelEvaluator(BimodalEvaluator):
 
         # Load datasets
         self.concreteness_dataset = generate_concreteness_dataset()
+        self.category_dataset = generate_category_dataset()
 
         # Load models
         if model_name is not None:
@@ -38,6 +40,7 @@ class JointModelEvaluator(BimodalEvaluator):
             metrics.BBoxMetric(self.visual_model),
             metrics.NounIdentificationMetric(self.text_model, self.nlp),
             metrics.ConcretenessPredictionMetric(self.text_model, self.concreteness_dataset),
+            metrics.CategorizationMetric(self.text_model, self.category_dataset),
             metrics.VisualUnknownClassesClassificationMetric(self.visual_model),
             metrics.SentenceImageMatchingMetric(self.visual_model, self.text_model)
         ]

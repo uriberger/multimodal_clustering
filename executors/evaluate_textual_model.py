@@ -4,10 +4,11 @@ from utils.general_utils import for_loop_with_reports, models_dir
 from utils.text_utils import prepare_data
 from executors.executor import Executor
 from dataset_builders.concreteness_dataset import generate_concreteness_dataset
+from dataset_builders.category_dataset import generate_category_dataset
 import os
 import spacy
 from models_src.textual_model_wrapper import TextualCountsModelWrapper
-from metrics import NounIdentificationMetric, ConcretenessPredictionMetric
+from metrics import NounIdentificationMetric, ConcretenessPredictionMetric, CategorizationMetric
 
 
 class TextualModelEvaluator(Executor):
@@ -21,6 +22,7 @@ class TextualModelEvaluator(Executor):
         text_model_dir = os.path.join(models_dir, 'text')
         self.model = TextualCountsModelWrapper(self.device, None, text_model_dir, indent + 1, model_name)
         self.concreteness_dataset = generate_concreteness_dataset()
+        self.category_dataset = generate_category_dataset()
         self.nlp = spacy.load("en_core_web_sm")
 
     def evaluate(self):
@@ -29,7 +31,8 @@ class TextualModelEvaluator(Executor):
         dataloader = data.DataLoader(self.test_set, batch_size=100, shuffle=True)
         metric_list = [
             NounIdentificationMetric(self.model, self.nlp),
-            ConcretenessPredictionMetric(self.model, self.concreteness_dataset)
+            ConcretenessPredictionMetric(self.model, self.concreteness_dataset),
+            CategorizationMetric(self.model, self.category_dataset)
         ]
         self.run_metrics_on_dataset(metric_list, dataloader)
 
