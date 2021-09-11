@@ -1,23 +1,16 @@
 from bimodal_evaluator import BimodalEvaluator
 import torch.utils.data as data
 import metrics
-import os
 from models_src.textual_model_wrapper import TextualCountsModelWrapper
 
 
 class NounIdentifierEvaluator(BimodalEvaluator):
 
-    def __init__(self, timestamp, test_set, gt_classes_file_path, gt_bboxes_file_path,
-                 config, indent, model_name=None):
+    def __init__(self, model_dir, model_name, test_set, gt_classes_file_path, gt_bboxes_file_path,
+                 config, indent):
         super().__init__(test_set, gt_classes_file_path, gt_bboxes_file_path, indent)
 
-        # Load models
-        if model_name is not None:
-            model_dir = os.path.join(self.models_dir, 'text')
-        else:
-            model_dir = timestamp
-
-        self.model = TextualCountsModelWrapper(self.device, config, model_dir, model_name)
+        self.model = TextualCountsModelWrapper(self.device, config, model_dir, model_name, indent)
 
     def evaluate(self):
         self.log_print('Evaluating noun identifier...')

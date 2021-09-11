@@ -47,8 +47,8 @@ class PromptEvaluator(VisualModelEvaluator):
             self.text_inference_func = self.clip_text_inference
             self.im_txt_similarity_func = self.clip_similarity_func
         elif model_type == 'unimodal':
-            visual_model_wrapper = VisualModelWrapper(self.device, None, 'models/visual', self.indent + 1, model_str)
-            text_model_wrapper = TextualCountsModelWrapper(self.device, None, 'models/text', self.indent + 1, model_str)
+            visual_model_wrapper = VisualModelWrapper(self.device, None, 'models/visual', model_str, self.indent + 1)
+            text_model_wrapper = TextualCountsModelWrapper(self.device, None, 'models/text', model_str, self.indent + 1)
 
             model = visual_model_wrapper
             inference_func = self.predict_visual_concepts_from_input

@@ -4,6 +4,7 @@ from executors.visual_evaluators.evaluate_visual_model import VisualModelEvaluat
 from metrics import VisualKnownClassesClassificationMetric
 from models_src.visual_model_wrapper import VisualModelWrapper
 from models_src.textual_model_wrapper import TextualCountsModelWrapper
+from utils.general_utils import visual_dir, text_dir
 
 
 class VisualConceptEvaluator(VisualModelEvaluator):
@@ -28,28 +29,19 @@ class VisualConceptEvaluator(VisualModelEvaluator):
             return torch.tensor(self.model.predict_classes()).view(1, inputs.shape[0]).transpose(1, 0)
 
     def generate_model(self, model_type, model_str):
-        visual_model_dir = os.path.join(self.models_dir, 'visual')
-        visual_model = VisualModelWrapper(self.device, None, visual_model_dir, self.indent + 1, model_str)
+        visual_model_dir = os.path.join(self.models_dir, visual_dir)
+        visual_model = VisualModelWrapper(self.device, None, visual_model_dir, model_str, self.indent + 1)
         visual_model.eval()
 
-        text_model_dir = os.path.join(self.models_dir, 'text')
-        self.text_model = TextualCountsModelWrapper(self.device, None, text_model_dir, self.indent + 1, model_str)
+        text_model_dir = os.path.join(self.models_dir, text_dir)
+        self.text_model = TextualCountsModelWrapper(self.device, None, text_model_dir, model_str, self.indent + 1)
 
         inference_func = self.inference
 
         return visual_model, inference_func
 
     def metric_pre_calculations(self):
-        gt_class_to_prediction = {i: self.text_model.model.predict_concept(self.class_mapping[i])
-                                  for i in self.class_mapping.keys()
-                                  if ' ' not in self.class_mapping[i]}
-        gt_class_to_concept = {x[0]: x[1][0] for x in gt_class_to_prediction.items() if x[1] is not None}
-        concept_num = self.model.config.concept_num
-        concept_to_gt_class = {concept_ind: [] for concept_ind in range(concept_num)}
-        for gt_class_ind, concept_ind in gt_class_to_concept.items():
-            concept_to_gt_class[concept_ind].append(gt_class_ind)
-
-        self.concept_to_gt_class = concept_to_gt_class
+        self.concept_to_gt_class = self.text_model.create_concept_to_gt_class_mapping(self.class_mapping)
 
     def predict_classes(self, sample_ind):
         if self.multi_label:

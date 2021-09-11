@@ -1,6 +1,6 @@
 import torch
 import torch.utils.data as data
-from utils.general_utils import for_loop_with_reports, models_dir
+from utils.general_utils import for_loop_with_reports, models_dir, text_dir
 from utils.text_utils import prepare_data
 from executors.executor import Executor
 from dataset_builders.concreteness_dataset import generate_concreteness_dataset
@@ -19,8 +19,8 @@ class TextualModelEvaluator(Executor):
 
         self.test_set = test_set
 
-        text_model_dir = os.path.join(models_dir, 'text')
-        self.model = TextualCountsModelWrapper(self.device, None, text_model_dir, indent + 1, model_name)
+        text_model_dir = os.path.join(models_dir, text_dir)
+        self.model = TextualCountsModelWrapper(self.device, None, text_model_dir, model_name, indent + 1)
         self.concreteness_dataset = generate_concreteness_dataset()
         self.category_dataset = generate_category_dataset()
         self.nlp = spacy.load("en_core_web_sm")

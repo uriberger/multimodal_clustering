@@ -5,6 +5,7 @@ import torch
 from PIL import ImageDraw
 from torchvision.transforms.functional import to_pil_image
 import matplotlib.pyplot as plt
+from utils.general_utils import visual_dir
 from utils.visual_utils import get_resized_gt_bboxes, wanted_image_size
 
 
@@ -14,8 +15,8 @@ class BboxDemonstrator(Demonstrator):
                  num_of_items_to_demonstrate, indent):
         super(BboxDemonstrator, self).__init__(dataset, num_of_items_to_demonstrate, indent)
 
-        visual_model_dir = os.path.join(self.models_dir, 'visual')
-        self.visual_model = VisualModelWrapper(self.device, None, visual_model_dir, indent + 1, model_name)
+        visual_model_dir = os.path.join(self.models_dir, visual_dir)
+        self.visual_model = VisualModelWrapper(self.device, None, visual_model_dir, model_name,  indent + 1)
         self.visual_model.eval()
         self.gt_classes_data = torch.load(gt_classes_file_path)
         self.gt_bboxes_data = torch.load(gt_bboxes_file_path)

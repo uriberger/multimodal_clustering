@@ -6,13 +6,13 @@ from loggable_object import LoggableObject
 
 class ModelWrapper(LoggableObject):
 
-    def __init__(self, device, config, model_dir, indent, name):
+    def __init__(self, device, config, model_dir, model_name, indent):
         """ The init function is used both for creating a new instance (when config is specified), and for loading
         saved instances (when config is None). """
         super(ModelWrapper, self).__init__(indent)
         self.device = device
         self.model_dir = model_dir
-        self.dump_path = os.path.join(self.model_dir, name)
+        self.dump_path = os.path.join(self.model_dir, model_name)
 
         need_to_load = (config is None)
         if need_to_load:

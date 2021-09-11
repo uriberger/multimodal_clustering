@@ -1,11 +1,10 @@
 import torch
 import torch.utils.data as data
-from utils.general_utils import generate_dataset, for_loop_with_reports
+from utils.general_utils import generate_dataset, for_loop_with_reports, visual_dir
 from metrics import BBoxMetric
 from executors.executor import Executor
 import os
 from models_src.visual_model_wrapper import VisualModelWrapper
-import time
 
 
 class TwoPhaseBBoxEvaluator(Executor):
@@ -19,7 +18,7 @@ class TwoPhaseBBoxEvaluator(Executor):
         self.gt_bboxes_data = torch.load(gt_bboxes_file)
 
         # Load models
-        visual_model_dir = os.path.join(self.models_dir, 'visual')
+        visual_model_dir = os.path.join(self.models_dir, visual_dir)
 
         self.model = VisualModelWrapper(self.device, None, visual_model_dir, indent + 1, model_name)
         self.model.eval()

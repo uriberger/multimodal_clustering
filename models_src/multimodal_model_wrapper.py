@@ -33,7 +33,7 @@ class MultimodalModelWrapper(ModelWrapper):
     def __init__(self, device, config, model_dir, indent):
         """ The init function is used both for creating a new instance (when config is specified), and for loading
         saved instances (when config is None). """
-        super(MultimodalModelWrapper, self).__init__(device, config, model_dir, indent, 'multimodal')
+        super(MultimodalModelWrapper, self).__init__(device, config, model_dir, 'multimodal', indent)
 
         # self.criterion = nn.BCEWithLogitsLoss()
         self.criterion = losses.ContrastiveLoss(distance=distances.CosineSimilarity(),

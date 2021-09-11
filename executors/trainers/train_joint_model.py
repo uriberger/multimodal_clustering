@@ -1,22 +1,30 @@
+import os
+from utils.general_utils import visual_dir, text_dir, default_model_name
 from utils.text_utils import prepare_data
 import torch
 from executors.trainers.trainer import Trainer
+from executors.bimodal_evaluators.evaluate_joint_model import JointModelEvaluator
 from models_src.visual_model_wrapper import VisualModelWrapper
 from models_src.textual_model_wrapper import generate_textual_model
 
 
 class JointModelTrainer(Trainer):
 
-    def __init__(self, timestamp, training_set, epoch_num, config, indent):
+    def __init__(self, timestamp, training_set, epoch_num, config, test_data, indent):
         super().__init__(training_set, epoch_num, 100, indent)
 
-        self.visual_model = VisualModelWrapper(self.device, config, timestamp, indent+1)
-        self.text_model = generate_textual_model(self.device, config, timestamp, indent + 1)
+        self.visual_model_dir = os.path.join(timestamp, visual_dir)
+        self.text_model_dir = os.path.join(timestamp, text_dir)
+        self.visual_model = VisualModelWrapper(self.device, config, self.visual_model_dir,
+                                               default_model_name, indent + 1)
+        self.text_model = generate_textual_model(self.device, config, self.text_model_dir,
+                                                 default_model_name, indent + 1)
 
         self.visual_loss_history = []
         self.text_loss_history = []
 
         self.prev_checkpoint_batch_ind = 0
+        self.test_data = test_data
 
     def dump_models(self):
         self.visual_model.dump()
@@ -27,6 +35,15 @@ class JointModelTrainer(Trainer):
 
     def post_training(self):
         self.dump_models()
+
+    def post_loop(self):
+        self.dump_models()
+        if self.test_data is not None:
+            # If test data was provided, we evaluate after every epoch
+            evaluator = JointModelEvaluator(self.visual_model_dir, self.text_model_dir, default_model_name,
+                                            self.test_data[0], self.test_data[1], self.test_data[2], self.test_data[3],
+                                            False, self.indent + 1)
+            evaluator.evaluate()
 
     def train_on_batch(self, index, sampled_batch, print_info):
         # Load data

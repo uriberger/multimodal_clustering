@@ -1,6 +1,5 @@
 from models_src.unimodal_model_wrapper import UnimodalModelWrapper
 import torch
-import torch.nn as nn
 from models_src.word_concept_count_model import WordConceptCountModel
 import abc
 from utils.text_utils import generate_text_model
@@ -39,11 +38,8 @@ def generate_textual_counts_model(model_str, concept_num):
 
 class TextualModelWrapper(UnimodalModelWrapper):
 
-    def __init__(self, device, config, model_dir, indent, name=None):
-        if name is None:
-            name = 'textual'
-
-        super(TextualModelWrapper, self).__init__(device, config, model_dir, indent, name)
+    def __init__(self, device, config, model_dir, model_name, indent):
+        super(TextualModelWrapper, self).__init__(device, config, model_dir, model_name, indent)
 
     @abc.abstractmethod
     def predict_concept_insantiating_words(self, sentences):
@@ -64,8 +60,8 @@ class TextualModelWrapper(UnimodalModelWrapper):
 
 class TextualCountsModelWrapper(TextualModelWrapper):
 
-    def __init__(self, device, config, model_dir, indent, name=None):
-        super().__init__(device, config, model_dir, indent, name)
+    def __init__(self, device, config, model_dir, model_name, indent):
+        super().__init__(device, config, model_dir, model_name, indent)
         self.model.calculate_probs()
 
     def generate_model(self):
@@ -157,14 +153,23 @@ class TextualCountsModelWrapper(TextualModelWrapper):
 
         return res
 
+    def create_concept_to_gt_class_mapping(self, class_mapping):
+        gt_class_to_prediction = {i: self.model.predict_concept(class_mapping[i])
+                                  for i in class_mapping.keys()
+                                  if ' ' not in class_mapping[i]}
+        gt_class_to_concept = {x[0]: x[1][0] for x in gt_class_to_prediction.items() if x[1] is not None}
+        concept_num = self.config.concept_num
+        concept_to_gt_class = {concept_ind: [] for concept_ind in range(concept_num)}
+        for gt_class_ind, concept_ind in gt_class_to_concept.items():
+            concept_to_gt_class[concept_ind].append(gt_class_ind)
+
+        return concept_to_gt_class
+
 
 class TextualRNNModelWrapper(TextualModelWrapper):
 
-    def __init__(self, device, config, model_dir, indent, name=None):
-        if name is None:
-            name = 'visual'
-
-        super().__init__(device, config, model_dir, indent, name)
+    def __init__(self, device, config, model_dir, model_name, indent):
+        super().__init__(device, config, model_dir, indent, model_name)
         self.model.to(self.device)
 
         learning_rate = self.config.textual_learning_rate

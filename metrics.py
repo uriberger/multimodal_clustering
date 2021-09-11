@@ -379,11 +379,15 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
     We train a visual model to cluster images, and evaluate its clustering by mapping the clusters to the
     labelled classes in a many-to-one manner, by maximizing the F1 score. """
 
-    def __init__(self, visual_model):
+    def __init__(self, visual_model, mapping_mode):
         super(VisualUnknownClassesClassificationMetric, self).__init__(visual_model)
 
         # Maintain a list of pairs of (predicted clusters, gt classes) for future calculations
         self.predicted_clusters_gt_classes = []
+        ''' Mapping mode: Two possible heuristics for choosing concept to class mapping:
+        First, for each concept choose the class with which it co-occurred the most.
+        Second, for each concept choose the class with which it has the largest IoU. '''
+        self.mapping_mode = mapping_mode
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         predicted_classes = self.visual_model.predict_concept_lists()
@@ -424,63 +428,64 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
         First, for each concept choose the class with which it co-occurred the most.
         Second, for each concept choose the class with which it has the largest IoU. '''
         # First option: for each concept, choose the class with which it co-occurred the most
-        # concept_to_class = {
-        #     x: max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
-        #     if len(concept_class_co_occur[x]) > 0 else None
-        #     for x in concept_list
-        # }
+        if self.mapping_mode == 'co_occur':
+            concept_to_class = {
+                x: max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
+                if len(concept_class_co_occur[x]) > 0 else None
+                for x in concept_list
+            }
 
-        # # Finally, go over the results again and use the mapping to evaluate
-        # for predicted_concepts, gt_classes in self.predicted_clusters_gt_classes:
-        #     predicted_classes = [concept_to_class[x] for x in predicted_concepts]
-        #     self.evaluate_classification([predicted_classes], [gt_classes])
-        #
-        # # Apart from the classification results, we want to measure the intersection of our classes and the gt classes
-        # intersections = {x: concept_class_co_occur[x][concept_to_class[x]] for x in concept_list}
-        # unions = {x: predicted_concept_count[x] +  # Concept count
-        #           gt_class_count[concept_to_class[x]] -  # Class count
-        #           intersections[x]  # Intersection count
-        #           for x in concept_list}
-        # self.ious = {x: intersections[x] / unions[x] if unions[x] > 0 else 0
-        #              for x in concept_list}
-        #
-        # concept_to_class = {
-        #     x: max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
-        #     if len(concept_class_co_occur[x]) > 0 else None
-        #     for x in concept_list
-        # }
+            # Finally, go over the results again and use the mapping to evaluate
+            for predicted_concepts, gt_classes in self.predicted_clusters_gt_classes:
+                predicted_classes = [concept_to_class[x] for x in predicted_concepts]
+                self.evaluate_classification([predicted_classes], [gt_classes])
 
+            # Apart from the classification results, we want to measure the intersection of our classes and the gt classes
+            intersections = {x: concept_class_co_occur[x][concept_to_class[x]] for x in concept_list}
+            unions = {x: predicted_concept_count[x] +  # Concept count
+                      gt_class_count[concept_to_class[x]] -  # Class count
+                      intersections[x]  # Intersection count
+                      for x in concept_list}
+            self.ious = {x: intersections[x] / unions[x] if unions[x] > 0 else 0
+                         for x in concept_list}
+
+            concept_to_class = {
+                x: max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
+                if len(concept_class_co_occur[x]) > 0 else None
+                for x in concept_list
+            }
         # Second option: for each concept choose the class with which it has the largest IoU
-        intersections = concept_class_co_occur
-        unions = {
-            concept_ind: {
-                class_ind:
-                    predicted_concept_count[concept_ind] +  # Concept count
-                    gt_class_count[class_ind] -  # Class count
-                    intersections[concept_ind][class_ind]  # Intersection count
-                if class_ind in intersections[concept_ind] else 0
-                for class_ind in gt_class_count.keys()
+        elif self.mapping_mode == 'iou':
+            intersections = concept_class_co_occur
+            unions = {
+                concept_ind: {
+                    class_ind:
+                        predicted_concept_count[concept_ind] +  # Concept count
+                        gt_class_count[class_ind] -  # Class count
+                        intersections[concept_ind][class_ind]  # Intersection count
+                    if class_ind in intersections[concept_ind] else 0
+                    for class_ind in gt_class_count.keys()
+                }
+                for concept_ind in concept_list
             }
-            for concept_ind in concept_list
-        }
-        ious = {
-            concept_ind: {
-                class_ind:
-                    intersections[concept_ind][class_ind] / unions[concept_ind][class_ind]
-                    if unions[concept_ind][class_ind] > 0 else 0
-                for class_ind in gt_class_count.keys()
+            ious = {
+                concept_ind: {
+                    class_ind:
+                        intersections[concept_ind][class_ind] / unions[concept_ind][class_ind]
+                        if unions[concept_ind][class_ind] > 0 else 0
+                    for class_ind in gt_class_count.keys()
+                }
+                for concept_ind in concept_list
             }
-            for concept_ind in concept_list
-        }
 
-        # Now, for each concept, choose the class with which it co-occurred the most
-        concept_to_class = {
-            x: max(ious[x], key=ious[x].get)
-            if len(ious[x]) > 0 else None
-            for x in concept_list
-        }
+            # Now, for each concept, choose the class with which it co-occurred the most
+            concept_to_class = {
+                x: max(ious[x], key=ious[x].get)
+                if len(ious[x]) > 0 else None
+                for x in concept_list
+            }
 
-        self.ious = {concept_ind: ious[concept_ind][concept_to_class[concept_ind]] for concept_ind in concept_list}
+            self.ious = {concept_ind: ious[concept_ind][concept_to_class[concept_ind]] for concept_ind in concept_list}
 
         # Finally, go over the results again and use the mapping to evaluate
         for predicted_concepts, gt_classes in self.predicted_clusters_gt_classes:
@@ -494,7 +499,7 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
         executed after all calculations are done."""
         self.evaluate()
 
-        res = self.report_with_name('Visual classification results')
+        res = self.report_with_name('Visual classification results ' + str(self.mapping_mode) + ' mapping')
         res += ', iou max ' + str(max(self.ious.values())) + ' min ' + str(min(self.ious.values())) + \
                ' mean ' + str(statistics.mean(self.ious.values())) + ' median ' + \
                str(statistics.median(self.ious.values())) + '\n'
@@ -504,6 +509,32 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
             res += '(' + str(concept_ind) + ',' + str(class_ind) + ',' + "{:.2f}".format(iou) + ') '
 
         return res
+
+
+class VisualPromptClassificationMetric(VisualClassificationMetric):
+    """ This metric is for models mapping both images and text to the same space.
+    We prompt the model by giving it the name of the ground-truth classes, and this enables us to map the model's
+    clusters to gt classes. """
+
+    def __init__(self, visual_model, text_model, class_mapping):
+        super(VisualPromptClassificationMetric, self).__init__(visual_model)
+        self.text_model = text_model
+        self.concept_to_gt_class = self.text_model.create_concept_to_gt_class_mapping(class_mapping)
+
+    def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
+        predicted_concepts = self.visual_model.predict_concept_lists()
+        predicted_class_lists = [self.concept_to_gt_class[x] for x in predicted_concepts]
+        predicted_classes = [inner for outer in predicted_class_lists for inner in outer]
+
+        gt_classes_str = visual_metadata['gt_classes']
+        gt_classes = [int(x) for x in gt_classes_str.split(',')]
+        self.document(predicted_classes, gt_classes)
+
+    def document(self, predicted_classes, gt_classes):
+        self.evaluate_classification(predicted_classes, gt_classes)
+
+    def report(self):
+        return self.report_with_name('Prompt classification results')
 
 
 class CategorizationMetric(Metric):

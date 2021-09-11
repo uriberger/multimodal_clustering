@@ -7,7 +7,7 @@ class CamTrainer(Trainer):
     def __init__(self, timestamp, training_set, epoch_num, config, indent):
         super().__init__(training_set, epoch_num, 100, indent)
 
-        self.model = VisualModelWrapper(self.device, config, timestamp, name=config.visual_model)
+        self.model = VisualModelWrapper(self.device, config, timestamp, config.visual_model, indent + 1)
 
     def train_on_batch(self, index, sampled_batch, print_info):
         image_tensor = sampled_batch['image'].to(self.device)

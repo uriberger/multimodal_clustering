@@ -8,11 +8,8 @@ from models_src.simclr import clean_state_dict, adjust_projection_in_state_dict
 
 class VisualModelWrapper(UnimodalModelWrapper):
 
-    def __init__(self, device, config, model_dir, indent, name=None):
-        if name is None:
-            name = 'visual'
-
-        super().__init__(device, config, model_dir, indent, name)
+    def __init__(self, device, config, model_dir, model_name, indent):
+        super().__init__(device, config, model_dir, model_name, indent)
         self.model.to(self.device)
 
         if config is not None:

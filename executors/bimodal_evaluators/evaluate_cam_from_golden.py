@@ -3,6 +3,7 @@ import torch.utils.data as data
 import metrics
 import os
 from models_src.visual_model_wrapper import VisualModelWrapper
+from utils.general_utils import visual_dir
 
 
 class CamEvaluator(BimodalEvaluator):
@@ -17,11 +18,11 @@ class CamEvaluator(BimodalEvaluator):
 
         # Load models
         if model_name is not None:
-            model_dir = os.path.join(self.models_dir, 'visual')
+            model_dir = os.path.join(self.models_dir, visual_dir)
         else:
             model_dir = timestamp
 
-        self.model = VisualModelWrapper(self.device, config, model_dir, model_name, indent+1)
+        self.model = VisualModelWrapper(self.device, config, model_dir, model_name, indent + 1)
         self.model.eval()
 
     def evaluate(self):

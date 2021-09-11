@@ -6,6 +6,9 @@ write_to_log = False
 log_fp = None
 
 models_dir = 'models'
+visual_dir = 'visual'
+text_dir = 'text'
+default_model_name = 'model'
 
 
 def set_write_to_log(output_dir):

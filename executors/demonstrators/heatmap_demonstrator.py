@@ -2,6 +2,7 @@ from executors.demonstrators.demonstrator import Demonstrator
 from models_src.visual_model_wrapper import VisualModelWrapper
 from models_src.textual_model_wrapper import generate_textual_model
 import os
+from utils.general_utils import visual_dir, text_dir
 
 
 class HeatmapDemonstrator(Demonstrator):
@@ -10,9 +11,9 @@ class HeatmapDemonstrator(Demonstrator):
                  num_of_items_to_demonstrate, indent):
         super(HeatmapDemonstrator, self).__init__(dataset, num_of_items_to_demonstrate, indent)
 
-        visual_model_dir = os.path.join(self.models_dir, 'visual')
-        textual_model_dir = os.path.join(self.models_dir, 'text')
-        self.visual_model = VisualModelWrapper(self.device, None, visual_model_dir, indent + 1, model_name)
+        visual_model_dir = os.path.join(self.models_dir, visual_dir)
+        textual_model_dir = os.path.join(self.models_dir, text_dir)
+        self.visual_model = VisualModelWrapper(self.device, None, visual_model_dir, model_name, indent + 1)
         self.visual_model.eval()
         self.text_model = generate_textual_model(self.device, 'counts_generative', textual_model_dir, indent + 1, model_name)
 

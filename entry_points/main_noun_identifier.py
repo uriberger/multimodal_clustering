@@ -1,6 +1,6 @@
 # General
 import os
-from utils.general_utils import log_print, set_write_to_log
+from utils.general_utils import log_print, set_write_to_log, default_model_name
 from datetime import datetime
 
 # Dataset
@@ -12,7 +12,7 @@ from models_src.model_config import ModelConfig
 
 # Executors
 from executors.trainers.train_noun_identifier_from_golden import NounIdentifierTrainer
-from executors.evaluators.evaluate_noun_identifier_from_golden import NounIdentifierEvaluator
+from executors.bimodal_evaluators.evaluate_noun_identifier_from_golden import NounIdentifierEvaluator
 
 
 timestamp = str(datetime.now()).replace(' ', '_')
@@ -45,6 +45,7 @@ trainer.train()
 log_print(function_name, 0, 'Finished training model')
 
 log_print(function_name, 0, 'Testing models...')
-evaluator = NounIdentifierEvaluator(timestamp, test_set, gt_classes_file_path, gt_bboxes_file_path, config)
+evaluator = NounIdentifierEvaluator(timestamp, default_model_name, test_set, gt_classes_file_path, gt_bboxes_file_path,
+                                    config, 1)
 evaluator.evaluate()
 log_print(function_name, 0, 'Finished testing model')
