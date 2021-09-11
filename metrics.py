@@ -181,7 +181,7 @@ class ConcretenessPredictionMetric(Metric):
     instantiates a concept is concrete (5) and is otherwise in-concrete (1).
     """
 
-    def __init__(self, text_model, concreteness_dataset):
+    def __init__(self, text_model, concreteness_dataset, token_count=None):
         super(ConcretenessPredictionMetric, self).__init__(None, text_model)
         self.concreteness_dataset = concreteness_dataset
         self.absolute_error_sum = 0
@@ -192,15 +192,31 @@ class ConcretenessPredictionMetric(Metric):
         self.non_conc_words_count = 0
         self.visited_tokens = {}
         self.gt_list = []
-        self.prediction_list = []
+        self.estimation_list = []
+
+        ''' We want to evaluate concreteness on different sets of words: words that appeared more than once
+        in the training set, words that appeared more than 5 times in the training set, etc. '''
+        if token_count is None:
+            self.token_count = {}
+        else:
+            self.token_count = token_count
+
+        self.over_vals = [1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]
+        self.over_gt_lists = []
+        self.over_pred_lists = []
+        for _ in self.over_vals:
+            self.over_gt_lists.append([])
+            self.over_pred_lists.append([])
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
+        """ We try both estimations of concreteness (a number between 0 and 1) and predictions of concreteness
+        (a binary result on the estimation, after applying a threshold). """
         concept_inst_predictions = self.text_model.predict_concept_insantiating_words(text_inputs)
         ''' Concreteness should be between 1 and 5. We have a number between
         0 and 1. So we scale it to the range [1, 5] '''
         concreteness_predictions = [[1 + 4 * x for x in y] for y in concept_inst_predictions]
         
-        #concreteness_estimation = self.text_model.estimate_concept_instantiation_per_word(text_inputs)
+        concreteness_estimation = self.text_model.estimate_concept_instantiation_per_word(text_inputs)
 
         batch_size = len(text_inputs)
         for sample_ind in range(batch_size):
@@ -225,19 +241,40 @@ class ConcretenessPredictionMetric(Metric):
                     self.absolute_error_sum_for_conc_words += absolute_error
 
                 self.gt_list.append(gt_concreteness)
-                self.prediction_list.append(predicted_concreteness)
+                self.estimation_list.append(concreteness_estimation[sample_ind][i])
+                if token in self.token_count:
+                    for j in range(len(self.over_vals)):
+                        val = self.over_vals[j]
+                        if self.token_count[token] > val:
+                            self.over_gt_lists[j].append(gt_concreteness)
+                            self.over_pred_lists[j].append(concreteness_estimation[sample_ind][i])
 
     def report(self):
         mae = self.absolute_error_sum / self.count
         mae_for_conc = self.absolute_error_sum_for_conc_words / self.conc_words_count
         mae_for_non_conc = self.absolute_error_sum_for_non_conc_words / self.non_conc_words_count
-        gt_and_predictions = np.array([self.gt_list, self.prediction_list])
-        pearson_corr = np.corrcoef(gt_and_predictions)[0, 1]
+
+        gt_and_estimations = np.array([self.gt_list, self.estimation_list])
+        binary_prediction_list = [1 if x > self.text_model.config.noun_threshold else 0 for x in self.estimation_list]
+        gt_and_predictions = np.array([self.gt_list, binary_prediction_list])
+        overall_est_pearson_corr = np.corrcoef(gt_and_estimations)[0, 1]
+        overall_pred_pearson_corr = np.corrcoef(gt_and_predictions)[0, 1]
+        over_dic = {}
+        for i in range(len(self.over_vals)):
+            gt_and_estimations = np.array([self.over_gt_lists[i], self.over_pred_lists[i]])
+            binary_prediction_list = [1 if x > self.text_model.config.noun_threshold else 0 for x in
+                                      self.over_pred_lists[i]]
+            gt_and_predictions = np.array([self.over_gt_lists[i], binary_prediction_list])
+            est_pearson_corr = np.corrcoef(gt_and_estimations)[0, 1]
+            pred_pearson_corr = np.corrcoef(gt_and_predictions)[0, 1]
+            over_dic[self.over_vals[i]] = (est_pearson_corr, pred_pearson_corr, len(self.over_gt_lists[i]))
+
         return 'Concreteness mean absolute error: ' + str(mae) + \
                ' overall, ' + str(mae_for_conc) + ' for concrete-predicted words, ' + \
                str(mae_for_non_conc) + ' for non-concrete-predicted words, ' + \
-               'Pearson correlation coefficient: ' + str(pearson_corr) + \
-               ', number of tokens: ' + str(self.count)
+               'Pearson estimation correlation coefficient: ' + str(overall_est_pearson_corr) + \
+               ', Pearson prediction correlation coefficient: ' + str(overall_pred_pearson_corr) + \
+               ', number of tokens: ' + str(self.count) + ', ' + str(over_dic)
 
 
 class SentenceImageMatchingMetric(Metric):
