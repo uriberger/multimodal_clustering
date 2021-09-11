@@ -1,6 +1,5 @@
 import torch.utils.data as data
 import torch
-import torchvision.transforms as transforms
 from utils.visual_utils import pil_image_trans
 from PIL import Image
 
