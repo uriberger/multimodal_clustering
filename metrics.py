@@ -522,13 +522,14 @@ class VisualPromptClassificationMetric(VisualClassificationMetric):
         self.concept_to_gt_class = self.text_model.create_concept_to_gt_class_mapping(class_mapping)
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
+        batch_size = len(text_inputs)
         predicted_concepts = self.visual_model.predict_concept_lists()
-        predicted_class_lists = [self.concept_to_gt_class[x] for x in predicted_concepts]
-        predicted_classes = [inner for outer in predicted_class_lists for inner in outer]
+        for sample_ind in range(batch_size):
+            predicted_class_lists = [self.concept_to_gt_class[x] for x in predicted_concepts[sample_ind]]
+            predicted_classes = [inner for outer in predicted_class_lists for inner in outer]
 
-        gt_classes_str = visual_metadata['gt_classes']
-        gt_classes = [int(x) for x in gt_classes_str.split(',')]
-        self.document(predicted_classes, gt_classes)
+            gt_classes = visual_metadata['gt_classes'][sample_ind]
+            self.document(predicted_classes, gt_classes)
 
     def document(self, predicted_classes, gt_classes):
         self.evaluate_classification(predicted_classes, gt_classes)
@@ -583,9 +584,11 @@ class CategorizationMetric(Metric):
         self.calculate_scatter_metric()
         scores = [x[0] for x in self.category_to_scatter_metric.values()]
         res = ''
-        res += 'Calculated scatter metric for ' + str(len(scores)) + ' categories' + \
-               ', max score ' + str(max(scores)) + ', min score ' + str(min(scores)) + \
-               ', mean score ' + str(statistics.mean(scores)) + ', median score ' + str(statistics.median(scores)) + \
-               ', all results are ' + str(self.category_to_scatter_metric)
+        if len(scores) > 0:
+            res += 'Calculated scatter metric for ' + str(len(scores)) + ' categories' + \
+                   ', max score ' + str(max(scores)) + ', min score ' + str(min(scores)) + \
+                   ', mean score ' + str(statistics.mean(scores)) + \
+                   ', median score ' + str(statistics.median(scores)) + \
+                   ', all results are ' + str(self.category_to_scatter_metric)
 
         return res

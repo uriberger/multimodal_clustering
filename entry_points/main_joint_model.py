@@ -1,6 +1,6 @@
 # General
 import os
-from utils.general_utils import log_print, set_write_to_log, models_dir, visual_dir, text_dir, default_model_name
+from utils.general_utils import log_print, set_write_to_log, visual_dir, text_dir, default_model_name
 from datetime import datetime
 
 # Dataset
@@ -60,8 +60,8 @@ trainer.train()
 log_print(function_name, 0, 'Finished training model')
 
 log_print(function_name, 0, 'Testing models...')
-visual_model_dir = os.path.join(models_dir, visual_dir)
-text_model_dir = os.path.join(models_dir, text_dir)
+visual_model_dir = os.path.join(timestamp, visual_dir)
+text_model_dir = os.path.join(timestamp, text_dir)
 evaluator = JointModelEvaluator(visual_model_dir, text_model_dir, default_model_name, test_set,
                                 gt_classes_file_path, gt_bboxes_file_path, class_mapping, True, 1)
 # evaluator = JointModelEvaluator('models/visual', 'models/text', 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100',

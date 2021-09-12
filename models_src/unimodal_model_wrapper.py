@@ -8,7 +8,7 @@ class UnimodalModelWrapper(ModelWrapper):
     def __init__(self, device, config, model_dir, model_name, indent):
         """ The init function is used both for creating a new instance (when config is specified), and for loading
         saved instances (when config is None). """
-        super(UnimodalModelWrapper, self).__init__(device, config, model_dir, indent, model_name)
+        super(UnimodalModelWrapper, self).__init__(device, config, model_dir, model_name, indent)
         self.cached_output = None
         self.criterion = nn.BCEWithLogitsLoss()
         self.cached_loss = None
