@@ -524,7 +524,7 @@ class VisualPromptClassificationMetric(VisualClassificationMetric):
             predicted_classes = [inner for outer in predicted_class_lists for inner in outer]
 
             gt_classes = visual_metadata['gt_classes'][sample_ind]
-            self.document(predicted_classes, gt_classes)
+            self.document([predicted_classes], [gt_classes])
 
     def document(self, predicted_classes, gt_classes):
         self.evaluate_classification(predicted_classes, gt_classes)
