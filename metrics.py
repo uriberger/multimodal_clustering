@@ -515,6 +515,7 @@ class VisualPromptClassificationMetric(VisualClassificationMetric):
         super(VisualPromptClassificationMetric, self).__init__(visual_model)
         self.text_model = text_model
         self.concept_to_gt_class = self.text_model.create_concept_to_gt_class_mapping(class_mapping)
+        self.class_num = len(class_mapping)
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         batch_size = len(text_inputs)
