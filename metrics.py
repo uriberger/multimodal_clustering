@@ -190,6 +190,7 @@ class ConcretenessPredictionMetric(Metric):
         self.prediction_absolute_error_sum = 0
         self.prediction_absolute_error_sum_for_conc_words = 0
         self.prediction_absolute_error_sum_for_non_conc_words = 0
+        self.tested_words_count = 0
         self.conc_words_count = 0
         self.non_conc_words_count = 0
 
@@ -211,6 +212,7 @@ class ConcretenessPredictionMetric(Metric):
             if token not in self.concreteness_dataset:
                 continue
 
+            self.tested_words_count += 1
             gt_concreteness = self.concreteness_dataset[token]
             ''' We try both estimations of concreteness (a number between 0 and 1) and predictions of concreteness
             (a binary result on the estimation, after applying a threshold). '''
@@ -243,11 +245,11 @@ class ConcretenessPredictionMetric(Metric):
     def report(self):
         self.traverse_vocab()
 
-        estimation_mae = self.estimation_absolute_error_sum / len(self.token_count)
+        estimation_mae = self.estimation_absolute_error_sum / self.tested_words_count
         estimation_mae_for_conc = self.estimation_absolute_error_sum_for_conc_words / self.conc_words_count
         estimation_mae_for_non_conc = self.estimation_absolute_error_sum_for_non_conc_words / self.non_conc_words_count
 
-        prediction_mae = self.prediction_absolute_error_sum / len(self.token_count)
+        prediction_mae = self.prediction_absolute_error_sum / self.tested_words_count
         prediction_mae_for_conc = self.prediction_absolute_error_sum_for_conc_words / self.conc_words_count
         prediction_mae_for_non_conc = self.prediction_absolute_error_sum_for_non_conc_words / self.non_conc_words_count
 
