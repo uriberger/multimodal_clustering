@@ -11,7 +11,7 @@ from models_src.textual_model_wrapper import generate_textual_model
 class JointModelTrainer(Trainer):
 
     def __init__(self, timestamp, training_set, epoch_num, config, test_data, indent):
-        super().__init__(training_set, epoch_num, 100, indent)
+        super().__init__(training_set, epoch_num, 50, indent)
 
         self.visual_model_dir = os.path.join(timestamp, visual_dir)
         self.text_model_dir = os.path.join(timestamp, text_dir)
