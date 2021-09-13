@@ -1,7 +1,6 @@
 import torch
 import torch.utils.data as data
 from utils.general_utils import for_loop_with_reports, models_dir, text_dir
-from utils.text_utils import prepare_data
 from executors.executor import Executor
 from dataset_builders.concreteness_dataset import generate_concreteness_dataset
 from dataset_builders.category_dataset import generate_category_dataset
@@ -55,7 +54,7 @@ class TextualModelEvaluator(Executor):
         # Load data
         with torch.no_grad():
             captions = sampled_batch['caption']
-            token_lists = prepare_data(captions)
+            token_lists = self.test_set.prepare_data(captions)
 
             # Infer
             self.model.inference(token_lists)

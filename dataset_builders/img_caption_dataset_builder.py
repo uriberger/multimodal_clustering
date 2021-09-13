@@ -4,7 +4,7 @@ from utils.general_utils import generate_dataset, for_loop_with_reports
 from utils.text_utils import multiple_word_string
 from utils.visual_utils import get_image_shape_from_id
 import torch
-from datasets_src.img_captions_dataset import ImageCaptionDataset
+from datasets_src.img_captions_dataset.single_img_captions_dataset import ImageCaptionDataset
 from datasets_src.img_dataset import ImageDataset
 from dataset_builders.dataset_builder import DatasetBuilder
 

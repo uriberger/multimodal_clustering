@@ -8,6 +8,7 @@ class DatasetConfig(LoggableObject):
                  include_gt_classes=False,
                  include_gt_bboxes=False,
                  use_transformations=False,
+                 lemmatize=False,
                  slice_str='train'
                  ):
         super(DatasetConfig, self).__init__(indent)
