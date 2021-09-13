@@ -5,9 +5,7 @@ from datetime import datetime
 
 # Dataset
 from dataset_builders.coco import Coco
-from dataset_builders.flickr30 import Flickr30
 from datasets_src.dataset_config import DatasetConfig
-from datasets_src.img_captions_dataset_union import ImageCaptionDatasetUnion
 
 # Model
 from models_src.model_config import ModelConfig
@@ -38,15 +36,11 @@ log_print(function_name, 0, str(model_config))
 log_print(function_name, 0, 'Generating dataset_files...')
 coco_dir = os.path.join('..', 'datasets', 'COCO')
 coco_builder = Coco(coco_dir, 1)
-flickr30_dir = os.path.join('..', 'datasets', 'flickr30')
-flickr_builder = Flickr30(flickr30_dir, 1)
 
 coco_training_set_config = DatasetConfig(1)
-flickr_training_set_config = DatasetConfig(1, slice_str='val')
-coco_training_set, _, _ = coco_builder.build_dataset(coco_training_set_config)
-flickr_training_set, _, _ = flickr_builder.build_dataset(flickr_training_set_config)
-training_set = ImageCaptionDatasetUnion([coco_training_set, flickr_training_set])
+training_set, _, _ = coco_builder.build_dataset(coco_training_set_config)
 class_mapping = coco_builder.get_class_mapping()
+token_count = training_set.get_token_count()
 
 test_set_config = DatasetConfig(1, slice_str='val', include_gt_classes=True, include_gt_bboxes=True)
 test_set, gt_classes_file_path, gt_bboxes_file_path = coco_builder.build_dataset(test_set_config)
@@ -63,8 +57,10 @@ log_print(function_name, 0, 'Testing models...')
 visual_model_dir = os.path.join(timestamp, visual_dir)
 text_model_dir = os.path.join(timestamp, text_dir)
 evaluator = JointModelEvaluator(visual_model_dir, text_model_dir, default_model_name, test_set,
-                                gt_classes_file_path, gt_bboxes_file_path, class_mapping, True, 1)
+                                gt_classes_file_path, gt_bboxes_file_path, class_mapping, token_count,
+                                True, 1)
 # evaluator = JointModelEvaluator('models/visual', 'models/text', 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100',
-#                                 test_set, gt_classes_file_path, gt_bboxes_file_path, True, 1)
+#                                 test_set, gt_classes_file_path, gt_bboxes_file_path, class_mapping, token_count,
+#                                 True, 1)
 evaluator.evaluate()
 log_print(function_name, 0, 'Finished testing model')

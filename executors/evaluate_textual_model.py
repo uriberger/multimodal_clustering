@@ -14,7 +14,7 @@ from metrics import NounIdentificationMetric, ConcretenessPredictionMetric, Cate
 class TextualModelEvaluator(Executor):
     """ Evaluate a textual pre-trained model for various metrics. """
 
-    def __init__(self, test_set, model_name, indent):
+    def __init__(self, test_set, model_name, token_count, indent):
         super(TextualModelEvaluator, self).__init__(indent)
 
         self.test_set = test_set
@@ -25,13 +25,15 @@ class TextualModelEvaluator(Executor):
         self.category_dataset = generate_category_dataset()
         self.nlp = spacy.load("en_core_web_sm")
 
+        self.token_count = token_count
+
     def evaluate(self):
         """ Go over the test set and evaluate using the metrics. """
         self.log_print('Evaluating metrics')
         dataloader = data.DataLoader(self.test_set, batch_size=100, shuffle=True)
         metric_list = [
             NounIdentificationMetric(self.model, self.nlp),
-            ConcretenessPredictionMetric(self.model, self.concreteness_dataset),
+            ConcretenessPredictionMetric(self.model, self.concreteness_dataset, self.token_count),
             CategorizationMetric(self.model, self.category_dataset)
         ]
         self.run_metrics_on_dataset(metric_list, dataloader)

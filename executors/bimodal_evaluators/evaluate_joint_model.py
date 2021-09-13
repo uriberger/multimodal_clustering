@@ -11,8 +11,8 @@ import metrics
 class JointModelEvaluator(BimodalEvaluator):
 
     def __init__(self, visual_model_dir, text_model_dir, model_name, test_set,
-                 gt_classes_file_path, gt_bboxes_file_path, class_mapping, evaluate_bbox,
-                 indent):
+                 gt_classes_file_path, gt_bboxes_file_path, class_mapping, token_count,
+                 evaluate_bbox, indent):
         super().__init__(test_set, gt_classes_file_path, gt_bboxes_file_path, indent)
         self.class_mapping = class_mapping
         self.evaluate_bbox = evaluate_bbox
@@ -20,6 +20,7 @@ class JointModelEvaluator(BimodalEvaluator):
         # Load datasets
         self.concreteness_dataset = generate_concreteness_dataset()
         self.category_dataset = generate_category_dataset()
+        self.token_count = token_count
 
         # Load models
         self.visual_model = VisualModelWrapper(self.device, None, visual_model_dir, model_name, indent + 1)
@@ -37,7 +38,7 @@ class JointModelEvaluator(BimodalEvaluator):
             metric_list.append(metrics.BBoxMetric(self.visual_model))
         metric_list += [
             metrics.NounIdentificationMetric(self.text_model, self.nlp),
-            metrics.ConcretenessPredictionMetric(self.text_model, self.concreteness_dataset),
+            metrics.ConcretenessPredictionMetric(self.text_model, self.concreteness_dataset, self.token_count),
             metrics.CategorizationMetric(self.text_model, self.category_dataset),
             metrics.VisualUnknownClassesClassificationMetric(self.visual_model, 'co_occur'),
             metrics.VisualUnknownClassesClassificationMetric(self.visual_model, 'iou'),
