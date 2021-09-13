@@ -4,6 +4,7 @@ from utils.visual_utils import calc_ious, get_resized_gt_bboxes
 from utils.text_utils import noun_tags
 import statistics
 import numpy as np
+from sklearn.metrics.cluster import v_measure_score
 
 
 class Metric:
@@ -535,12 +536,7 @@ class VisualPromptClassificationMetric(VisualClassificationMetric):
 class CategorizationMetric(Metric):
     """ This metric estimate whether the textual model categorizes words according to some baseline (the category
     dataset).
-    For each 'ground-truth' category in the dataset, we want to measure how scattered are the words in the category,
-    according to our model, where if all the words are clustered together we want the score to be 1, and if each word
-    belongs to a different cluster we want the score to be 0.
-    So, we use the following metric: we go over the clusters of all the words in the category (assume n words in the
-    category). For each word, starting from the second word, if this word is in a cluster that a previous word
-    belongs to we add 1/(n-1) to the final score. Otherwise (i.e this word is in a brand new cluster), we add 0. """
+    We use the V-measure-score for evaluation. """
 
     def __init__(self, text_model, category_dataset):
         super(CategorizationMetric, self).__init__(None, text_model)
@@ -552,37 +548,20 @@ class CategorizationMetric(Metric):
         return
 
     def calculate_scatter_metric(self):
+        gt_labels = []
+        predicted_labels = []
+        category_index = 0
         for category, word_list in self.category_dataset.items():
-
-            # First, predict clusters for all words in the category
-            prediction_list = []
             for word in word_list:
                 prediction = self.text_model.model.predict_concept(word)
                 if prediction is not None:
-                    prediction_list.append(prediction[0])
-            word_num = len(prediction_list)
-
-            # Now, if there are at least 2 known words, calculated the scatter metrics (otherwise its pointless)
-            if word_num > 1:
-                total_score = 0
-                not_new_cluster_score = 1/(word_num - 1)
-                visited_clusters = {prediction_list[0]: True}
-                for predicted_cluster in prediction_list[1:]:
-                    if predicted_cluster in visited_clusters:
-                        total_score += not_new_cluster_score
-                    else:
-                        visited_clusters[predicted_cluster] = True
-                self.category_to_scatter_metric[category] = (total_score, word_num)
+                    gt_labels.append(category_index)
+                    predicted_labels.append(prediction[0])
+            category_index += 1
+        self.v_measure_score = v_measure_score(gt_labels, predicted_labels)
 
     def report(self):
         self.calculate_scatter_metric()
-        scores = [x[0] for x in self.category_to_scatter_metric.values()]
-        res = ''
-        if len(scores) > 0:
-            res += 'Calculated scatter metric for ' + str(len(scores)) + ' categories' + \
-                   ', max score ' + str(max(scores)) + ', min score ' + str(min(scores)) + \
-                   ', mean score ' + str(statistics.mean(scores)) + \
-                   ', median score ' + str(statistics.median(scores)) + \
-                   ', all results are ' + str(self.category_to_scatter_metric)
+        res = 'v measure score: ' + str(self.v_measure_score)
 
         return res
