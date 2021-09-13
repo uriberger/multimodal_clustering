@@ -1,6 +1,7 @@
 import torch.utils.data as data
 import torch
 from utils.visual_utils import pil_image_trans
+from utils.text_utils import prepare_data
 from PIL import Image
 
 
@@ -64,3 +65,16 @@ class ImageCaptionDataset(data.Dataset):
         }
 
         return sample
+
+    def get_token_count(self):
+        token_count = {}
+        i = 0
+        for x in self.caption_data:
+            token_list = prepare_data([x['caption']])[0]
+            for token in token_list:
+                if token not in token_count:
+                    token_count[token] = 0
+                token_count[token] += 1
+            i += 1
+
+        return token_count
