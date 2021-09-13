@@ -1,7 +1,7 @@
 import torch.nn as nn
-# from spacy.lang.en import English
-# nlp = English()
-# tokenizer = nlp.tokenizer
+from spacy.lang.en import English
+nlp = English()
+tokenizer = nlp.tokenizer
 
 
 
@@ -28,10 +28,10 @@ def preprocess_token(token):
 def prepare_data(captions):
     token_lists = []
     for caption in captions:
-        token_list = caption.split()
-        token_list = [preprocess_token(token) for token in token_list]
-        token_list = [x for x in token_list if len(x) > 0]
-        # token_list = [str(x) for x in list(tokenizer(caption.lower()))]
+        # token_list = caption.split()
+        # token_list = [preprocess_token(token) for token in token_list]
+        # token_list = [x for x in token_list if len(x) > 0]
+        token_list = [str(x) for x in list(tokenizer(caption.lower()))]
         token_lists.append(token_list)
     return token_lists
 
