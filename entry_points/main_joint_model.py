@@ -49,7 +49,7 @@ log_print(function_name, 0, 'Datasets generated')
 log_print(function_name, 0, 'Training model...')
 trainer = JointModelTrainer(timestamp, training_set, 2, model_config, None, 1)
 # trainer = JointModelTrainer(timestamp, training_set, 2, model_config,
-#                             [test_set, gt_classes_file_path, gt_bboxes_file_path, class_mapping], 1)
+#                             [test_set, gt_classes_file_path, gt_bboxes_file_path, class_mapping, token_count], 1)
 trainer.train()
 log_print(function_name, 0, 'Finished training model')
 

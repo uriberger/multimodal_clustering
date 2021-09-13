@@ -45,7 +45,7 @@ class JointModelTrainer(Trainer):
             # If test data was provided, we evaluate after every epoch
             evaluator = JointModelEvaluator(self.visual_model_dir, self.text_model_dir, default_model_name,
                                             self.test_data[0], self.test_data[1], self.test_data[2], self.test_data[3],
-                                            False, self.indent + 1)
+                                            self.test_data[4], False, self.indent + 1)
             evaluator.evaluate()
 
     def train_on_batch(self, index, sampled_batch, print_info):
