@@ -1,6 +1,5 @@
 import torch
 from utils.general_utils import for_loop_with_reports
-from utils.text_utils import prepare_data
 from executors.executor import Executor
 import abc
 
@@ -58,7 +57,7 @@ class BimodalEvaluator(Executor):
                 'gt_classes': gt_classes,
                 'gt_bboxes': gt_bboxes
             }
-            token_lists = prepare_data(captions)
+            token_lists = self.test_set.prepare_data(captions)
 
             # Infer
             self.infer(visual_metadata, image_tensor, token_lists)

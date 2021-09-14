@@ -1,4 +1,3 @@
-from utils.text_utils import prepare_data
 from executors.trainers.trainer import Trainer
 from models_src.multimodal_model_wrapper import MultimodalModelWrapper
 
@@ -6,8 +5,7 @@ from models_src.multimodal_model_wrapper import MultimodalModelWrapper
 class MultimodalModelTrainer(Trainer):
 
     def __init__(self, timestamp, training_set, epoch_num, config, indent):
-        # super().__init__(training_set, epoch_num, 100, indent)
-        super().__init__(training_set, epoch_num, 5, indent)
+        super().__init__(training_set, epoch_num, 50, indent)
 
         self.model = MultimodalModelWrapper(self.device, config, timestamp, indent + 1)
 
@@ -24,7 +22,7 @@ class MultimodalModelTrainer(Trainer):
         # Load data
         image_tensor = sampled_batch['image'].to(self.device)
         captions = sampled_batch['caption']
-        token_lists = prepare_data(captions)
+        token_lists = self.training_set.prepare_data(captions)
 
         self.model.inference(image_tensor, token_lists)
         if print_info:

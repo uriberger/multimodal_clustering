@@ -1,11 +1,10 @@
-import torch.utils.data as data
 import torch
 from utils.visual_utils import pil_image_trans
-from utils.text_utils import prepare_data
+from datasets_src.img_captions_dataset.img_captions_dataset import ImageCaptionDataset
 from PIL import Image
 
 
-class ImageCaptionDataset(data.Dataset):
+class SingleImageCaptionDataset(ImageCaptionDataset):
     """A dataset with image samples and corresponding captions.
     The dataset is comprised of pairs of captions and images.
     The captions are stored in the dataset from the beginning, the images are loaded online during the __getitem__
@@ -22,7 +21,7 @@ class ImageCaptionDataset(data.Dataset):
                  class_mapping,
                  get_image_path_func,
                  config):
-        self.config = config
+        super(SingleImageCaptionDataset, self).__init__(config)
 
         self.caption_data = torch.load(caption_file)
 
@@ -66,15 +65,5 @@ class ImageCaptionDataset(data.Dataset):
 
         return sample
 
-    def get_token_count(self):
-        token_count = {}
-        i = 0
-        for x in self.caption_data:
-            token_list = prepare_data([x['caption']])[0]
-            for token in token_list:
-                if token not in token_count:
-                    token_count[token] = 0
-                token_count[token] += 1
-            i += 1
-
-        return token_count
+    def get_caption_data(self):
+        return self.caption_data

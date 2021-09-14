@@ -1,6 +1,5 @@
 import os
 from utils.general_utils import visual_dir, text_dir, default_model_name
-from utils.text_utils import prepare_data
 import torch
 from executors.trainers.trainer import Trainer
 from executors.bimodal_evaluators.evaluate_joint_model import JointModelEvaluator
@@ -53,7 +52,7 @@ class JointModelTrainer(Trainer):
         image_tensor = sampled_batch['image'].to(self.device)
         captions = sampled_batch['caption']
         batch_size = len(captions)
-        token_lists = prepare_data(captions)
+        token_lists = self.training_set.prepare_data(captions)
 
         # Infer
         self.visual_model.inference(image_tensor)

@@ -1,7 +1,6 @@
 from models_src.textual_model_wrapper import TextualCountsModelWrapper
 from trainer import Trainer
 from utils.general_utils import default_model_name
-from utils.text_utils import prepare_data
 
 
 class NounIdentifierTrainer(Trainer):
@@ -13,7 +12,7 @@ class NounIdentifierTrainer(Trainer):
 
     def train_on_batch(self, index, sampled_batch, print_info):
         caption = sampled_batch['caption']
-        token_list = prepare_data(caption)[0]
+        token_list = self.training_set.prepare_data(caption)[0]
         concept_inds = sampled_batch[1]
 
         self.model.inference(token_list)
