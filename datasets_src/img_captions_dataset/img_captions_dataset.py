@@ -10,7 +10,7 @@ class ImageCaptionDataset(data.Dataset):
         self.config = config
 
     def prepare_data(self, captions):
-        prepare_data(captions, lemmatize=self.config.lemmatize)
+        return prepare_data(captions, lemmatize=self.config.lemmatize)
 
     @abc.abstractmethod
     def get_caption_data(self):
