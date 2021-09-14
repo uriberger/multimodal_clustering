@@ -30,11 +30,12 @@ def prepare_data(captions, lemmatize=False):
         # token_list = caption.split()
         # token_list = [preprocess_token(token) for token in token_list]
         # token_list = [x for x in token_list if len(x) > 0]
-        doc = nlp(caption)
         if lemmatize:
+            doc = nlp(caption)
             token_list = [str(x.lemma_) for x in doc]
         else:
-            token_list = [str(x) for x in doc]
+            # token_list = [str(x) for x in doc]
+            token_list = [str(x) for x in list(tokenizer(caption.lower()))]
         token_lists.append(token_list)
     return token_lists
 
