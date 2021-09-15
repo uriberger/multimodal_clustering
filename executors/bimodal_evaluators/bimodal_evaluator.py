@@ -30,9 +30,13 @@ class BimodalEvaluator(Executor):
                               self.evaluate_on_batch, self.progress_report)
         self.decrement_indent()
         # Report results
+        results = {}
         for metric in metric_list:
             self.log_print(metric.report())
+            results.update(metric.results)
         self.decrement_indent()
+
+        return results
 
     def evaluate_on_batch(self, index, sampled_batch, print_info):
         # Load data

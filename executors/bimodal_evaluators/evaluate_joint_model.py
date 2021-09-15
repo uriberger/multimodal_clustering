@@ -45,7 +45,9 @@ class JointModelEvaluator(BimodalEvaluator):
             metrics.VisualPromptClassificationMetric(self.visual_model, self.text_model, self.class_mapping),
             metrics.SentenceImageMatchingMetric(self.visual_model, self.text_model)
         ]
-        self.run_metrics_on_dataset(metric_list, dataloader)
+        results = self.run_metrics_on_dataset(metric_list, dataloader)
+
+        return results
 
     def infer(self, visual_metadata, visual_inputs, textual_inputs):
         self.visual_model.inference(visual_inputs)

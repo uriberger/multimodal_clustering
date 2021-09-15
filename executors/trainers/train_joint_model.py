@@ -1,4 +1,5 @@
 import os
+import csv
 from utils.general_utils import visual_dir, text_dir, default_model_name
 import torch
 from executors.trainers.trainer import Trainer
@@ -12,6 +13,7 @@ class JointModelTrainer(Trainer):
     def __init__(self, timestamp, training_set, epoch_num, config, test_data, indent):
         super().__init__(training_set, epoch_num, 50, indent)
 
+        self.timestamp = timestamp
         self.visual_model_dir = os.path.join(timestamp, visual_dir)
         self.text_model_dir = os.path.join(timestamp, text_dir)
         os.mkdir(self.visual_model_dir)
@@ -26,6 +28,7 @@ class JointModelTrainer(Trainer):
 
         self.prev_checkpoint_batch_ind = 0
         self.test_data = test_data
+        self.evaluation_results = []
 
     def dump_models(self):
         self.visual_model.dump()
@@ -37,6 +40,37 @@ class JointModelTrainer(Trainer):
     def post_training(self):
         self.dump_models()
 
+        if self.test_data is not None:
+            # Dump results into a csv file
+            with open(os.path.join(self.timestamp, 'evaluation_by_epoch.csv'), 'w', newline='') as csvfile:
+                fieldnames = ['metric'] + [str(x) for x in range(self.epoch_num)]
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+                writer.writeheader()
+
+                metric_to_results = self.generate_metric_to_results_mapping()
+                for result_dic in metric_to_results.values():
+                    writer.writerow(result_dic)
+
+    def generate_metric_to_results_mapping(self):
+        metric_to_results = {}
+        precision_str = "%.4f"
+        for epoch_ind in range(len(self.evaluation_results)):
+            epoch_results = self.evaluation_results[epoch_ind]
+            for metric_name, metric_result in epoch_results.items():
+                if metric_name not in metric_to_results:
+                    metric_to_results[metric_name] = {'metric': metric_name}
+                if isinstance(metric_result, float) or isinstance(metric_result, int):
+                    result_str = precision_str % metric_result
+                elif isinstance(metric_result, tuple):
+                    result_str = str([precision_str % x for x in metric_result])
+                else:
+                    # Not implemented
+                    assert False
+                metric_to_results[metric_name][str(epoch_ind)] = result_str
+
+        return metric_to_results
+
     def post_loop(self):
         self.dump_models()
         if self.test_data is not None:
@@ -45,7 +79,8 @@ class JointModelTrainer(Trainer):
             evaluator = JointModelEvaluator(self.visual_model_dir, self.text_model_dir, default_model_name,
                                             self.test_data[0], self.test_data[1], self.test_data[2], self.test_data[3],
                                             self.test_data[4], False, self.indent + 1)
-            evaluator.evaluate()
+            results = evaluator.evaluate()
+            self.evaluation_results.append(results)
 
     def train_on_batch(self, index, sampled_batch, print_info):
         # Load data

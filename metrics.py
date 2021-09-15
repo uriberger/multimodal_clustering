@@ -15,18 +15,23 @@ class Metric:
     def __init__(self, visual_model, text_model):
         self.visual_model = visual_model
         self.text_model = text_model
+        self.results = None
+        self.precision_str = "%.4f"
 
     """ Predicts the output of the model for a specific input, compares
     to ground-truth, and documents the current evaluation. """
-
     @abc.abstractmethod
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         return
 
     """ Reports some aggregation of evaluation of all inputs. """
-
     @abc.abstractmethod
     def report(self):
+        return
+
+    """ Returns a mapping from metric name to metric value. """
+    @abc.abstractmethod
+    def calc_results(self):
         return
 
 
@@ -39,30 +44,43 @@ class SensitivitySpecificityMetric(Metric):
         self.fn = 0
         self.tn = 0
 
-    def report_with_name(self, name):
+    def calc_results(self):
+        if self.results is None:
+            self.results = {}
+        name = self.get_name()
+
+        if self.tp + self.fp == 0:
+            precision = 0
+        else:
+            precision = self.tp / (self.tp + self.fp)
+        self.results[name + ' precision'] = precision
+
+        if self.tp + self.fn == 0:
+            recall = 0
+        else:
+            recall = self.tp / (self.tp + self.fn)
+        self.results[name + ' recall'] = recall
+
+        if precision + recall == 0:
+            f1 = 0
+        else:
+            f1 = 2 * (precision * recall) / (precision + recall)
+        self.results[name + ' F1'] = f1
+
+    def report_with_name(self):
+        if self.results is None:
+            self.calc_results()
+
+        name = self.get_name()
         res = name + ': '
         res += 'tp ' + str(self.tp)
         res += ', fp ' + str(self.fp)
         res += ', fn ' + str(self.fn)
         res += ', tn ' + str(self.tn)
 
-        if self.tp + self.fp == 0:
-            precision = 0
-        else:
-            precision = self.tp / (self.tp + self.fp)
-        res += ', precision: ' + str(precision)
-
-        if self.tp + self.fn == 0:
-            recall = 0
-        else:
-            recall = self.tp / (self.tp + self.fn)
-        res += ', recall: ' + str(recall)
-
-        if precision + recall == 0:
-            f1 = 0
-        else:
-            f1 = 2 * (precision * recall) / (precision + recall)
-        res += ', F1: ' + str(f1)
+        res += ', precision: ' + self.precision_str % self.results[name + ' precision']
+        res += ', recall: ' + self.precision_str % self.results[name + ' recall']
+        res += ', F1: ' + self.precision_str % self.results[name + ' F1']
 
         return res
 
@@ -72,6 +90,10 @@ class SensitivitySpecificityMetric(Metric):
 
     @abc.abstractmethod
     def report(self):
+        return
+
+    @abc.abstractmethod
+    def get_name(self):
         return
 
 
@@ -124,7 +146,10 @@ class BBoxMetric(SensitivitySpecificityMetric):
         self.document(orig_image_sizes, predicted_bboxes, gt_bboxes)
 
     def report(self):
-        return self.report_with_name('bbox results')
+        return self.report_with_name()
+
+    def get_name(self):
+        return 'bbox prediction'
 
 
 class NounIdentificationMetric(SensitivitySpecificityMetric):
@@ -172,7 +197,10 @@ class NounIdentificationMetric(SensitivitySpecificityMetric):
                     self.tn += 1
 
     def report(self):
-        return self.report_with_name('Noun prediction results')
+        return self.report_with_name()
+
+    def get_name(self):
+        return 'Noun prediction'
 
 
 class ConcretenessPredictionMetric(Metric):
@@ -243,33 +271,63 @@ class ConcretenessPredictionMetric(Metric):
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         return
 
-    def report(self):
+    def calc_results(self):
+        self.results = {}
         self.traverse_vocab()
 
-        estimation_mae = self.estimation_absolute_error_sum / self.tested_words_count
-        estimation_mae_for_conc = self.estimation_absolute_error_sum_for_conc_words / self.conc_words_count
-        estimation_mae_for_non_conc = self.estimation_absolute_error_sum_for_non_conc_words / self.non_conc_words_count
+        self.results['concreteness estimation mae'] = \
+            self.estimation_absolute_error_sum / self.tested_words_count
+        self.results['concreteness estimation mae for conc'] = \
+            self.estimation_absolute_error_sum_for_conc_words / self.conc_words_count
+        self.results['concreteness estimation mae for non conc'] = \
+            self.estimation_absolute_error_sum_for_non_conc_words / self.non_conc_words_count
 
-        prediction_mae = self.prediction_absolute_error_sum / self.tested_words_count
-        prediction_mae_for_conc = self.prediction_absolute_error_sum_for_conc_words / self.conc_words_count
-        prediction_mae_for_non_conc = self.prediction_absolute_error_sum_for_non_conc_words / self.non_conc_words_count
+        self.results['concreteness prediction mae'] = \
+            self.prediction_absolute_error_sum / self.tested_words_count
+        self.results['concreteness prediction mae for conc'] = \
+            self.prediction_absolute_error_sum_for_conc_words / self.conc_words_count
+        self.results['concreteness prediction mae for non conc'] = \
+            self.prediction_absolute_error_sum_for_non_conc_words / self.non_conc_words_count
 
-        min_count_to_correlation = {}
         for i in range(len(self.min_count_vals)):
             gt_and_estimations = np.array([self.min_count_gt_lists[i], self.min_count_est_lists[i]])
             gt_and_predictions = np.array([self.min_count_gt_lists[i], self.min_count_pred_lists[i]])
             est_pearson_corr = np.corrcoef(gt_and_estimations)[0, 1]
             pred_pearson_corr = np.corrcoef(gt_and_predictions)[0, 1]
-            min_count_to_correlation[self.min_count_vals[i]] = \
+            self.results['concreteness estimation/prediction correlation over ' + str(self.min_count_vals[i])] = \
                 (est_pearson_corr, pred_pearson_corr, len(self.min_count_gt_lists[i]))
 
-        return 'Concreteness estimation mean absolute error: ' + str(estimation_mae) + \
-               ' overall, ' + str(estimation_mae_for_conc) + ' for concrete-predicted words, ' + \
-               str(estimation_mae_for_non_conc) + ' for non-concrete-predicted words, ' + \
-               'concreteness prediction mean absolute error: ' + str(prediction_mae) + \
-               ' overall, ' + str(prediction_mae_for_conc) + ' for concrete-predicted words, ' + \
-               str(prediction_mae_for_non_conc) + ' for non-concrete-predicted words, ' + \
-               'pearson correlation by token count: ' + str(min_count_to_correlation)
+    def report(self):
+        if self.results is None:
+            self.calc_results()
+
+        res = ''
+        res += 'Concreteness estimation mean absolute error: ' + \
+               self.precision_str % self.results['concreteness estimation mae'] + ' overall, '
+        res += \
+            self.precision_str % self.results['concreteness estimation mae for conc'] + \
+            ' for concrete-predicted words, '
+        res += \
+            self.precision_str % self.results['concreteness estimation mae for non conc'] + \
+            ' for non-concrete-predicted words, '
+        res += 'concreteness prediction mean absolute error: ' + \
+               self.precision_str % self.results['concreteness prediction mae'] + ' overall, '
+        res += \
+            self.precision_str % self.results['concreteness prediction mae for conc'] + \
+            ' for concrete-predicted words, '
+        res += \
+            self.precision_str % self.results['concreteness prediction mae for non conc'] + \
+            ' for non-concrete-predicted words, '
+
+        res += 'pearson correlation by token count: '
+        for val in self.min_count_vals:
+            if val != self.min_count_vals[0]:
+                res += ', '
+            res += str(val) + ': '
+            cur_result = self.results['concreteness estimation/prediction correlation over ' + str(val)]
+            res += str((self.precision_str % cur_result[0], self.precision_str % cur_result[1], cur_result[2]))
+
+        return res
 
 
 class SentenceImageMatchingMetric(Metric):
@@ -311,9 +369,15 @@ class SentenceImageMatchingMetric(Metric):
                 self.correct_count += 1
             self.overall_count += 1
 
+    def calc_results(self):
+        self.results = {'image sentence alignment accuracy': self.correct_count / self.overall_count}
+
     def report(self):
-        accuracy = self.correct_count / self.overall_count
-        return 'Image sentence alignment accuracy: ' + str(accuracy)
+        if self.results is None:
+            self.calc_results()
+
+        return 'Image sentence alignment accuracy: ' + \
+               self.precision_str % self.results['image sentence alignment accuracy']
 
 
 class VisualClassificationMetric(SensitivitySpecificityMetric):
@@ -365,7 +429,10 @@ class VisualKnownClassesClassificationMetric(VisualClassificationMetric):
         self.evaluate_classification(predicted_classes, gt_classes)
 
     def report(self):
-        return self.report_with_name('Visual classification results')
+        return self.report_with_name()
+
+    def get_name(self):
+        return 'Visual classification'
 
 
 class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
@@ -494,16 +561,27 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
         executed after all calculations are done."""
         self.evaluate()
 
-        res = self.report_with_name('Visual classification results ' + str(self.mapping_mode) + ' mapping')
+        res = self.report_with_name()
         res += ', iou max ' + str(max(self.ious.values())) + ' min ' + str(min(self.ious.values())) + \
                ' mean ' + str(statistics.mean(self.ious.values())) + ' median ' + \
                str(statistics.median(self.ious.values())) + '\n'
+
         res += 'Concept class pairs: '
         for concept_ind, iou in self.ious.items():
             class_ind = self.concept_to_class[concept_ind]
             res += '(' + str(concept_ind) + ',' + str(class_ind) + ',' + "{:.2f}".format(iou) + ') '
 
         return res
+
+    def calc_results(self):
+        self.results = {}
+
+        if 'created_cluster_num' not in self.results:
+            self.results['created_cluster_num'] = len(self.ious)
+        SensitivitySpecificityMetric.calc_results(self)
+
+    def get_name(self):
+        return 'Visual classification ' + str(self.mapping_mode) + ' mapping'
 
 
 class VisualPromptClassificationMetric(VisualClassificationMetric):
@@ -531,7 +609,10 @@ class VisualPromptClassificationMetric(VisualClassificationMetric):
         self.evaluate_classification(predicted_classes, gt_classes)
 
     def report(self):
-        return self.report_with_name('Prompt classification results')
+        return self.report_with_name()
+
+    def get_name(self):
+        return 'Prompt classification'
 
 
 class CategorizationMetric(Metric):
@@ -559,10 +640,17 @@ class CategorizationMetric(Metric):
                     gt_labels.append(category_index)
                     predicted_labels.append(prediction[0])
             category_index += 1
-        self.v_measure_score = v_measure_score(gt_labels, predicted_labels)
+        self.results['v_measure_score'] = v_measure_score(gt_labels, predicted_labels)
 
     def report(self):
-        self.calculate_scatter_metric()
-        res = 'v measure score: ' + str(self.v_measure_score)
+        if self.results is None:
+            self.calc_results()
+
+        res = 'v measure score: ' + str(self.results['v_measure_score'])
 
         return res
+
+    def calc_results(self):
+        self.results = {}
+
+        self.calculate_scatter_metric()
