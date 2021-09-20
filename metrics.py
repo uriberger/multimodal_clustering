@@ -623,7 +623,6 @@ class CategorizationMetric(Metric):
     def __init__(self, text_model, category_dataset):
         super(CategorizationMetric, self).__init__(None, text_model)
         self.category_dataset = category_dataset
-        self.category_to_scatter_metric = {}
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         # This metric is not related to the test set, all the measurements are done later
@@ -641,12 +640,47 @@ class CategorizationMetric(Metric):
                     predicted_labels.append(prediction[0])
             category_index += 1
         self.results['v_measure_score'] = v_measure_score(gt_labels, predicted_labels)
+        self.results['purity'], self.results['collocation'], self.results['pu_co_f1'] = \
+            self.calc_purity_collocation(gt_labels, predicted_labels)
+
+    @staticmethod
+    def calc_purity_collocation(gt_labels, predicted_labels):
+        N = len(gt_labels)
+        cluster_to_gt_intersection = {}
+        gt_to_cluster_intersection = {}
+        for i in range(N):
+            gt_class = gt_labels[i]
+            predicted_cluster = predicted_labels[i]
+            # Update gt class to cluster mapping
+            if gt_class not in gt_to_cluster_intersection:
+                gt_to_cluster_intersection[gt_class] = {predicted_cluster: 0}
+            if predicted_cluster not in gt_to_cluster_intersection[gt_class]:
+                gt_to_cluster_intersection[gt_class][predicted_cluster] = 0
+            gt_to_cluster_intersection[gt_class][predicted_cluster] += 1
+            # Update cluster to gt class mapping
+            if predicted_cluster not in cluster_to_gt_intersection:
+                cluster_to_gt_intersection[predicted_cluster] = {gt_class: 0}
+            if gt_class not in cluster_to_gt_intersection[predicted_cluster]:
+                cluster_to_gt_intersection[predicted_cluster][gt_class] = 0
+            cluster_to_gt_intersection[predicted_cluster][gt_class] += 1
+
+        purity = (1/N) * sum([max(x.values()) for x in cluster_to_gt_intersection.values()])
+        collocation = (1 / N) * sum([max(x.values()) for x in gt_to_cluster_intersection.values()])
+        if purity + collocation == 0:
+            f1 = 0
+        else:
+            f1 = 2 * (purity * collocation) / (purity + collocation)
+
+        return purity, collocation, f1
 
     def report(self):
         if self.results is None:
             self.calc_results()
 
-        res = 'v measure score: ' + str(self.results['v_measure_score'])
+        res = 'v measure score: ' + self.precision_str % self.results['v_measure_score'] + ', '
+        res += 'purity: ' + self.precision_str % self.results['purity'] + ', '
+        res += 'collocation: ' + self.precision_str % self.results['collocation'] + ', '
+        res += 'purity-collocation F1: ' + self.precision_str % self.results['pu_co_f1']
 
         return res
 
