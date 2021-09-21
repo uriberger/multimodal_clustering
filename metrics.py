@@ -20,16 +20,19 @@ class Metric:
 
     """ Predicts the output of the model for a specific input, compares
     to ground-truth, and documents the current evaluation. """
+
     @abc.abstractmethod
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         return
 
     """ Reports some aggregation of evaluation of all inputs. """
+
     @abc.abstractmethod
     def report(self):
         return
 
     """ Returns a mapping from metric name to metric value. """
+
     @abc.abstractmethod
     def calc_results(self):
         return
@@ -161,6 +164,8 @@ class NounIdentificationMetric(SensitivitySpecificityMetric):
     def __init__(self, text_model, nlp):
         super(NounIdentificationMetric, self).__init__(None, text_model)
         self.nlp = nlp
+        self.noun_count = 0
+        self.non_noun_count = 0
 
     def prepare_ground_truth(self, text_inputs):
         gt_res = []
@@ -172,8 +177,10 @@ class NounIdentificationMetric(SensitivitySpecificityMetric):
                 is_noun_gt = token.tag_ in noun_tags
                 if is_noun_gt:
                     gt_res[-1].append(1)
+                    self.noun_count += 1
                 else:
                     gt_res[-1].append(0)
+                    self.non_noun_count += 1
 
         return gt_res
 
@@ -196,8 +203,21 @@ class NounIdentificationMetric(SensitivitySpecificityMetric):
                 else:
                     self.tn += 1
 
+    def calc_majority_baseline_results(self):
+        # Majority baseline means we always predict noun or always predict non-noun
+        if self.noun_count > self.non_noun_count:
+            # Better to always predict noun
+            accuracy = self.noun_count / (self.noun_count + self.non_noun_count)
+        else:
+            # Better to always predict non-noun
+            accuracy = self.non_noun_count / (self.noun_count + self.non_noun_count)
+
+        return accuracy
+
     def report(self):
-        return self.report_with_name()
+        majority_basline_accuracy = self.calc_majority_baseline_results()
+        return self.report_with_name() + \
+            ', majority baseline accuracy: ' + self.precision_str % majority_basline_accuracy
 
     def get_name(self):
         return 'Noun prediction'
@@ -505,8 +525,8 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
             # Apart from the classification results, we want to measure the intersection of our classes and the gt classes
             intersections = {x: concept_class_co_occur[x][concept_to_class[x]] for x in concept_list}
             unions = {x: predicted_concept_count[x] +  # Concept count
-                      gt_class_count[concept_to_class[x]] -  # Class count
-                      intersections[x]  # Intersection count
+                         gt_class_count[concept_to_class[x]] -  # Class count
+                         intersections[x]  # Intersection count
                       for x in concept_list}
             self.ious = {x: intersections[x] / unions[x] if unions[x] > 0 else 0
                          for x in concept_list}
@@ -525,7 +545,7 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
                         predicted_concept_count[concept_ind] +  # Concept count
                         gt_class_count[class_ind] -  # Class count
                         intersections[concept_ind][class_ind]  # Intersection count
-                    if class_ind in intersections[concept_ind] else 0
+                        if class_ind in intersections[concept_ind] else 0
                     for class_ind in gt_class_count.keys()
                 }
                 for concept_ind in concept_list
@@ -664,7 +684,7 @@ class CategorizationMetric(Metric):
                 cluster_to_gt_intersection[predicted_cluster][gt_class] = 0
             cluster_to_gt_intersection[predicted_cluster][gt_class] += 1
 
-        purity = (1/N) * sum([max(x.values()) for x in cluster_to_gt_intersection.values()])
+        purity = (1 / N) * sum([max(x.values()) for x in cluster_to_gt_intersection.values()])
         collocation = (1 / N) * sum([max(x.values()) for x in gt_to_cluster_intersection.values()])
         if purity + collocation == 0:
             f1 = 0
