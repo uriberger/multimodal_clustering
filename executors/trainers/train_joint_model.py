@@ -10,18 +10,29 @@ from models_src.textual_model_wrapper import generate_textual_model
 
 class JointModelTrainer(Trainer):
 
-    def __init__(self, timestamp, training_set, epoch_num, config, test_data, indent):
+    def __init__(self, timestamp, training_set, epoch_num, config, test_data, indent,
+                 loaded_model_dir=None, loaded_model_name=None):
         super().__init__(training_set, epoch_num, 50, indent)
 
         self.timestamp = timestamp
-        self.visual_model_dir = os.path.join(timestamp, visual_dir)
-        self.text_model_dir = os.path.join(timestamp, text_dir)
-        os.mkdir(self.visual_model_dir)
-        os.mkdir(self.text_model_dir)
-        self.visual_model = VisualModelWrapper(self.device, config, self.visual_model_dir,
-                                               default_model_name, indent + 1)
-        self.text_model = generate_textual_model(self.device, config, self.text_model_dir,
-                                                 default_model_name, indent + 1)
+        if loaded_model_dir is None:
+            self.visual_model_dir = os.path.join(timestamp, visual_dir)
+            self.text_model_dir = os.path.join(timestamp, text_dir)
+            os.mkdir(self.visual_model_dir)
+            os.mkdir(self.text_model_dir)
+            model_name = default_model_name
+            visual_config = config
+            textual_config = config
+        else:
+            self.visual_model_dir = os.path.join(loaded_model_dir, visual_dir)
+            self.text_model_dir = os.path.join(loaded_model_dir, text_dir)
+            model_name = loaded_model_name
+            visual_config = None
+            textual_config = config.text_model
+        self.visual_model = VisualModelWrapper(self.device, visual_config, self.visual_model_dir,
+                                               model_name, indent + 1)
+        self.text_model = generate_textual_model(self.device, textual_config, self.text_model_dir,
+                                                 model_name, indent + 1)
 
         self.visual_loss_history = []
         self.text_loss_history = []
