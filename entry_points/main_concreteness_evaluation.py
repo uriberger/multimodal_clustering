@@ -18,7 +18,7 @@ from models_src.textual_model_wrapper import TextualCountsModelWrapper
 timestamp = str(datetime.now()).replace(' ', '_')
 function_name = 'main_concreteness evaluation'
 os.mkdir(timestamp)
-# set_write_to_log(timestamp)
+set_write_to_log(timestamp)
 
 log_print(function_name, 0, 'Generating dataset_files...')
 dataset_name = 'COCO'
