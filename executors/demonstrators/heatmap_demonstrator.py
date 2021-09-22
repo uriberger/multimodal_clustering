@@ -15,7 +15,8 @@ class HeatmapDemonstrator(Demonstrator):
         textual_model_dir = os.path.join(self.models_dir, text_dir)
         self.visual_model = VisualModelWrapper(self.device, None, visual_model_dir, model_name, indent + 1)
         self.visual_model.eval()
-        self.text_model = generate_textual_model(self.device, 'counts_generative', textual_model_dir, indent + 1, model_name)
+        self.text_model = \
+            generate_textual_model(self.device, 'counts_generative', textual_model_dir, model_name, indent + 1)
 
         gt_class_to_concept = {i: self.text_model.model.predict_concept(class_mapping[i])[0]
                                for i in range(len(class_mapping))

@@ -5,7 +5,7 @@ import abc
 from utils.text_utils import generate_text_model
 
 
-def generate_textual_model(device, config_or_str, dir_name, indent, model_name=None):
+def generate_textual_model(device, config_or_str, dir_name, model_name, indent):
     """ Generate a textual model.
     Config can either be a model configuration, in case of a new model,
     or a string representing the name of the model, in case we want to
@@ -20,9 +20,9 @@ def generate_textual_model(device, config_or_str, dir_name, indent, model_name=N
         config = config_or_str
         model_str = config_or_str.text_model
     if model_str in count_models:
-        return TextualCountsModelWrapper(device, config, dir_name, indent, model_name)
+        return TextualCountsModelWrapper(device, config, dir_name, model_name, indent)
     elif model_str in rnn_models:
-        return TextualRNNModelWrapper(device, config, dir_name, indent, model_name)
+        return TextualRNNModelWrapper(device, config, dir_name, model_name, indent)
     else:
         return None
 
@@ -169,7 +169,7 @@ class TextualCountsModelWrapper(TextualModelWrapper):
 class TextualRNNModelWrapper(TextualModelWrapper):
 
     def __init__(self, device, config, model_dir, model_name, indent):
-        super().__init__(device, config, model_dir, indent, model_name)
+        super().__init__(device, config, model_dir, model_name, indent)
         self.model.to(self.device)
 
         learning_rate = self.config.textual_learning_rate
