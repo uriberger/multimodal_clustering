@@ -362,6 +362,7 @@ class SentenceImageMatchingMetric(Metric):
     def __init__(self, visual_model, text_model):
         super(SentenceImageMatchingMetric, self).__init__(visual_model, text_model)
         self.correct_count = 0
+        self.incorrect_count = 0
         self.overall_count = 0
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
@@ -387,17 +388,24 @@ class SentenceImageMatchingMetric(Metric):
 
             if first_hamming_distance < second_hamming_distance:
                 self.correct_count += 1
+            if first_hamming_distance > second_hamming_distance:
+                self.incorrect_count += 1
             self.overall_count += 1
 
     def calc_results(self):
-        self.results = {'image sentence alignment accuracy': self.correct_count / self.overall_count}
+        self.results = {
+            'image sentence alignment accuracy': self.correct_count / self.overall_count,
+            'image sentence alignment extended accuracy': 1 - (self.incorrect_count / self.overall_count)
+        }
 
     def report(self):
         if self.results is None:
             self.calc_results()
 
         return 'Image sentence alignment accuracy: ' + \
-               self.precision_str % self.results['image sentence alignment accuracy']
+               self.precision_str % self.results['image sentence alignment accuracy'] + ', ' + \
+               'extended accuracy: ' + \
+               self.precision_str % self.results['image sentence alignment extended accuracy']
 
 
 class VisualClassificationMetric(SensitivitySpecificityMetric):
