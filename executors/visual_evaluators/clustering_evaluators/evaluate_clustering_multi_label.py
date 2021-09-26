@@ -35,7 +35,9 @@ class ClusteringMultiLabelEvaluator(ClusteringEvaluator):
 
         """ Finally, we need to choose the probability threshold using the multi-label threshold utility. """
         self.log_print('Generating sample to  predicted class mapping...')
-        self.sample_to_predicted_classes = generate_sample_to_predicted_classes_mapping(self.prob_gt_list)
+        self.sample_to_predicted_classes = generate_sample_to_predicted_classes_mapping(
+            self.prob_gt_list, self.indent + 1
+        )
 
     def create_fuzzy_clusters(self):
         gt_class_num = len(self.class_mapping)

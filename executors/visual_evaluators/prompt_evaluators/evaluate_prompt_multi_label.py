@@ -37,7 +37,9 @@ class PromptMultiLabelEvaluator(PromptEvaluator):
         self.decrement_indent()
 
         self.log_print('Generating sample to prediced class mapping...')
-        self.sample_to_predicted_classes = generate_sample_to_predicted_classes_mapping(self.similarity_gt_list)
+        self.sample_to_predicted_classes = generate_sample_to_predicted_classes_mapping(
+            self.similarity_gt_list, self.indent + 1
+        )
 
     def collect_similarity_and_gt(self, sample_ind, sampled_batch, print_info):
         # Calculate similarity with each text class

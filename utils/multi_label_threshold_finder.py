@@ -1,3 +1,6 @@
+from utils.general_utils import for_loop_with_reports, log_print
+from loggable_object import LoggableObject
+
 """ The purpose of the functions in this file is to find, given a multi-label classification problem, and a model that
 predicts the probability of each class for each sample, what is the best threshold, where classes with probability
 lower than the threshold will be considered as negative, and classes with probability that exceeds the threshold will
@@ -10,10 +13,10 @@ The output of the main function is a mapping from sample index to a list of clas
 sample, according to the best threshold we calculated internally. """
 
 
-def generate_sample_to_predicted_classes_mapping(prob_gt_list):
+def generate_sample_to_predicted_classes_mapping(prob_gt_list, indent):
     prob_gt_list.sort(key=lambda x: x[0])
 
-    prob_threshold = choose_probability_threshold(prob_gt_list)
+    prob_threshold = choose_probability_threshold(prob_gt_list, indent)
 
     sample_to_predicted_classes = {}
     for prob, _, sample_ind, class_ind in prob_gt_list:
@@ -25,22 +28,28 @@ def generate_sample_to_predicted_classes_mapping(prob_gt_list):
     return sample_to_predicted_classes
 
 
-def choose_probability_threshold(prob_gt_list):
+def choose_probability_threshold(prob_gt_list, indent):
     """ To choose the best probability threshold, we need to know how many gt and non-gt there are before and after each
     element in the list.
     So, we go over the entire list twice: once to collect how many gt and non-gt there are before each element, and
     once to collect how many there are after each element.
     One thing we need to remember is that there might be multiple probabilities with the same value in the list. So
     we need to update the count only after the last one with the same value. """
+    func_name = 'choose_probability_threshold'
     prob_num = len(prob_gt_list)
 
-    # First traverse
-    gt_non_gt_count_before_element = collect_gt_non_gt_relative_to_element(prob_gt_list, False)
+    # First traverse: collect gt non gt relative to element
+    log_print(func_name, indent, 'Starting forward traverse to collect gt non gt count...')
+    forward_collector = GtNonGtCollector(prob_gt_list, False, indent + 1)
+    gt_non_gt_count_before_element = forward_collector.collect()
 
     # Second traverse
-    gt_non_gt_count_after_element = collect_gt_non_gt_relative_to_element(prob_gt_list, True)
+    log_print(func_name, indent, 'Starting reverse traverse to collect gt non gt count...')
+    reverse_collector = GtNonGtCollector(prob_gt_list, True, indent + 1)
+    gt_non_gt_count_after_element = reverse_collector.collect()
 
     # F1 calculation for each threshold
+    log_print(func_name, indent, 'Calculating F1 for each threshold...')
     best_F1 = -1
     for i in range(prob_num):
         ''' In case we choose similarity number i to be the threshold, all the gt before it will be false negative,
@@ -57,65 +66,81 @@ def choose_probability_threshold(prob_gt_list):
     return best_threshold
 
 
-def collect_gt_non_gt_relative_to_element(prob_gt_list, reverse):
-    prob_num = len(prob_gt_list)
-    if reverse:
-        ind_start = prob_num - 1
-        ind_end = -1
-        step = -1
-    else:
-        ind_start = 0
-        ind_end = prob_num
-        step = 1
+class GtNonGtCollector(LoggableObject):
+    def __init__(self, prob_gt_list, reverse, indent):
+        super(GtNonGtCollector, self).__init__(indent)
 
-    gt_non_gt_count_relative_to_element = []
-    gt_count_so_far = 0
-    non_gt_count_so_far = 0
-    gt_count_from_last_different_prob = 0
-    non_gt_count_from_last_different_prob = 0
-    cur_prob_count = 0
-    for i in range(ind_start, ind_end, step):
-        prob, is_gt, _, _ = prob_gt_list[i]
-        if i == ind_start:
-            prev_prob = prob
+        self.prob_gt_list = prob_gt_list
+        self.reverse = reverse
 
-        if prob != prev_prob:
-            if not reverse:
+        self.gt_non_gt_count_relative_to_element = []
+        self.gt_count_so_far = 0
+        self.non_gt_count_so_far = 0
+        self.gt_count_from_last_different_prob = 0
+        self.non_gt_count_from_last_different_prob = 0
+        self.cur_prob_count = 0
+        self.prev_prob = 0
+
+    def collect(self):
+        prob_num = len(self.prob_gt_list)
+        if self.reverse:
+            ind_start = prob_num - 1
+            ind_end = -1
+            step = -1
+        else:
+            ind_start = 0
+            ind_end = prob_num
+            step = 1
+
+        for_loop_with_reports(range(ind_start, ind_end, step), prob_num, 100000,
+                              self.collect_inner_loop, self.progress_report)
+
+        # In the end, we'll have the last batch of equal probabilities, need to update for those as well
+        if not self.reverse:
+            self.gt_non_gt_count_relative_to_element = \
+                self.gt_non_gt_count_relative_to_element + \
+                [(self.gt_count_so_far, self.non_gt_count_so_far)] * self.cur_prob_count
+        else:
+            self.gt_count_so_far += self.gt_count_from_last_different_prob
+            self.non_gt_count_so_far += self.non_gt_count_from_last_different_prob
+            self.gt_non_gt_count_relative_to_element = \
+                [(self.gt_count_so_far, self.non_gt_count_so_far)] * self.cur_prob_count + \
+                self.gt_non_gt_count_relative_to_element
+
+        return self.gt_non_gt_count_relative_to_element
+
+    def collect_inner_loop(self, global_index, index_in_prob_list, print_info):
+        prob, is_gt, _, _ = self.prob_gt_list[index_in_prob_list]
+        if global_index == 0:
+            self.prev_prob = prob
+
+        if prob != self.prev_prob:
+            if not self.reverse:
                 ''' In case we're going in normal direction, we don't want to include the gt and non-gt count of the
                  current probability in the list. Also, we'll add the new count at the end of the list. '''
-                gt_non_gt_count_relative_to_element = \
-                    gt_non_gt_count_relative_to_element + \
-                    [(gt_count_so_far, non_gt_count_so_far)] * cur_prob_count
-            gt_count_so_far += gt_count_from_last_different_prob
-            non_gt_count_so_far += non_gt_count_from_last_different_prob
-            if reverse:
+                self.gt_non_gt_count_relative_to_element = \
+                    self.gt_non_gt_count_relative_to_element + \
+                    [(self.gt_count_so_far, self.non_gt_count_so_far)] * self.cur_prob_count
+            self.gt_count_so_far += self.gt_count_from_last_different_prob
+            self.non_gt_count_so_far += self.non_gt_count_from_last_different_prob
+            if self.reverse:
                 ''' In case we're going in reverse order, we want to include the gt and non-gt count of the current
                 probability in the list. Also, we'll add the new count at the beginning of the list. '''
-                gt_non_gt_count_relative_to_element = \
-                    [(gt_count_so_far, non_gt_count_so_far)] * cur_prob_count + \
-                    gt_non_gt_count_relative_to_element
-            gt_count_from_last_different_prob = 0
-            non_gt_count_from_last_different_prob = 0
-            prev_prob = prob
-            cur_prob_count = 0
+                self.gt_non_gt_count_relative_to_element = \
+                    [(self.gt_count_so_far, self.non_gt_count_so_far)] * self.cur_prob_count + \
+                    self.gt_non_gt_count_relative_to_element
+            self.gt_count_from_last_different_prob = 0
+            self.non_gt_count_from_last_different_prob = 0
+            self.prev_prob = prob
+            self.cur_prob_count = 0
 
         if is_gt:
-            gt_count_from_last_different_prob += 1
+            self.gt_count_from_last_different_prob += 1
         else:
-            non_gt_count_from_last_different_prob += 1
+            self.non_gt_count_from_last_different_prob += 1
 
-        cur_prob_count += 1
+        self.cur_prob_count += 1
 
-    # In the end, we'll have the last batch of equal probabilities, need to update for those as well
-    if not reverse:
-        gt_non_gt_count_relative_to_element = \
-            gt_non_gt_count_relative_to_element + \
-            [(gt_count_so_far, non_gt_count_so_far)] * cur_prob_count
-    else:
-        gt_count_so_far += gt_count_from_last_different_prob
-        non_gt_count_so_far += non_gt_count_from_last_different_prob
-        gt_non_gt_count_relative_to_element = \
-            [(gt_count_so_far, non_gt_count_so_far)] * cur_prob_count + \
-            gt_non_gt_count_relative_to_element
-
-    return gt_non_gt_count_relative_to_element
+    def progress_report(self, index, dataset_size, time_from_prev):
+        self.log_print('Starting index ' + str(index) + ' out of ' + str(dataset_size) +
+                       ', time from previous checkpoint ' + str(time_from_prev))
