@@ -17,7 +17,6 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
         self.name = name
 
         self.slices = ['train', 'val']
-        self.cached_dataset_files_dir = 'cached_dataset_files'
         self.file_paths = {}
         for slice_str in self.slices:
             self.file_paths[slice_str] = self.get_filepaths_for_slice(slice_str)

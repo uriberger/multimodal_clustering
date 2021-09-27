@@ -7,6 +7,8 @@ class DatasetBuilder(LoggableObject):
     def __init__(self, indent):
         super(DatasetBuilder, self).__init__(indent)
 
+        self.cached_dataset_files_dir = 'cached_dataset_files'
+
     @abc.abstractmethod
     def get_class_mapping(self):
         return

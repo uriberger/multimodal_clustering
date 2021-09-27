@@ -10,7 +10,7 @@ class ImageDataset(data.Dataset):
     """
 
     def __init__(self,
-                 caption_file,
+                 image_id_file_or_list,
                  get_image_path_func,
                  config):
         self.config = config
@@ -19,8 +19,15 @@ class ImageDataset(data.Dataset):
         std_tuple = (0.2718, 0.2672, 0.2826)
         self.normalizer = transforms.Normalize(mean_tuple, std_tuple)
 
-        caption_data = torch.load(caption_file)
-        self.image_ids = list(set([x['image_id'] for x in caption_data]))
+        if isinstance(image_id_file_or_list, str):
+            image_id_data = torch.load(image_id_file_or_list)
+            image_id_list = list(set([x['image_id'] for x in image_id_data]))
+        elif isinstance(image_id_file_or_list, list):
+            image_id_list = image_id_file_or_list
+        else:
+            assert False
+
+        self.image_ids = image_id_list
 
         self.get_image_path_func = get_image_path_func
 
@@ -42,7 +49,7 @@ class ImageDataset(data.Dataset):
             idx = idx.tolist()
 
         image_id = self.image_ids[idx]
-        image_obj = Image.open(self.get_image_path_func, (image_id, self.config.slice_str))
+        image_obj = Image.open(self.get_image_path_func(image_id, self.config.slice_str))
         orig_image_size = image_obj.size
         image_tensor = pil_image_trans(image_obj)
 
