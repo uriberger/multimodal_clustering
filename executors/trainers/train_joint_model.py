@@ -20,19 +20,19 @@ class JointModelTrainer(Trainer):
             self.text_model_dir = os.path.join(timestamp, text_dir)
             os.mkdir(self.visual_model_dir)
             os.mkdir(self.text_model_dir)
-            model_name = default_model_name
+            self.model_name = default_model_name
             visual_config = config
             textual_config = config
         else:
             self.visual_model_dir = os.path.join(loaded_model_dir, visual_dir)
             self.text_model_dir = os.path.join(loaded_model_dir, text_dir)
-            model_name = loaded_model_name
+            self.model_name = loaded_model_name
             visual_config = None
             textual_config = config.text_model
         self.visual_model = VisualModelWrapper(self.device, visual_config, self.visual_model_dir,
-                                               model_name, indent + 1)
+                                               self.model_name, indent + 1)
         self.text_model = generate_textual_model(self.device, textual_config, self.text_model_dir,
-                                                 model_name, indent + 1)
+                                                 self.model_name, indent + 1)
 
         self.visual_loss_history = []
         self.text_loss_history = []
@@ -87,7 +87,7 @@ class JointModelTrainer(Trainer):
         if self.test_data is not None:
             self.log_print('Evaluating after finishing the epoch...')
             # If test data was provided, we evaluate after every epoch
-            evaluator = JointModelEvaluator(self.visual_model_dir, self.text_model_dir, default_model_name,
+            evaluator = JointModelEvaluator(self.visual_model_dir, self.text_model_dir, self.model_name,
                                             self.test_data[0], self.test_data[1], self.test_data[2], self.test_data[3],
                                             self.test_data[4], False, self.indent + 1)
             results = evaluator.evaluate()
