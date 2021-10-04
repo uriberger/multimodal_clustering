@@ -670,6 +670,7 @@ class CategorizationMetric(Metric):
         self.results['v_measure_score'] = v_measure_score(gt_labels, predicted_labels)
         self.results['purity'], self.results['collocation'], self.results['pu_co_f1'] = \
             self.calc_purity_collocation(gt_labels, predicted_labels)
+        self.results['FScore'] = self.calc_fscore(gt_labels, predicted_labels)
 
     @staticmethod
     def calc_purity_collocation(gt_labels, predicted_labels):
@@ -701,6 +702,50 @@ class CategorizationMetric(Metric):
 
         return purity, collocation, f1
 
+    @staticmethod
+    def calc_fscore(gt_labels, predicted_labels):
+        N = len(gt_labels)
+        gt_to_cluster_intersection = {}
+        gt_class_count = {}
+        cluster_count = {}
+        for i in range(N):
+            gt_class = gt_labels[i]
+            predicted_cluster = predicted_labels[i]
+
+            # Update counts
+            if gt_class not in gt_class_count:
+                gt_class_count[gt_class] = 0
+            gt_class_count[gt_class] += 1
+            if predicted_cluster not in cluster_count:
+                cluster_count[predicted_cluster] = 0
+            cluster_count[predicted_cluster] += 1
+
+            # Update gt class to cluster mapping
+            if gt_class not in gt_to_cluster_intersection:
+                gt_to_cluster_intersection[gt_class] = {predicted_cluster: 0}
+            if predicted_cluster not in gt_to_cluster_intersection[gt_class]:
+                gt_to_cluster_intersection[gt_class][predicted_cluster] = 0
+            gt_to_cluster_intersection[gt_class][predicted_cluster] += 1
+
+        Fscore = 0
+        for gt_class, cluster_map in gt_to_cluster_intersection.items():
+            gt_class_size = gt_class_count[gt_class]
+            cur_class_F = 0
+            for cluster, intersection_size in cluster_map.items():
+                cluster_size = cluster_count[cluster]
+                precision = intersection_size/gt_class_size
+                recall = intersection_size/cluster_size
+                if precision + recall == 0:
+                    f = 0
+                else:
+                    f = 2 * (precision * recall) / (precision + recall)
+                if f > cur_class_F:
+                    cur_class_F = f
+
+            Fscore += (gt_class/N) * cur_class_F
+
+        return Fscore
+
     def report(self):
         if self.results is None:
             self.calc_results()
@@ -708,7 +753,8 @@ class CategorizationMetric(Metric):
         res = 'v measure score: ' + self.precision_str % self.results['v_measure_score'] + ', '
         res += 'purity: ' + self.precision_str % self.results['purity'] + ', '
         res += 'collocation: ' + self.precision_str % self.results['collocation'] + ', '
-        res += 'purity-collocation F1: ' + self.precision_str % self.results['pu_co_f1']
+        res += 'purity-collocation F1: ' + self.precision_str % self.results['pu_co_f1'] + ', '
+        res += 'FScore: ' + self.precision_str % self.results['FScore']
 
         return res
 
