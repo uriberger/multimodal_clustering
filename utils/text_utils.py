@@ -12,6 +12,21 @@ noun_tags = [
     'PRP'
 ]
 
+verb_tags = [
+    'VBZ',
+    'VB',
+    'VBP',
+    'VBG',
+    'VBN',
+    'VBD'
+]
+
+adjective_tags = [
+    'JJ',
+    'JJR',
+    'JJS'
+]
+
 
 def is_noun(pos_tag):
     return pos_tag in noun_tags
