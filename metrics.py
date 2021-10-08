@@ -295,19 +295,35 @@ class ConcretenessPredictionMetric(Metric):
         self.results = {}
         self.traverse_vocab()
 
-        self.results['concreteness estimation mae'] = \
-            self.estimation_absolute_error_sum / self.tested_words_count
-        self.results['concreteness estimation mae for conc'] = \
-            self.estimation_absolute_error_sum_for_conc_words / self.conc_words_count
-        self.results['concreteness estimation mae for non conc'] = \
-            self.estimation_absolute_error_sum_for_non_conc_words / self.non_conc_words_count
+        concreteness_estimation_mae = 0
+        concreteness_prediction_mae = 0
+        if self.tested_words_count > 0:
+            concreteness_estimation_mae = \
+                self.estimation_absolute_error_sum / self.tested_words_count
+            concreteness_prediction_mae = \
+                self.prediction_absolute_error_sum / self.tested_words_count
+        self.results['concreteness estimation mae'] = concreteness_estimation_mae
+        self.results['concreteness prediction mae'] = concreteness_prediction_mae
 
-        self.results['concreteness prediction mae'] = \
-            self.prediction_absolute_error_sum / self.tested_words_count
-        self.results['concreteness prediction mae for conc'] = \
-            self.prediction_absolute_error_sum_for_conc_words / self.conc_words_count
-        self.results['concreteness prediction mae for non conc'] = \
-            self.prediction_absolute_error_sum_for_non_conc_words / self.non_conc_words_count
+        concreteness_estimation_mae_for_conc = 0
+        concreteness_prediction_mae_for_conc = 0
+        if self.conc_words_count > 0:
+            concreteness_estimation_mae_for_conc = \
+                self.estimation_absolute_error_sum_for_conc_words / self.conc_words_count
+            concreteness_prediction_mae_for_conc = \
+                self.prediction_absolute_error_sum_for_conc_words / self.conc_words_count
+        self.results['concreteness estimation mae for conc'] = concreteness_estimation_mae_for_conc
+        self.results['concreteness prediction mae for conc'] = concreteness_prediction_mae_for_conc
+
+        concreteness_estimation_mae_for_non_conc = 0
+        concreteness_prediction_mae_for_non_conc = 0
+        if self.non_conc_words_count > 0:
+            concreteness_estimation_mae_for_non_conc = \
+                self.estimation_absolute_error_sum_for_non_conc_words / self.non_conc_words_count
+            concreteness_prediction_mae_for_non_conc = \
+                self.prediction_absolute_error_sum_for_non_conc_words / self.non_conc_words_count
+        self.results['concreteness estimation mae for non conc'] = concreteness_estimation_mae_for_non_conc
+        self.results['concreteness prediction mae for non conc'] = concreteness_prediction_mae_for_non_conc
 
         for i in range(len(self.min_count_vals)):
             gt_and_estimations = np.array([self.min_count_gt_lists[i], self.min_count_est_lists[i]])
