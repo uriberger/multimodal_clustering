@@ -123,16 +123,16 @@ class BBoxMetric(SensitivitySpecificityMetric):
 
             tp = 0
             fp = 0
-            identifed_gt_inds = {}
+            identified_gt_inds = {}
             for predicted_bbox_ind in range(len(predicted_bboxes[sample_ind])):
                 for gt_bbox_ind in range(gt_bbox_num):
                     iou = ious[gt_bbox_ind, predicted_bbox_ind]
                     if iou >= iou_threshold:
                         tp += 1
-                        identifed_gt_inds[gt_bbox_ind] = True
+                        identified_gt_inds[gt_bbox_ind] = True
                         continue
                     fp += 1
-            fn = gt_bbox_num - len(identifed_gt_inds)
+            fn = gt_bbox_num - len(identified_gt_inds)
 
             self.tp += tp
             self.fp += fp
@@ -668,6 +668,63 @@ class CategorizationMetric(Metric):
         super(CategorizationMetric, self).__init__(None, text_model)
         self.category_dataset = category_dataset
 
+    @staticmethod
+    def fuzzy_v_measure_score(gt_class_to_sample, cluster_to_sample):
+
+        def safe_log(num):
+            if num == 0:
+                return 0
+            else:
+                return np.log2(num)
+
+        sample_to_gt_class_count = {}
+        for gt_class, sample_list in gt_class_to_sample.items():
+            for sample in sample_list:
+                if sample not in sample_to_gt_class_count:
+                    sample_to_gt_class_count[sample] = 0
+                sample_to_gt_class_count[sample] += 1
+
+        sample_to_mass = {x[0]: 1 / x[1] for x in sample_to_gt_class_count.items()}
+        clustering_mass = sum([len(y) for y in cluster_to_sample.values()])
+
+        all_gt_classes = list(gt_class_to_sample.keys())
+        all_clusters = list(cluster_to_sample.keys())
+        cluster_list_for_all_gt_classes = [[(x, y) for y in all_clusters] for x in all_gt_classes]
+        all_gt_classes_and_clusters = [inner for outer in cluster_list_for_all_gt_classes for inner in outer]
+        gt_class_to_cluster_mass = {x: {} for x in all_gt_classes}
+        cluster_to_gt_class_mass = {x: {} for x in all_clusters}
+
+        for gt_class, gt_sample_list in gt_class_to_sample.items():
+            for cluster, cluster_sample_list in cluster_to_sample.items():
+                intersection = list(set(gt_sample_list).intersection(cluster_sample_list))
+                intersection_mass = sum([sample_to_mass[x] for x in intersection])
+                gt_class_to_cluster_mass[gt_class][cluster] = intersection_mass
+                cluster_to_gt_class_mass[cluster][gt_class] = intersection_mass
+
+        gt_class_to_mass = {x[0]: sum(x[1].values()) for x in gt_class_to_cluster_mass.items()}
+        cluster_to_mass = {x[0]: sum(x[1].values()) for x in cluster_to_gt_class_mass.items()}
+
+        p_gt = {x[0]: x[1] / clustering_mass for x in gt_class_to_mass.items()}
+        p_cluster = {x[0]: x[1] / clustering_mass for x in cluster_to_mass.items()}
+        p_gt_cluster = {x: gt_class_to_cluster_mass[x[0]][x[1]] / clustering_mass for x in all_gt_classes_and_clusters}
+
+        H_gt = (-1) * sum([x * safe_log(x) for x in p_gt.values()])
+        H_clusters = (-1) * sum([x * safe_log(x) for x in p_cluster.values()])
+        H_gt_given_clusters = (-1) * sum([p_gt_cluster[x] * safe_log(p_gt_cluster[x] / p_cluster[x[1]])
+                                          for x in all_gt_classes_and_clusters])
+        H_clusters_given_gt = (-1) * sum([p_gt_cluster[x] * safe_log(p_gt_cluster[x] / p_gt[x[0]])
+                                          for x in all_gt_classes_and_clusters])
+
+        homogeneity = 1 - H_gt_given_clusters / H_gt
+        completeness = 1 - H_clusters_given_gt / H_clusters
+
+        if homogeneity + completeness == 0:
+            score = 0
+        else:
+            score = 2 * (homogeneity * completeness) / (homogeneity + completeness)
+
+        return homogeneity, completeness, score
+
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         # This metric is not related to the test set, all the measurements are done later
         return
@@ -687,6 +744,22 @@ class CategorizationMetric(Metric):
         self.results['purity'], self.results['collocation'], self.results['pu_co_f1'] = \
             self.calc_purity_collocation(gt_labels, predicted_labels)
         self.results['FScore'] = self.calc_fscore(gt_labels, predicted_labels)
+
+    def calculate_fuzzy_scatter_metric(self):
+        all_words = list(set([word for inner in self.category_dataset.values() for word in inner]))
+        concept_to_word_list = {}
+        for word in all_words:
+            prediction = self.text_model.predict_concepts_for_word(word)
+            if prediction is None:
+                continue
+            predicted_concepts = [x for x in range(len(prediction)) if prediction[x] == 1]
+            for concept in predicted_concepts:
+                if concept not in concept_to_word_list:
+                    concept_to_word_list[concept] = []
+                concept_to_word_list[concept].append(word)
+
+        self.results['fuzzy_homogeneity'], self.results['fuzzy_completeness'], self.results['fuzzy_v_measure_score'] = \
+            self.fuzzy_v_measure_score(self.category_dataset, concept_to_word_list)
 
     @staticmethod
     def calc_purity_collocation(gt_labels, predicted_labels):
@@ -770,7 +843,10 @@ class CategorizationMetric(Metric):
         res += 'purity: ' + self.precision_str % self.results['purity'] + ', '
         res += 'collocation: ' + self.precision_str % self.results['collocation'] + ', '
         res += 'purity-collocation F1: ' + self.precision_str % self.results['pu_co_f1'] + ', '
-        res += 'FScore: ' + self.precision_str % self.results['FScore']
+        res += 'FScore: ' + self.precision_str % self.results['FScore'] + ', '
+        res += 'fuzzy homogeneity: ' + self.precision_str % self.results['fuzzy_homogeneity'] + ', '
+        res += 'fuzzy completeness: ' + self.precision_str % self.results['fuzzy_completeness'] + ', '
+        res += 'fuzzy v measure score: ' + self.precision_str % self.results['fuzzy_v_measure_score']
 
         return res
 
@@ -778,3 +854,4 @@ class CategorizationMetric(Metric):
         self.results = {}
 
         self.calculate_scatter_metric()
+        self.calculate_fuzzy_scatter_metric()

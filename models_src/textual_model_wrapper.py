@@ -135,6 +135,10 @@ class TextualCountsModelWrapper(TextualModelWrapper):
 
     def predict_concepts_for_word(self, word):
         concept_conditioned_on_word = self.model.get_concept_conditioned_on_word(word)
+        if concept_conditioned_on_word is None:
+            # return [0]*self.config.concept_num
+            return None
+
         concept_indicators = [1 if x >= self.config.noun_threshold else 0 for x in concept_conditioned_on_word]
         return concept_indicators
 
