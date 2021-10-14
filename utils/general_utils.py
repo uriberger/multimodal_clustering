@@ -1,6 +1,7 @@
 import os
 import torch
 import time
+from datetime import datetime
 
 write_to_log = False
 log_fp = None
@@ -54,3 +55,7 @@ def for_loop_with_reports(iterable, iterable_size, checkpoint_len, inner_impl, p
             should_print = True
 
         inner_impl(index, item, should_print)
+
+
+def get_timestamp_str():
+    return str(datetime.now()).replace(' ', '_').replace(':', '-')
