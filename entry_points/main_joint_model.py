@@ -1,7 +1,6 @@
 # General
 import os
-from utils.general_utils import log_print, set_write_to_log, visual_dir, text_dir, default_model_name
-from datetime import datetime
+from utils.general_utils import log_print, set_write_to_log, visual_dir, text_dir, default_model_name, get_timestamp_str
 
 # Dataset
 from dataset_builders.coco import Coco
@@ -15,15 +14,13 @@ from executors.trainers.train_joint_model import JointModelTrainer
 from executors.bimodal_evaluators.evaluate_joint_model import JointModelEvaluator
 
 
-timestamp = str(datetime.now()).replace(' ', '_')
+timestamp = get_timestamp_str()
 function_name = 'main_joint_model'
 os.mkdir(timestamp)
 set_write_to_log(timestamp)
 
 model_config = ModelConfig(
     visual_model='resnet50',
-    # visual_model='simclr',
-    # visual_model_path='embedding_models/simclr_resnet_15_epochs',
     text_model='counts_generative',
     concept_num=100,
     object_threshold=0.5,
