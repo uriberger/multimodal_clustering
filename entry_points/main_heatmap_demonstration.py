@@ -1,7 +1,6 @@
 # General
 import os
-from utils.general_utils import log_print, set_write_to_log
-from datetime import datetime
+from utils.general_utils import log_print, set_write_to_log, get_timestamp_str
 
 # Dataset
 from dataset_builders.coco import Coco
@@ -11,7 +10,7 @@ from datasets_src.dataset_config import DatasetConfig
 from executors.demonstrators.heatmap_demonstrator import HeatmapDemonstrator
 
 
-timestamp = str(datetime.now()).replace(' ', '_')
+timestamp = get_timestamp_str()
 function_name = 'main_heatmap_demonstration'
 os.mkdir(timestamp)
 set_write_to_log(timestamp)
