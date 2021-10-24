@@ -44,7 +44,7 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
         return
 
     @abc.abstractmethod
-    def generate_gt_classes_bboxes_data(slice_str):
+    def generate_gt_classes_bboxes_data(self, slice_str):
         return
 
     @abc.abstractmethod
@@ -98,8 +98,10 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
         image_id = item
 
         # No class or bbox data
-        if image_id not in self.unwanted_images_info['img_classes_dataset'] or \
-                image_id not in self.unwanted_images_info['img_bboxes_dataset']:
+        if (self.unwanted_images_info['img_classes_dataset'] is not None and
+            image_id not in self.unwanted_images_info['img_classes_dataset']) or \
+                (self.unwanted_images_info['img_bboxes_dataset'] is not None and
+                 image_id not in self.unwanted_images_info['img_bboxes_dataset']):
             self.unwanted_images_info['unwanted_image_ids'].append(image_id)
             self.unwanted_images_info['no_class_or_bbox_data_count'] += 1
             return

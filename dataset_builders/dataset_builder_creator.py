@@ -4,6 +4,7 @@ from dataset_builders.imagenet import ImageNet
 from dataset_builders.coco import Coco
 from dataset_builders.flickr30 import Flickr30
 from dataset_builders.pascal_voc import PascalVOC
+from dataset_builders.wiki_scenes import WikiScenes
 
 
 def create_dataset_builder(dataset_name):
@@ -30,6 +31,10 @@ def create_dataset_builder(dataset_name):
         multi_label = True
     elif dataset_name == 'VOC2012':
         dataset_generator = PascalVOC(root_dir, 1)
+        val_slice_str = ''
+        multi_label = True
+    elif dataset_name == 'WikiScenes':
+        dataset_generator = WikiScenes(root_dir, 1)
         val_slice_str = ''
         multi_label = True
     else:
