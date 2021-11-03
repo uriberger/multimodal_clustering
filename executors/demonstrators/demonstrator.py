@@ -20,6 +20,6 @@ class Demonstrator(Executor):
         return
 
     def demonstrate(self):
-        data_loader = data.DataLoader(self.dataset, batch_size=1, shuffle=False)
+        data_loader = data.DataLoader(self.dataset, batch_size=1, shuffle=True)
         for_loop_with_reports(data_loader, len(data_loader), len(data_loader),
                               self.demonstrate_item, self.progress_report)
