@@ -1,6 +1,5 @@
 import os
-from utils.general_utils import log_print, set_write_to_log
-from datetime import datetime
+from utils.general_utils import log_print, set_write_to_log, get_timestamp_str
 
 # Dataset
 from datasets_src.dataset_config import DatasetConfig
@@ -14,7 +13,7 @@ from executors.visual_evaluators.prompt_evaluators.evaluate_prompt_multi_label i
 from executors.visual_evaluators.evaluate_concepts_visual_model import VisualConceptEvaluator
 
 
-timestamp = str(datetime.now()).replace(' ', '_')
+timestamp = get_timestamp_str()
 function_name = 'main_visual_model'
 os.mkdir(timestamp)
 set_write_to_log(timestamp)
@@ -35,11 +34,11 @@ log_print(function_name, 0, 'Testing...')
 
 # model_type = 'pretrained'
 # model_str = 'resnet18'
-# model_type = 'clip'
-# model_str = 'RN50'
+model_type = 'clip'
+model_str = 'RN50'
 # model_str = 'ViT-B/32'
-model_type = 'unimodal'
-model_str = 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100'
+# model_type = 'unimodal'
+# model_str = 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100'
 # model_type = 'simclr'
 # model_str = 'simclr_resnet_15_epochs'
 
