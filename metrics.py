@@ -664,9 +664,11 @@ class CategorizationMetric(Metric):
     dataset).
     We use the V-measure-score for evaluation. """
 
-    def __init__(self, text_model, category_dataset):
+    def __init__(self, text_model, category_dataset, predicted_labels=None, ignore_unknown_words=True):
         super(CategorizationMetric, self).__init__(None, text_model)
         self.category_dataset = category_dataset
+        self.predicted_labels = predicted_labels
+        self.ignore_unknown_words = ignore_unknown_words
 
     @staticmethod
     def fuzzy_v_measure_score(gt_class_to_sample, cluster_to_sample):
@@ -735,10 +737,36 @@ class CategorizationMetric(Metric):
         category_index = 0
         for category, word_list in self.category_dataset.items():
             for word in word_list:
-                prediction = self.text_model.model.predict_concept(word)
+                # Prediction
+                if self.predicted_labels is None:
+                    # If we're using the model for prediction, use inner predict function
+                    predicted_tuple = self.text_model.model.predict_concept(word)
+                    if predicted_tuple is None:
+                        prediction = None
+                    else:
+                        prediction = predicted_tuple[0]
+                else:
+                    # Otherwise, we use external predicted labels
+                    if word in self.predicted_labels:
+                        prediction = self.predicted_labels[word]
+                    else:
+                        prediction = None
+
                 if prediction is not None:
+                    # The word is known
+                    predicted_labels.append(prediction)
                     gt_labels.append(category_index)
-                    predicted_labels.append(prediction[0])
+                elif not self.ignore_unknown_words:
+                    ''' The word is unknown, but we were told not to ignore unknown words, so we'll label it by a new
+                    cluster. '''
+                    new_cluster_ind = self.text_model.config.concept_num
+                    predicted_labels.append(new_cluster_ind)
+
+                if (prediction is not None) or (not self.ignore_unknown_words):
+                    ''' Only in case that we appended something to the predicted_labels list, we need to append to the
+                    gt_labels list '''
+                    gt_labels.append(category_index)
+
             category_index += 1
         self.results['v_measure_score'] = v_measure_score(gt_labels, predicted_labels)
         self.results['purity'], self.results['collocation'], self.results['pu_co_f1'] = \
