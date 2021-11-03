@@ -15,7 +15,7 @@ from models_src.textual_model_wrapper import TextualCountsModelWrapper
 
 
 timestamp = get_timestamp_str()
-function_name = 'main_concreteness evaluation'
+function_name = 'main_concreteness_evaluation'
 os.mkdir(timestamp)
 set_write_to_log(timestamp)
 
