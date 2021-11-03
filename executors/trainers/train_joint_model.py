@@ -48,20 +48,10 @@ class JointModelTrainer(Trainer):
     def pre_training(self):
         self.dump_models()
 
+        self.first_epoch = True
+
     def post_training(self):
         self.dump_models()
-
-        if self.test_data is not None:
-            # Dump results into a csv file
-            with open(os.path.join(self.timestamp, 'evaluation_by_epoch.csv'), 'w', newline='') as csvfile:
-                fieldnames = ['metric'] + [str(x) for x in range(self.epoch_num)]
-                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-                writer.writeheader()
-
-                metric_to_results = self.generate_metric_to_results_mapping()
-                for result_dic in metric_to_results.values():
-                    writer.writerow(result_dic)
 
     def generate_metric_to_results_mapping(self):
         metric_to_results = {}
@@ -82,16 +72,40 @@ class JointModelTrainer(Trainer):
 
         return metric_to_results
 
-    def post_loop(self):
+    def evaluate_current_model(self):
+        evaluator = JointModelEvaluator(self.visual_model_dir, self.text_model_dir, self.model_name,
+                                        self.test_data[0], self.test_data[1], self.test_data[2], self.test_data[3],
+                                        self.test_data[4], False, self.indent + 1)
+        results = evaluator.evaluate()
+        self.evaluation_results.append(results)
+
+    def dump_results_to_csv(self):
+        with open(os.path.join(self.timestamp, 'evaluation_by_epoch.csv'), 'w', newline='') as csvfile:
+            fieldnames = ['metric'] + [str(x) for x in range(self.epoch_num)]
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+            writer.writeheader()
+
+            metric_to_results = self.generate_metric_to_results_mapping()
+            for result_dic in metric_to_results.values():
+                writer.writerow(result_dic)
+
+    def post_epoch(self):
         self.dump_models()
+
         if self.test_data is not None:
+            # First dump results of first epoch (we record every few batches)
+            if self.first_epoch:
+                self.dump_results_to_csv()
+                self.evaluation_results = []
+                self.first_epoch = False
+
             self.log_print('Evaluating after finishing the epoch...')
             # If test data was provided, we evaluate after every epoch
-            evaluator = JointModelEvaluator(self.visual_model_dir, self.text_model_dir, self.model_name,
-                                            self.test_data[0], self.test_data[1], self.test_data[2], self.test_data[3],
-                                            self.test_data[4], False, self.indent + 1)
-            results = evaluator.evaluate()
-            self.evaluation_results.append(results)
+            self.evaluate_current_model()
+
+            # Dump results into a csv file
+            self.dump_results_to_csv()
 
     def train_on_batch(self, index, sampled_batch, print_info):
         # Load data
@@ -142,3 +156,6 @@ class JointModelTrainer(Trainer):
                            ', mean text loss: ' + str(mean_text_loss) +
                            ', mean visual loss: ' + str(mean_visual_loss))
             self.prev_checkpoint_batch_ind = len(self.loss_history)
+
+        if print_info and self.test_data is not None:
+            self.evaluate_current_model()

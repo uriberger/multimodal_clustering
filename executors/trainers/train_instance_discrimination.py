@@ -38,7 +38,7 @@ class InstanceDiscriminationTrainer(Trainer):
     def pre_training(self):
         return
 
-    def post_loop(self):
+    def post_epoch(self):
         torch.save(self.model.state_dict(), 'image_embedder')
 
     def post_training(self):

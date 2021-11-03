@@ -25,7 +25,7 @@ class Trainer(Executor):
         return
 
     @abc.abstractmethod
-    def post_loop(self):
+    def post_epoch(self):
         return
 
     def train(self):
@@ -36,13 +36,13 @@ class Trainer(Executor):
 
             dataloader = data.DataLoader(self.training_set, batch_size=self.batch_size, shuffle=self.shuffle)
 
-            checkpoint_len = 500
+            checkpoint_len = 100
             self.increment_indent()
             for_loop_with_reports(dataloader, len(dataloader), checkpoint_len,
                                   self.train_on_batch, self.progress_report)
             self.decrement_indent()
 
-            self.post_loop()
+            self.post_epoch()
 
         self.post_training()
 
