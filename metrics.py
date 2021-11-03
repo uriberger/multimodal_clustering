@@ -859,7 +859,7 @@ class CategorizationMetric(Metric):
                 if f > cur_class_F:
                     cur_class_F = f
 
-            Fscore += (gt_class/N) * cur_class_F
+            Fscore += (gt_class_size/N) * cur_class_F
 
         return Fscore
 
