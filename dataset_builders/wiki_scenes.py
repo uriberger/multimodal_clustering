@@ -14,12 +14,15 @@ class WikiScenes(ImageCaptionDatasetBuilder):
         self.cathedral_dir = os.path.join(self.root_dir_path, 'cathedrals')
         self.category_filename = 'category.json'
 
-        self.image_id_to_name_file_path = os.path.join(self.cached_dataset_files_dir, self.name + '_image_id_to_name')
-        if os.path.isfile(self.image_id_to_name_file_path):
-            self.image_id_to_name = torch.load(self.image_id_to_name_file_path)
+        self.image_id_to_path_file_path = os.path.join(self.cached_dataset_files_dir, self.name + '_image_id_to_name')
+        if os.path.isfile(self.image_id_to_path_file_path):
+            self.image_id_to_path = torch.load(self.image_id_to_path_file_path)
         else:
-            self.image_id_to_name = {}
-        self.image_id_segment_size = 1000
+            self.image_id_to_path = {}
+
+        self.wanted_suffixes = ['jpg', 'jpeg', 'png']
+
+        self.damaged_image_ids = [1002002005005154]
 
     def generate_caption_data_internal(self, slice_str):
         return self.generate_captions_and_gt_classes_data()[0]
@@ -33,9 +36,26 @@ class WikiScenes(ImageCaptionDatasetBuilder):
                 category_data = json.load(category_fp)
                 image_info_list = list(category_data.items())
 
+                # Filter images that doesn't really exist
+                picture_names = os.listdir(os.path.join(path, 'pictures'))
+                image_info_list = [x for x in image_info_list if x[0] in picture_names]
+
+                # Filter images with unwanted suffix
+                image_info_list = [x for x in image_info_list if x[0].split('.')[-1].lower() in self.wanted_suffixes]
+
+                # DELETE- filter images with very long names
+                image_info_list = [x for x in image_info_list if os.path.isfile(os.path.join(path, 'pictures', x[0]))]
+
                 image_num = len(image_info_list)
                 assert image_num <= self.image_id_segment_size
                 image_ids = [id_prefix * self.image_id_segment_size + x for x in range(image_num)]
+
+                # Filter damaged images
+                damaged_image_ids_indices = [i for i in range(image_num) if image_ids[i] in self.damaged_image_ids]
+                image_info_list = [image_info_list[i] for i in range(image_num) if i not in damaged_image_ids_indices]
+                image_ids = [image_ids[i] for i in range(image_num) if i not in damaged_image_ids_indices]
+                image_num = len(image_info_list)
+
                 self.image_id_to_name.update({image_ids[i]: image_info_list[i][0] for i in range(image_num)})
                 self.caption_data += [{'image_id': image_ids[i], 'caption': image_info_list[i][1]['caption']}
                                       for i in range(image_num)]
@@ -88,7 +108,7 @@ class WikiScenes(ImageCaptionDatasetBuilder):
         self.generate_captions_and_gt_classes_data()[1]
 
     def generate_gt_bboxes_data(self, slice_str):
-        return None
+        return {}
 
     def generate_gt_classes_bboxes_data(self, slice_str):
         return self.generate_gt_classes_data(slice_str), self.generate_gt_bboxes_data(slice_str)
