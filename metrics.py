@@ -37,6 +37,16 @@ class Metric:
     def calc_results(self):
         return
 
+    """ A flag to indicate whether this metric is only related to images. """
+
+    def is_image_only(self):
+        return False
+
+    """ A flag to indicate whether this metric uses an external dataset. """
+
+    def uses_external_dataset(self):
+        return False
+
 
 class SensitivitySpecificityMetric(Metric):
 
@@ -153,6 +163,61 @@ class BBoxMetric(SensitivitySpecificityMetric):
 
     def get_name(self):
         return 'bbox prediction'
+
+    def is_image_only(self):
+        return True
+
+
+class HeatmapMetric(SensitivitySpecificityMetric):
+    """ This metric measures whether the center of a predicted heatmap is inside the gt bounding box. """
+
+    def __init__(self, visual_model):
+        super(HeatmapMetric, self).__init__(visual_model, None)
+
+    def document(self, orig_image_sizes, predicted_heatmaps, gt_bboxes):
+        batch_size = len(gt_bboxes)
+        for sample_ind in range(batch_size):
+            sample_gt_bboxes = gt_bboxes[sample_ind]
+            gt_bbox_num = len(sample_gt_bboxes)
+            sample_gt_bboxes = get_resized_gt_bboxes(sample_gt_bboxes, orig_image_sizes[sample_ind])
+
+            sample_predicted_heatmaps = predicted_heatmaps[sample_ind]
+            tp = 0
+            fp = 0
+            identified_gt_inds = {}
+            for predicted_heatmap_ind in range(len(sample_predicted_heatmaps)):
+                predicted_heatmap = sample_predicted_heatmaps[predicted_heatmap_ind]
+                max_heatmap_ind = torch.argmax(predicted_heatmap)
+                max_heatmap_loc = (torch.div(max_heatmap_ind, predicted_heatmap.shape[1], rounding_mode='floor').item(),
+                                   max_heatmap_ind % predicted_heatmap.shape[1])
+                for gt_bbox_ind in range(gt_bbox_num):
+                    gt_bbox = sample_gt_bboxes[gt_bbox_ind]
+                    if gt_bbox[0] <= max_heatmap_loc[0] <= gt_bbox[2] and \
+                            gt_bbox[1] <= max_heatmap_loc[1] <= gt_bbox[3]:
+                        tp += 1
+                        identified_gt_inds[gt_bbox_ind] = True
+                        continue
+                    fp += 1
+            fn = gt_bbox_num - len(identified_gt_inds)
+
+            self.tp += tp
+            self.fp += fp
+            self.fn += fn
+
+    def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
+        predicted_heatmaps = [self.visual_model.get_heatmaps_without_inference()]
+        gt_bboxes = visual_metadata['gt_bboxes']
+        orig_image_sizes = visual_metadata['orig_image_size']
+        self.document(orig_image_sizes, predicted_heatmaps, gt_bboxes)
+
+    def report(self):
+        return self.report_with_name()
+
+    def get_name(self):
+        return 'heatmap prediction'
+
+    def is_image_only(self):
+        return True
 
 
 class NounIdentificationMetric(SensitivitySpecificityMetric):
@@ -365,6 +430,9 @@ class ConcretenessPredictionMetric(Metric):
 
         return res
 
+    def uses_external_dataset(self):
+        return True
+
 
 class SentenceImageMatchingMetric(Metric):
     """ This metric chooses 2 random samples, and checks if the model knows
@@ -451,6 +519,9 @@ class VisualClassificationMetric(SensitivitySpecificityMetric):
     @abc.abstractmethod
     def document(self, predicted_classes, gt_classes):
         return
+
+    def is_image_only(self):
+        return True
 
 
 class VisualKnownClassesClassificationMetric(VisualClassificationMetric):
@@ -670,8 +741,16 @@ class CategorizationMetric(Metric):
         self.predicted_labels = predicted_labels
         self.ignore_unknown_words = ignore_unknown_words
 
+        if self.ignore_unknown_words:
+            self.name_prefix_str = 'include_unknown'
+        else:
+            self.name_prefix_str = 'ignore_unknown'
+
     @staticmethod
     def fuzzy_v_measure_score(gt_class_to_sample, cluster_to_sample):
+
+        if len(cluster_to_sample) == 0:
+            return 0, 0, 0
 
         def safe_log(num):
             if num == 0:
@@ -713,9 +792,9 @@ class CategorizationMetric(Metric):
         H_gt = (-1) * sum([x * safe_log(x) for x in p_gt.values()])
         H_clusters = (-1) * sum([x * safe_log(x) for x in p_cluster.values()])
         H_gt_given_clusters = (-1) * sum([p_gt_cluster[x] * safe_log(p_gt_cluster[x] / p_cluster[x[1]])
-                                          for x in all_gt_classes_and_clusters])
+                                          if p_cluster[x[1]] > 0 else 0 for x in all_gt_classes_and_clusters])
         H_clusters_given_gt = (-1) * sum([p_gt_cluster[x] * safe_log(p_gt_cluster[x] / p_gt[x[0]])
-                                          for x in all_gt_classes_and_clusters])
+                                          if p_gt[x[0]] > 0 else 0 for x in all_gt_classes_and_clusters])
 
         homogeneity = 1 - H_gt_given_clusters / H_gt
         completeness = 1 - H_clusters_given_gt / H_clusters
@@ -755,7 +834,6 @@ class CategorizationMetric(Metric):
                 if prediction is not None:
                     # The word is known
                     predicted_labels.append(prediction)
-                    gt_labels.append(category_index)
                 elif not self.ignore_unknown_words:
                     ''' The word is unknown, but we were told not to ignore unknown words, so we'll label it by a new
                     cluster. '''
@@ -792,6 +870,9 @@ class CategorizationMetric(Metric):
     @staticmethod
     def calc_purity_collocation(gt_labels, predicted_labels):
         N = len(gt_labels)
+        if N == 0:
+            return 0, 0, 0
+
         cluster_to_gt_intersection = {}
         gt_to_cluster_intersection = {}
         for i in range(N):
@@ -867,14 +948,23 @@ class CategorizationMetric(Metric):
         if self.results is None:
             self.calc_results()
 
-        res = 'v measure score: ' + self.precision_str % self.results['v_measure_score'] + ', '
-        res += 'purity: ' + self.precision_str % self.results['purity'] + ', '
-        res += 'collocation: ' + self.precision_str % self.results['collocation'] + ', '
-        res += 'purity-collocation F1: ' + self.precision_str % self.results['pu_co_f1'] + ', '
-        res += 'FScore: ' + self.precision_str % self.results['FScore'] + ', '
-        res += 'fuzzy homogeneity: ' + self.precision_str % self.results['fuzzy_homogeneity'] + ', '
-        res += 'fuzzy completeness: ' + self.precision_str % self.results['fuzzy_completeness'] + ', '
-        res += 'fuzzy v measure score: ' + self.precision_str % self.results['fuzzy_v_measure_score']
+        res = self.name_prefix_str + ': '
+        res += 'v measure score: ' +\
+               self.precision_str % self.results[self.name_prefix_str + '_v_measure_score'] + ', '
+        res += 'purity: ' +\
+               self.precision_str % self.results[self.name_prefix_str + '_purity'] + ', '
+        res += 'collocation: ' +\
+               self.precision_str % self.results[self.name_prefix_str + '_collocation'] + ', '
+        res += 'purity-collocation F1: ' +\
+               self.precision_str % self.results[self.name_prefix_str + '_pu_co_f1'] + ', '
+        res += 'FScore: ' +\
+               self.precision_str % self.results[self.name_prefix_str + '_FScore'] + ', '
+        res += 'fuzzy homogeneity: ' +\
+               self.precision_str % self.results[self.name_prefix_str + '_fuzzy_homogeneity'] + ', '
+        res += 'fuzzy completeness: ' +\
+               self.precision_str % self.results[self.name_prefix_str + '_fuzzy_completeness'] + ', '
+        res += 'fuzzy v measure score: ' +\
+               self.precision_str % self.results[self.name_prefix_str + '_fuzzy_v_measure_score']
 
         return res
 
@@ -883,3 +973,17 @@ class CategorizationMetric(Metric):
 
         self.calculate_scatter_metric()
         self.calculate_fuzzy_scatter_metric()
+
+        # Add unknown words prefix to all metric names
+        keys_to_remove = []
+
+        item_list = list(self.results.items())
+        for key, val in item_list:
+            keys_to_remove.append(key)
+            self.results[self.name_prefix_str + '_' + key] = val
+
+        for key in keys_to_remove:
+            del self.results[key]
+
+    def uses_external_dataset(self):
+        return True

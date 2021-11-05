@@ -3,7 +3,7 @@ import csv
 from utils.general_utils import visual_dir, text_dir, default_model_name
 import torch
 from executors.trainers.trainer import Trainer
-from executors.bimodal_evaluators.evaluate_joint_model import JointModelEvaluator
+from executors.common_evaluator import CommonEvaluator
 from models_src.visual_model_wrapper import VisualModelWrapper
 from models_src.textual_model_wrapper import generate_textual_model
 
@@ -73,15 +73,20 @@ class JointModelTrainer(Trainer):
         return metric_to_results
 
     def evaluate_current_model(self):
-        evaluator = JointModelEvaluator(self.visual_model_dir, self.text_model_dir, self.model_name,
-                                        self.test_data[0], self.test_data[1], self.test_data[2], self.test_data[3],
-                                        self.test_data[4], False, self.indent + 1)
+        evaluator = CommonEvaluator(self.visual_model_dir, self.text_model_dir, self.model_name,
+                                    self.test_data[0], self.test_data[1], self.test_data[2], self.test_data[3],
+                                    self.test_data[4], self.indent + 1)
         results = evaluator.evaluate()
         self.evaluation_results.append(results)
 
     def dump_results_to_csv(self):
-        with open(os.path.join(self.timestamp, 'evaluation_by_epoch.csv'), 'w', newline='') as csvfile:
-            fieldnames = ['metric'] + [str(x) for x in range(self.epoch_num)]
+        csv_filename = 'evaluation_by_epoch.csv'
+        if self.first_epoch:
+            csv_filename = 'first_' + csv_filename
+
+        with open(os.path.join(self.timestamp, csv_filename), 'w', newline='') as csvfile:
+            step_num = len(self.evaluation_results)
+            fieldnames = ['metric'] + [str(x) for x in range(step_num)]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
             writer.writeheader()
@@ -157,5 +162,5 @@ class JointModelTrainer(Trainer):
                            ', mean visual loss: ' + str(mean_visual_loss))
             self.prev_checkpoint_batch_ind = len(self.loss_history)
 
-        if print_info and self.test_data is not None:
+        if print_info and self.test_data is not None and self.first_epoch:
             self.evaluate_current_model()

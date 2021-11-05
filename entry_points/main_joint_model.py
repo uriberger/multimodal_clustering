@@ -11,7 +11,6 @@ from models_src.model_config import ModelConfig
 
 # Executors
 from executors.trainers.train_joint_model import JointModelTrainer
-from executors.bimodal_evaluators.evaluate_joint_model import JointModelEvaluator
 
 
 timestamp = get_timestamp_str()
@@ -49,15 +48,3 @@ trainer = JointModelTrainer(timestamp, training_set, 2, model_config,
                             [test_set, gt_classes_file_path, gt_bboxes_file_path, class_mapping, token_count], 1)
 trainer.train()
 log_print(function_name, 0, 'Finished training model')
-
-log_print(function_name, 0, 'Testing models...')
-visual_model_dir = os.path.join(timestamp, visual_dir)
-text_model_dir = os.path.join(timestamp, text_dir)
-evaluator = JointModelEvaluator(visual_model_dir, text_model_dir, default_model_name, test_set,
-                                gt_classes_file_path, gt_bboxes_file_path, class_mapping, token_count,
-                                True, 1)
-# evaluator = JointModelEvaluator('models/visual', 'models/text', 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100',
-#                                 test_set, gt_classes_file_path, gt_bboxes_file_path, class_mapping, token_count,
-#                                 True, 1)
-evaluator.evaluate()
-log_print(function_name, 0, 'Finished testing model')

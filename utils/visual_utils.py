@@ -204,7 +204,6 @@ def resize_activation_map(activation_map):
     upsample_op = nn.Upsample(size=wanted_image_size, mode='bicubic', align_corners=False)
     activation_map = activation_map.view(1, 1, activation_map.shape[0], activation_map.shape[1])
     return upsample_op(activation_map).view(wanted_image_size)
-    return upsample_op(activation_map).view(wanted_image_size)
 
 
 def predict_bbox(activation_map, segment_threshold_rate=0.5):

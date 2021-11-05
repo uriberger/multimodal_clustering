@@ -1,7 +1,8 @@
 from models_src.unimodal_model_wrapper import UnimodalModelWrapper
 import torch
 from torchcam.cams import CAM
-from utils.visual_utils import predict_bbox, plot_heatmap, generate_visual_model, unnormalize_trans
+from utils.visual_utils import predict_bbox, plot_heatmap, generate_visual_model, unnormalize_trans,\
+    resize_activation_map
 import matplotlib.pyplot as plt
 from models_src.simclr import clean_state_dict, adjust_projection_in_state_dict
 
@@ -157,3 +158,26 @@ class VisualModelWrapper(UnimodalModelWrapper):
                 plt.show()
 
         self.cached_output = old_cached_output
+
+    def get_heatmaps_without_inference(self):
+        # Get heatmaps for a single sample, assuming that inference was already executed
+        heatmaps = []
+        predicted_class_list = self.predict_concept_lists()[0]
+        for predicted_class in predicted_class_list:
+            activation_map = self.extract_cam(predicted_class)
+            heatmap = resize_activation_map(activation_map)
+            heatmaps.append(heatmap)
+
+        return heatmaps
+
+    def get_heatmaps(self, image_tensor):
+        old_cached_output = self.cached_output  # We don't want to change the cache
+
+        heatmaps = []
+        batch_size = image_tensor.shape[0]
+        for sample_ind in range(batch_size):
+            self.inference(image_tensor[[sample_ind], :, :, :])
+            heatmaps.append(self.get_heatmaps_without_inference())
+
+        self.cached_output = old_cached_output
+        return heatmaps
