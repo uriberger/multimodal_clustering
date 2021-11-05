@@ -4,7 +4,7 @@ from executors.executor import Executor
 from utils.general_utils import for_loop_with_reports
 
 # Metrics
-from metrics import CategorizationMetric, ConcretenessPredictionMetric, VisualPromptClassificationMetric, HeatmapMetric
+from metrics import CategorizationMetric, ConcretenessPredictionMetric, VisualPromptClassificationMetric
 
 # Datasets
 from dataset_builders.category_dataset import generate_fountain_category_dataset
@@ -41,8 +41,7 @@ class CommonEvaluator(Executor):
             CategorizationMetric(self.text_model, category_dataset, predicted_labels=None, ignore_unknown_words=True),
             CategorizationMetric(self.text_model, category_dataset, predicted_labels=None, ignore_unknown_words=False),
             ConcretenessPredictionMetric(self.text_model, concreteness_dataset, token_count),
-            VisualPromptClassificationMetric(self.visual_model, self.text_model, class_mapping),
-            HeatmapMetric(self.visual_model)
+            VisualPromptClassificationMetric(self.visual_model, self.text_model, class_mapping)
         ]
 
         # Determine on which portion of the test set we need to run inference
@@ -74,11 +73,11 @@ class CommonEvaluator(Executor):
     def run_metrics_on_test_set(self):
         """ Go over the test set and evaluate using the metrics. """
         self.log_print('Evaluating metrics')
-        dataloader = data.DataLoader(self.test_set, batch_size=1, shuffle=False)
+        dataloader = data.DataLoader(self.test_set, batch_size=50, shuffle=False)
         self.visited_image_ids = {}
 
         self.increment_indent()
-        checkpoint_len = 100
+        checkpoint_len = 400
         for_loop_with_reports(dataloader, len(dataloader), checkpoint_len,
                               self.run_metrics_on_batch, self.progress_report)
         self.decrement_indent()
