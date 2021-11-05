@@ -44,28 +44,9 @@ class CommonEvaluator(Executor):
             VisualPromptClassificationMetric(self.visual_model, self.text_model, class_mapping)
         ]
 
-        # Determine on which portion of the test set we need to run inference
-        self.determine_constraints()
-
-    def determine_constraints(self):
-        found_text_metric_on_test_set = False
-        found_visual_metric_on_test_set = False
-        for metric in self.metrics:
-            if metric.is_image_only():
-                found_visual_metric_on_test_set = True
-            if not metric.uses_external_dataset():
-                found_visual_metric_on_test_set = True
-                found_text_metric_on_test_set = True
-
-        self.need_to_run_on_test_set = found_visual_metric_on_test_set or found_text_metric_on_test_set
-        self.need_to_run_only_on_images = found_visual_metric_on_test_set and (not found_text_metric_on_test_set)
-        self.need_to_run_only_on_text = found_text_metric_on_test_set and (not found_visual_metric_on_test_set)
-        self.need_to_run_on_both_modalities = found_visual_metric_on_test_set and found_text_metric_on_test_set
-
     def evaluate(self):
         # Evaluate for each metric on the test set
-        if self.need_to_run_on_test_set:
-            self.run_metrics_on_test_set()
+        self.run_metrics_on_test_set()
 
         # Extract results
         return self.extract_results()
@@ -100,34 +81,48 @@ class CommonEvaluator(Executor):
         gt_bboxes = [self.gt_bboxes_data[x] for x in image_ids]
 
         visual_metadata = {
-            'image_id': image_ids,
+            'image_ids': image_ids,
             'orig_image_size': orig_image_size,
             'gt_classes': gt_classes,
             'gt_bboxes': gt_bboxes
         }
 
         # Infer
-        self.infer(image_ids, image_tensor, token_lists)
+        self.infer(image_tensor, token_lists)
 
         # Calculate metrics
+        self.calculate_metrics_on_batch(visual_metadata, image_tensor, token_lists)
+
+    def calculate_metrics_on_batch(self, visual_metadata, image_tensor, token_lists):
+        image_ids = visual_metadata['image_ids']
         for metric in self.metrics:
-            metric.predict_and_document(visual_metadata, image_tensor, token_lists)
+            if metric.uses_external_dataset():
+                continue
 
-    def infer(self, image_ids, visual_input, text_input):
-        batch_size = len(image_ids)
-        for sample_ind in range(batch_size):
-            image_id = image_ids[sample_ind]
+            # We should filter out visited images
+            filtered_visual_metadata = visual_metadata
+            filtered_image_tensor = image_tensor
+            filtered_token_lists = token_lists
+            if metric.is_image_only():
+                not_visited_image_ids_indices = [i for i in range(len(image_ids))
+                                                 if image_ids[i] not in self.visited_image_ids]
+                filtered_visual_metadata = {
+                    'image_id': [image_ids[i] for i in not_visited_image_ids_indices],
+                    'orig_image_size': [visual_metadata['orig_image_size'][i] for i in not_visited_image_ids_indices],
+                    'gt_classes': [visual_metadata['gt_classes'][i] for i in not_visited_image_ids_indices],
+                    'gt_bboxes': [visual_metadata['gt_bboxes'][i] for i in not_visited_image_ids_indices]
+                }
+                filtered_image_tensor = filtered_image_tensor[not_visited_image_ids_indices]
+                filtered_token_lists = [filtered_token_lists[i] for i in not_visited_image_ids_indices]
 
-            if self.need_to_run_on_both_modalities or \
-                    (self.need_to_run_only_on_images and image_id not in self.visited_image_ids):
-                self.visited_image_ids[image_id] = True
+            metric.predict_and_document(filtered_visual_metadata, filtered_image_tensor, filtered_token_lists)
 
-                image_tensor = visual_input[[sample_ind], :, :, :]
-                self.visual_model.inference(image_tensor)
+        for image_id in image_ids:
+            self.visited_image_ids[image_id] = True
 
-                if self.need_to_run_on_both_modalities or self.need_to_run_only_on_text:
-                    token_list = text_input[sample_ind]
-                    self.text_model.inference([token_list])
+    def infer(self, visual_input, text_input):
+        self.visual_model.inference(visual_input)
+        self.text_model.inference(text_input)
 
     def extract_results(self):
         results = {}
