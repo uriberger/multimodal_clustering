@@ -54,11 +54,11 @@ class CommonEvaluator(Executor):
     def run_metrics_on_test_set(self):
         """ Go over the test set and evaluate using the metrics. """
         self.log_print('Evaluating metrics')
-        dataloader = data.DataLoader(self.test_set, batch_size=50, shuffle=False)
+        dataloader = data.DataLoader(self.test_set, batch_size=25, shuffle=False)
         self.visited_image_ids = {}
 
         self.increment_indent()
-        checkpoint_len = 400
+        checkpoint_len = 800
         for_loop_with_reports(dataloader, len(dataloader), checkpoint_len,
                               self.run_metrics_on_batch, self.progress_report)
         self.decrement_indent()

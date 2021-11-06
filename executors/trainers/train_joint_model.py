@@ -163,4 +163,5 @@ class JointModelTrainer(Trainer):
             self.prev_checkpoint_batch_ind = len(self.loss_history)
 
         if print_info and self.test_data is not None and self.first_epoch:
+            self.dump_models()
             self.evaluate_current_model()
