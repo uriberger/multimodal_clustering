@@ -1,8 +1,11 @@
 from models_src.unimodal_model_wrapper import UnimodalModelWrapper
+from models_src.word_co_occurrence_model import WordCoOccurrenceModel
 import torch
+import numpy as np
 from models_src.word_concept_count_model import WordConceptCountModel
 import abc
 from utils.text_utils import generate_text_model
+from utils.text_utils import prepare_data
 
 
 def generate_textual_model(device, config_or_str, dir_name, model_name, indent):
@@ -47,6 +50,10 @@ class TextualModelWrapper(UnimodalModelWrapper):
 
     @abc.abstractmethod
     def predict_concepts_for_word(self, word):
+        return
+
+    @abc.abstractmethod
+    def predict_concept_for_word(self, word):
         return
 
     @abc.abstractmethod
@@ -141,6 +148,14 @@ class TextualCountsModelWrapper(TextualModelWrapper):
 
         concept_indicators = [1 if x >= self.config.noun_threshold else 0 for x in concept_conditioned_on_word]
         return concept_indicators
+
+    def predict_concept_for_word(self, word):
+        concept_conditioned_on_word = self.model.get_concept_conditioned_on_word(word)
+        if concept_conditioned_on_word is None:
+            # return [0]*self.config.concept_num
+            return None
+
+        return np.argmax(concept_conditioned_on_word)
 
     def estimate_concept_instantiation_per_word(self, sentences):
         res = []
@@ -269,3 +284,53 @@ class TextualRNNModelWrapper(TextualModelWrapper):
 
         self.cached_loss = old_cached_output
         return concept_indicators
+
+
+class TextualSimpleCountsModelWrapper(TextualModelWrapper):
+
+    def __init__(self, device, config, model_dir, model_name, indent):
+        super(TextualSimpleCountsModelWrapper, self).__init__(device, config, model_dir, model_name, indent)
+
+    def generate_model(self):
+        return WordCoOccurrenceModel()
+
+    def predict_concept_insantiating_words(self, sentences):
+        return
+
+    def predict_concepts_for_word(self, word):
+        return
+
+    def predict_concept_for_word(self, word):
+        if word in self.word_to_cluster:
+            return self.word_to_cluster[word]
+        else:
+            return None
+
+    def estimate_concept_instantiation_per_word(self, sentences):
+        return
+
+    def train(self, training_set):
+        for sample in training_set.caption_data:
+            caption = sample['caption']
+            token_list = prepare_data([caption])[0]
+            for token in token_list:
+                self.model.document_word(token)
+
+        self.model.create_co_occurrence_matrix()
+
+        for sample in training_set.caption_data:
+            caption = sample['caption']
+            token_list = prepare_data([caption])[0]
+            for token in token_list:
+                self.model.document_word_occurrence(token)
+            for i in range(len(token_list)):
+                for j in range(i+1, len(token_list)):
+                    self.model.document_co_occurrence(token_list[i], token_list[j])
+
+        self.word_to_cluster = self.model.categorize_words(self.config.concept_num)
+
+    def dump_model(self):
+        torch.save([self.model, self.word_to_cluster], self.get_model_path())
+
+    def load_model(self):
+        self.model, self.word_to_cluster = torch.load(self.get_model_path())

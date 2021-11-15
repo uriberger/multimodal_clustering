@@ -295,7 +295,7 @@ class ConcretenessPredictionMetric(Metric):
     instantiates a concept is concrete (5) and is otherwise in-concrete (1).
     """
 
-    def __init__(self, text_model, concreteness_dataset, token_count):
+    def __init__(self, text_model, concreteness_dataset, token_count, predicted_concreteness=None):
         super(ConcretenessPredictionMetric, self).__init__(None, text_model)
         self.concreteness_dataset = concreteness_dataset
         self.estimation_absolute_error_sum = 0
@@ -311,6 +311,8 @@ class ConcretenessPredictionMetric(Metric):
         ''' We want to evaluate concreteness on different sets of words: words that appeared more than once
         in the training set, words that appeared more than 5 times in the training set, etc. '''
         self.token_count = token_count
+
+        self.predicted_concreteness = predicted_concreteness
 
         self.min_count_vals = [0, 1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]
         self.min_count_gt_lists = []
@@ -330,7 +332,10 @@ class ConcretenessPredictionMetric(Metric):
             gt_concreteness = self.concreteness_dataset[token]
             ''' We try both estimations of concreteness (a number between 0 and 1) and predictions of concreteness
             (a binary result on the estimation, after applying a threshold). '''
-            concreteness_estimation = self.text_model.estimate_concept_instantiation_per_word([[token]])[0][0]
+            if self.predicted_concreteness:
+                concreteness_estimation = self.predicted_concreteness[token]
+            else:
+                concreteness_estimation = self.text_model.estimate_concept_instantiation_per_word([[token]])[0][0]
             concreteness_prediction = concreteness_estimation >= self.text_model.config.noun_threshold
             estimation_absolute_error = abs(gt_concreteness - concreteness_estimation)
             prediction_absolute_error = abs(gt_concreteness - concreteness_prediction)
@@ -735,16 +740,15 @@ class CategorizationMetric(Metric):
     dataset).
     We use the V-measure-score for evaluation. """
 
-    def __init__(self, text_model, category_dataset, predicted_labels=None, ignore_unknown_words=True):
+    def __init__(self, text_model, category_dataset, ignore_unknown_words=True):
         super(CategorizationMetric, self).__init__(None, text_model)
         self.category_dataset = category_dataset
-        self.predicted_labels = predicted_labels
         self.ignore_unknown_words = ignore_unknown_words
 
         if self.ignore_unknown_words:
-            self.name_prefix_str = 'include_unknown'
-        else:
             self.name_prefix_str = 'ignore_unknown'
+        else:
+            self.name_prefix_str = 'include_unknown'
 
     @staticmethod
     def fuzzy_v_measure_score(gt_class_to_sample, cluster_to_sample):
@@ -817,20 +821,7 @@ class CategorizationMetric(Metric):
         for category, word_list in self.category_dataset.items():
             for word in word_list:
                 # Prediction
-                if self.predicted_labels is None:
-                    # If we're using the model for prediction, use inner predict function
-                    predicted_tuple = self.text_model.model.predict_concept(word)
-                    if predicted_tuple is None:
-                        prediction = None
-                    else:
-                        prediction = predicted_tuple[0]
-                else:
-                    # Otherwise, we use external predicted labels
-                    if word in self.predicted_labels:
-                        prediction = self.predicted_labels[word]
-                    else:
-                        prediction = None
-
+                prediction = self.text_model.predict_concept_for_word(word)
                 if prediction is not None:
                     # The word is known
                     predicted_labels.append(prediction)
