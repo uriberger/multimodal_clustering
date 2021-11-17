@@ -1,5 +1,5 @@
 from models_src.unimodal_model_wrapper import UnimodalModelWrapper
-from models_src.word_co_occurrence_model import WordCoOccurrenceModel
+from models_src.baselines.word_co_occurrence_model import WordCoOccurrenceModel
 import torch
 import numpy as np
 from models_src.word_concept_count_model import WordConceptCountModel
