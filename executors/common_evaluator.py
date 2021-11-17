@@ -35,6 +35,7 @@ class CommonEvaluator(Executor):
         self.visual_model = VisualModelWrapper(self.device, None, visual_model_dir, model_name, indent + 1)
         self.visual_model.eval()
         self.text_model = TextualCountsModelWrapper(self.device, None, text_model_dir, model_name, indent + 1)
+        self.text_model.model.calculate_probs()
 
         # Datasets
         category_dataset = generate_fountain_category_dataset()

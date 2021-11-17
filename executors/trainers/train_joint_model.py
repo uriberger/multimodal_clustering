@@ -41,9 +41,15 @@ class JointModelTrainer(Trainer):
         self.test_data = test_data
         self.evaluation_results = []
 
-    def dump_models(self):
-        self.visual_model.dump()
-        self.text_model.dump()
+    def dump_models(self, suffix=None):
+        self.visual_model.dump(suffix)
+        self.text_model.dump(suffix)
+
+    def dump_best_model_if_needed(self):
+        all_res = [x['include_unknown_FScore'] for x in self.evaluation_results]
+        if all_res[-1] == max(all_res):
+            # Current model is the best model so far
+            self.dump_models('best')
 
     def pre_training(self):
         self.dump_models()
@@ -111,6 +117,9 @@ class JointModelTrainer(Trainer):
 
             # Dump results into a csv file
             self.dump_results_to_csv()
+
+            # If this is the best model, save it
+            self.dump_best_model_if_needed()
 
     def train_on_batch(self, index, sampled_batch, print_info):
         # Load data

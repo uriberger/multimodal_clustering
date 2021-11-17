@@ -55,7 +55,13 @@ class ModelWrapper(LoggableObject):
             assert False
         self.config = torch.load(config_path)
 
-    def dump(self):
+    def dump(self, suffix=None):
+        old_dump_path = self.dump_path
+        if suffix is not None:
+            self.dump_path += '_' + suffix
+
         self.dump_config()
         self.dump_model()
-        return
+
+        self.dump_path = old_dump_path
+
