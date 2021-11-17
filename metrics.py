@@ -282,7 +282,7 @@ class NounIdentificationMetric(SensitivitySpecificityMetric):
     def report(self):
         majority_basline_accuracy = self.calc_majority_baseline_results()
         return self.report_with_name() + \
-            ', majority baseline accuracy: ' + self.precision_str % majority_basline_accuracy
+               ', majority baseline accuracy: ' + self.precision_str % majority_basline_accuracy
 
     def get_name(self):
         return 'Noun prediction'
@@ -922,8 +922,8 @@ class CategorizationMetric(Metric):
             cur_class_F = 0
             for cluster, intersection_size in cluster_map.items():
                 cluster_size = cluster_count[cluster]
-                precision = intersection_size/gt_class_size
-                recall = intersection_size/cluster_size
+                precision = intersection_size / gt_class_size
+                recall = intersection_size / cluster_size
                 if precision + recall == 0:
                     f = 0
                 else:
@@ -931,7 +931,7 @@ class CategorizationMetric(Metric):
                 if f > cur_class_F:
                     cur_class_F = f
 
-            Fscore += (gt_class_size/N) * cur_class_F
+            Fscore += (gt_class_size / N) * cur_class_F
 
         return Fscore
 
@@ -940,21 +940,21 @@ class CategorizationMetric(Metric):
             self.calc_results()
 
         res = self.name_prefix_str + ': '
-        res += 'v measure score: ' +\
+        res += 'v measure score: ' + \
                self.precision_str % self.results[self.name_prefix_str + '_v_measure_score'] + ', '
-        res += 'purity: ' +\
+        res += 'purity: ' + \
                self.precision_str % self.results[self.name_prefix_str + '_purity'] + ', '
-        res += 'collocation: ' +\
+        res += 'collocation: ' + \
                self.precision_str % self.results[self.name_prefix_str + '_collocation'] + ', '
-        res += 'purity-collocation F1: ' +\
+        res += 'purity-collocation F1: ' + \
                self.precision_str % self.results[self.name_prefix_str + '_pu_co_f1'] + ', '
-        res += 'FScore: ' +\
+        res += 'FScore: ' + \
                self.precision_str % self.results[self.name_prefix_str + '_FScore'] + ', '
-        res += 'fuzzy homogeneity: ' +\
+        res += 'fuzzy homogeneity: ' + \
                self.precision_str % self.results[self.name_prefix_str + '_fuzzy_homogeneity'] + ', '
-        res += 'fuzzy completeness: ' +\
+        res += 'fuzzy completeness: ' + \
                self.precision_str % self.results[self.name_prefix_str + '_fuzzy_completeness'] + ', '
-        res += 'fuzzy v measure score: ' +\
+        res += 'fuzzy v measure score: ' + \
                self.precision_str % self.results[self.name_prefix_str + '_fuzzy_v_measure_score']
 
         return res
@@ -1005,11 +1005,13 @@ class ConceptCounterMetric(Metric):
         text_threshold = self.text_model.config.noun_threshold
 
         for token in self.token_count.keys():
-            predicted_concept, prob = self.text_model.model.predict_concept(token)
-            if prob >= text_threshold:
-                used_concept_indicators[predicted_concept] = True
+            prediction_res = self.text_model.model.predict_concept(token)
+            if prediction_res is not None:
+                predicted_concept, prob = prediction_res
+                if prob >= text_threshold:
+                    used_concept_indicators[predicted_concept] = True
 
-        used_concept_num = len([x for x in used_concept_indicators if x == True])
+        used_concept_num = len([x for x in used_concept_indicators if x is True])
         self.results['used_concept_num'] = used_concept_num
 
     def uses_external_dataset(self):
