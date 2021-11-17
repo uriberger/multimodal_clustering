@@ -38,8 +38,8 @@ class CommonEvaluator(Executor):
 
         # Metrics
         self.metrics = [
-            CategorizationMetric(self.text_model, category_dataset, predicted_labels=None, ignore_unknown_words=True),
-            CategorizationMetric(self.text_model, category_dataset, predicted_labels=None, ignore_unknown_words=False),
+            CategorizationMetric(self.text_model, category_dataset, ignore_unknown_words=True),
+            CategorizationMetric(self.text_model, category_dataset, ignore_unknown_words=False),
             ConcretenessPredictionMetric(self.text_model, concreteness_dataset, token_count),
             VisualPromptClassificationMetric(self.visual_model, self.text_model, class_mapping)
         ]
@@ -87,9 +87,6 @@ class CommonEvaluator(Executor):
             'gt_bboxes': gt_bboxes
         }
 
-        # Infer
-        self.infer(image_tensor, token_lists)
-
         # Calculate metrics
         self.calculate_metrics_on_batch(visual_metadata, image_tensor, token_lists)
 
@@ -104,8 +101,9 @@ class CommonEvaluator(Executor):
             filtered_image_tensor = image_tensor
             filtered_token_lists = token_lists
             if metric.is_image_only():
-                not_visited_image_ids_indices = [i for i in range(len(image_ids))
-                                                 if image_ids[i] not in self.visited_image_ids]
+                not_visited_image_id_to_index = {image_ids[i]: i for i in range(len(image_ids))
+                                                 if image_ids[i] not in self.visited_image_ids}
+                not_visited_image_ids_indices = list(not_visited_image_id_to_index.values())
                 filtered_visual_metadata = {
                     'image_id': [image_ids[i] for i in not_visited_image_ids_indices],
                     'orig_image_size': [visual_metadata['orig_image_size'][i] for i in not_visited_image_ids_indices],
@@ -115,6 +113,10 @@ class CommonEvaluator(Executor):
                 filtered_image_tensor = filtered_image_tensor[not_visited_image_ids_indices]
                 filtered_token_lists = [filtered_token_lists[i] for i in not_visited_image_ids_indices]
 
+            # Infer
+            self.infer(filtered_image_tensor, filtered_token_lists)
+
+            # Run metric
             metric.predict_and_document(filtered_visual_metadata, filtered_image_tensor, filtered_token_lists)
 
         for image_id in image_ids:
