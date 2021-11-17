@@ -978,3 +978,39 @@ class CategorizationMetric(Metric):
 
     def uses_external_dataset(self):
         return True
+
+
+class ConceptCounterMetric(Metric):
+    """ This metric counts how many active concepts we have.
+        An active concept is a concept with at least one word that crosses the threshold. """
+
+    def __init__(self, text_model, token_count):
+        super(ConceptCounterMetric, self).__init__(None, text_model)
+
+        self.token_count = token_count
+
+    def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
+        return
+
+    def report(self):
+        if self.results is None:
+            self.calc_results()
+
+        res = 'Used concept number: ' + str(self.results['used_concept_num'])
+        return res
+
+    def calc_results(self):
+        self.results = {}
+        used_concept_indicators = [False] * self.text_model.config.concept_num
+        text_threshold = self.text_model.config.noun_threshold
+
+        for token in self.token_count.keys():
+            predicted_concept, prob = self.text_model.model.predict_concept(token)
+            if prob >= text_threshold:
+                used_concept_indicators[predicted_concept] = True
+
+        used_concept_num = len([x for x in used_concept_indicators if x == True])
+        self.results['used_concept_num'] = used_concept_num
+
+    def uses_external_dataset(self):
+        return True

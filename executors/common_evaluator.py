@@ -4,7 +4,11 @@ from executors.executor import Executor
 from utils.general_utils import for_loop_with_reports
 
 # Metrics
-from metrics import CategorizationMetric, ConcretenessPredictionMetric, VisualPromptClassificationMetric
+from metrics import \
+    CategorizationMetric, \
+    ConcretenessPredictionMetric, \
+    VisualPromptClassificationMetric, \
+    ConceptCounterMetric
 
 # Datasets
 from dataset_builders.category_dataset import generate_fountain_category_dataset
@@ -41,7 +45,8 @@ class CommonEvaluator(Executor):
             CategorizationMetric(self.text_model, category_dataset, ignore_unknown_words=True),
             CategorizationMetric(self.text_model, category_dataset, ignore_unknown_words=False),
             ConcretenessPredictionMetric(self.text_model, concreteness_dataset, token_count),
-            VisualPromptClassificationMetric(self.visual_model, self.text_model, class_mapping)
+            VisualPromptClassificationMetric(self.visual_model, self.text_model, class_mapping),
+            ConceptCounterMetric(self.text_model, token_count)
         ]
 
     def evaluate(self):
