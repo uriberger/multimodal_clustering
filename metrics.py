@@ -196,7 +196,7 @@ class HeatmapMetric(SensitivitySpecificityMetric):
                             gt_bbox[1] <= max_heatmap_loc[1] <= gt_bbox[3]:
                         tp += 1
                         identified_gt_inds[gt_bbox_ind] = True
-                        continue
+                        break
                     fp += 1
             fn = gt_bbox_num - len(identified_gt_inds)
 
