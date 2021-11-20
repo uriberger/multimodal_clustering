@@ -153,7 +153,7 @@ class VisualModelWrapper(UnimodalModelWrapper):
                 unnormalized_image_tensor = unnormalize_trans(image_tensor)
                 image_obj = plot_heatmap(unnormalized_image_tensor, activation_map, False)
                 plt.imshow(image_obj)
-                plt.title('Heatmap for class ' + str(predicted_class) +
+                plt.title('Heatmap for cluster ' + str(predicted_class) +
                           class_str)
                 plt.show()
 
