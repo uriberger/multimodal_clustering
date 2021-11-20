@@ -8,7 +8,8 @@ from metrics import \
     CategorizationMetric, \
     ConcretenessPredictionMetric, \
     VisualPromptClassificationMetric, \
-    ConceptCounterMetric
+    ConceptCounterMetric, \
+    HeatmapMetric
 
 # Datasets
 from dataset_builders.category_dataset import generate_fountain_category_dataset
@@ -24,8 +25,10 @@ class CommonEvaluator(Executor):
     def __init__(self, visual_model_dir, text_model_dir, model_name,
                  test_set, gt_classes_file_path, gt_bboxes_file_path,
                  class_mapping, token_count,
-                 indent):
+                 indent, metric_list=None, batch_size=25):
         super().__init__(indent)
+
+        self.batch_size = batch_size
 
         self.test_set = test_set
         self.gt_classes_data = torch.load(gt_classes_file_path)
@@ -42,13 +45,20 @@ class CommonEvaluator(Executor):
         concreteness_dataset = generate_concreteness_dataset()
 
         # Metrics
-        self.metrics = [
-            CategorizationMetric(self.text_model, category_dataset, ignore_unknown_words=True),
-            CategorizationMetric(self.text_model, category_dataset, ignore_unknown_words=False),
-            ConcretenessPredictionMetric(self.text_model, concreteness_dataset, token_count),
-            VisualPromptClassificationMetric(self.visual_model, self.text_model, class_mapping),
-            ConceptCounterMetric(self.text_model, token_count)
-        ]
+        if metric_list is None:
+            self.metrics = [
+                CategorizationMetric(self.text_model, category_dataset, ignore_unknown_words=True),
+                CategorizationMetric(self.text_model, category_dataset, ignore_unknown_words=False),
+                ConcretenessPredictionMetric(self.text_model, concreteness_dataset, token_count),
+                VisualPromptClassificationMetric(self.visual_model, self.text_model, class_mapping),
+                ConceptCounterMetric(self.text_model, token_count)
+            ]
+        else:
+            self.metrics = [self.metric_name_to_object(x) for x in metric_list]
+
+    def metric_name_to_object(self, metric_name):
+        if metric_name == 'heatmap_metric':
+            return HeatmapMetric(self.visual_model)
 
     def evaluate(self):
         # Evaluate for each metric on the test set
@@ -60,7 +70,7 @@ class CommonEvaluator(Executor):
     def run_metrics_on_test_set(self):
         """ Go over the test set and evaluate using the metrics. """
         self.log_print('Evaluating metrics')
-        dataloader = data.DataLoader(self.test_set, batch_size=25, shuffle=False)
+        dataloader = data.DataLoader(self.test_set, batch_size=self.batch_size, shuffle=False)
         self.visited_image_ids = {}
 
         self.increment_indent()
@@ -118,6 +128,9 @@ class CommonEvaluator(Executor):
                 }
                 filtered_image_tensor = filtered_image_tensor[not_visited_image_ids_indices]
                 filtered_token_lists = [filtered_token_lists[i] for i in not_visited_image_ids_indices]
+
+            if len(filtered_token_lists) == 0:
+                continue
 
             # Infer
             self.infer(filtered_image_tensor, filtered_token_lists)
