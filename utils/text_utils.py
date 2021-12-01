@@ -39,13 +39,29 @@ def preprocess_token(token):
     return token
 
 
-def prepare_data(captions):
+def prepare_chars(captions):
     res = []
     for caption in captions:
         token_list = [str(x) for x in list(tokenizer(caption.lower()))]
         char_list = ''.join(token_list)
         res.append(char_list)
     return res
+
+
+def prepare_tokens(captions, lemmatize=False):
+    token_lists = []
+    for caption in captions:
+        # token_list = caption.split()
+        # token_list = [preprocess_token(token) for token in token_list]
+        # token_list = [x for x in token_list if len(x) > 0]
+        if lemmatize:
+            doc = nlp(caption)
+            token_list = [str(x.lemma_) for x in doc]
+        else:
+            # token_list = [str(x) for x in doc]
+            token_list = [str(x) for x in list(tokenizer(caption.lower()))]
+        token_lists.append(token_list)
+    return token_lists
 
 
 def multiple_word_string(my_str):

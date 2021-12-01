@@ -5,7 +5,7 @@ import numpy as np
 from models_src.word_concept_count_model import WordConceptCountModel
 import abc
 from utils.text_utils import generate_text_model
-from utils.text_utils import prepare_data
+from utils.text_utils import prepare_chars, prepare_tokens
 
 
 def generate_textual_model(device, config_or_str, dir_name, model_name, indent):
@@ -320,7 +320,7 @@ class TextualSimpleCountsModelWrapper(TextualModelWrapper):
     def train(self, training_set):
         for sample in training_set.caption_data:
             caption = sample['caption']
-            token_list = prepare_data([caption])[0]
+            token_list = prepare_tokens([caption])[0]
             for token in token_list:
                 self.model.document_word(token)
 
@@ -328,7 +328,7 @@ class TextualSimpleCountsModelWrapper(TextualModelWrapper):
 
         for sample in training_set.caption_data:
             caption = sample['caption']
-            token_list = prepare_data([caption])[0]
+            token_list = prepare_tokens([caption])[0]
             for token in token_list:
                 self.model.document_word_occurrence(token)
             for i in range(len(token_list)):
