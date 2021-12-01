@@ -11,7 +11,7 @@ from dataset_builders.category_dataset import generate_fountain_category_dataset
 from metrics import CategorizationMetric
 
 # Models
-from models_src.textual_model_wrapper import TextualCountsModelWrapper
+from models_src.textual_model_wrapper import TextualCountsModelWrapper, TextualSimpleCountsModelWrapper
 
 
 timestamp = get_timestamp_str()
@@ -32,10 +32,12 @@ log_print(function_name, 0, 'Datasets generated')
 log_print(function_name, 0, 'Testing...')
 
 model_name = 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100'
+# model_name = 'simple_count_model'
 
 text_model_dir = os.path.join(models_dir, text_dir)
 model = TextualCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
-metric = CategorizationMetric(model, category_dataset)
+# model = TextualSimpleCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+metric = CategorizationMetric(model, category_dataset, ignore_unknown_words=True)
 log_print(function_name, 1, metric.report())
 
 log_print(function_name, 0, 'Finished testing')
