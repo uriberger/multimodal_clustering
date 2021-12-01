@@ -110,43 +110,115 @@ class SensitivitySpecificityMetric(Metric):
         return
 
 
-class BBoxMetric(SensitivitySpecificityMetric):
+class BBoxPredictionMetric(SensitivitySpecificityMetric):
+    """ This is a class from which the bbox and heatmap metrics will inherit. """
+
+    def __init__(self, visual_model):
+        super(BBoxPredictionMetric, self).__init__(visual_model, None)
+
+    @abc.abstractmethod
+    def map_pred_to_bbox(self, sample_predicted_heatmaps, sample_gt_bboxes):
+        return
+
+    @staticmethod
+    def try_matching_pred_to_bbox(final_mapping, pred_ind, bbox_ind, matched_preds, matched_bboxes):
+        if pred_ind not in matched_preds and bbox_ind not in matched_bboxes:
+            final_mapping[pred_ind] = bbox_ind
+            matched_preds[pred_ind] = True
+            matched_bboxes[bbox_ind] = True
+
+    @staticmethod
+    def build_bbox_to_pred_map(pred_to_matching_bbox, matched_preds, matched_bboxes):
+        bbox_to_matching_pred = {}
+
+        for pred_ind, bbox_index_list in pred_to_matching_bbox.items():
+            if pred_ind not in matched_preds:
+                for bbox_ind in bbox_index_list:
+                    if bbox_ind not in matched_bboxes:
+                        if bbox_ind not in bbox_to_matching_pred:
+                            bbox_to_matching_pred[bbox_ind] = []
+                        bbox_to_matching_pred[bbox_ind].append(pred_ind)
+
+        return bbox_to_matching_pred
+
+    def find_best_pred_bbox_matching(self, pred_to_matching_bbox):
+        """ We can have multiple prediction-bbox matching. We use a heuristic to find the best one:
+        First, we match predictions/bboxes with only one mapping. Only then we match others. """
+        final_mapping = {}
+        matched_preds = {}
+        matched_bboxes = {}
+        # First search for heatmaps with a single matching bbox
+        for pred_ind, bbox_index_list in pred_to_matching_bbox.items():
+            if len(bbox_index_list) == 1:
+                self.try_matching_pred_to_bbox(final_mapping, pred_ind, bbox_index_list[0],
+                                               matched_preds, matched_bboxes)
+
+        # Next, search for bboxes with a single matching heatmap
+        bbox_to_matching_heatmap = self.build_bbox_to_pred_map(pred_to_matching_bbox,
+                                                                  matched_preds, matched_bboxes)
+
+        for bbox_ind, heatmap_index_list in bbox_to_matching_heatmap.items():
+            if len(heatmap_index_list) == 1:
+                self.try_matching_pred_to_bbox(final_mapping, heatmap_index_list[0], bbox_ind,
+                                               matched_preds, matched_bboxes)
+
+        # Finally, match unmatched
+        bbox_to_matching_pred = self.build_bbox_to_pred_map(pred_to_matching_bbox,
+                                                            matched_preds, matched_bboxes)
+        for bbox_ind, pred_index_list in bbox_to_matching_pred.items():
+            while len(pred_index_list) > 0:
+                self.try_matching_pred_to_bbox(final_mapping, pred_index_list[0], bbox_ind,
+                                                  matched_preds, matched_bboxes)
+                pred_index_list = pred_index_list[1:]
+
+        return final_mapping
+
+    def document(self, orig_image_sizes, predicted_list, gt_bboxes):
+        batch_size = len(gt_bboxes)
+        for sample_ind in range(batch_size):
+            sample_gt_bboxes = gt_bboxes[sample_ind]
+            gt_bbox_num = len(sample_gt_bboxes)
+            sample_gt_bboxes = get_resized_gt_bboxes(sample_gt_bboxes, orig_image_sizes[sample_ind])
+            sample_predicted = predicted_list[sample_ind]
+            predicted_num = len(sample_predicted)
+
+            # Map predicted to matching bboxes
+            pred_to_matching_bbox = self.map_pred_to_bbox(sample_predicted, sample_gt_bboxes)
+
+            # Determine final prediction -> bbox mapping
+            final_mapping = self.find_best_pred_bbox_matching(pred_to_matching_bbox)
+
+            tp = len(final_mapping)
+            fp = predicted_num - tp
+            fn = gt_bbox_num - tp
+
+            self.tp += tp
+            self.fp += fp
+            self.fn += fn
+
+
+class BBoxMetric(BBoxPredictionMetric):
     """ This metric predicts bounding boxes, compares the prediction to the
     ground-truth bounding boxes (using intersection-over-union), and reports
     the results. """
 
     def __init__(self, visual_model):
-        super(BBoxMetric, self).__init__(visual_model, None)
+        super(BBoxMetric, self).__init__(visual_model)
 
-    def document(self, orig_image_sizes, predicted_bboxes, gt_bboxes):
-        iou_threshold = self.visual_model.config.object_threshold
+    def map_pred_to_bbox(self, sample_predicted_bboxes, sample_gt_bboxes):
+        gt_bbox_num = len(sample_gt_bboxes)
+        sample_gt_bboxes = torch.stack([torch.tensor(x) for x in sample_gt_bboxes])
+        if len(sample_predicted_bboxes) > 0:
+            sample_predicted_bboxes = torch.stack([torch.tensor(x) for x in sample_predicted_bboxes])
+            ious = calc_ious(sample_gt_bboxes, sample_predicted_bboxes)
+        pred_to_matching_gt = {}
+        for predicted_bbox_ind in range(len(sample_predicted_bboxes)):
+            pred_to_matching_gt[predicted_bbox_ind] = []
+            for gt_bbox_ind in range(gt_bbox_num):
+                if ious[gt_bbox_ind, predicted_bbox_ind] >= 0.5:
+                    pred_to_matching_gt[predicted_bbox_ind].append(gt_bbox_ind)
 
-        batch_size = len(gt_bboxes)
-        for sample_ind in range(batch_size):
-            gt_bbox_num = len(gt_bboxes[sample_ind])
-            sample_gt_bboxes = gt_bboxes[sample_ind]
-            sample_gt_bboxes = get_resized_gt_bboxes(sample_gt_bboxes, orig_image_sizes[sample_ind])
-            sample_gt_bboxes = torch.stack([torch.tensor(x) for x in sample_gt_bboxes])
-            if len(predicted_bboxes[sample_ind]) > 0:
-                sample_predicted_bboxes = torch.stack([torch.tensor(x) for x in predicted_bboxes[sample_ind]])
-                ious = calc_ious(sample_gt_bboxes, sample_predicted_bboxes)
-
-            tp = 0
-            fp = 0
-            identified_gt_inds = {}
-            for predicted_bbox_ind in range(len(predicted_bboxes[sample_ind])):
-                for gt_bbox_ind in range(gt_bbox_num):
-                    iou = ious[gt_bbox_ind, predicted_bbox_ind]
-                    if iou >= iou_threshold:
-                        tp += 1
-                        identified_gt_inds[gt_bbox_ind] = True
-                        continue
-                    fp += 1
-            fn = gt_bbox_num - len(identified_gt_inds)
-
-            self.tp += tp
-            self.fp += fp
-            self.fn += fn
+        return pred_to_matching_gt
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         predicted_bboxes = self.visual_model.predict_bboxes(visual_inputs)
@@ -168,41 +240,29 @@ class BBoxMetric(SensitivitySpecificityMetric):
         return True
 
 
-class HeatmapMetric(SensitivitySpecificityMetric):
+class HeatmapMetric(BBoxPredictionMetric):
     """ This metric measures whether the center of a predicted heatmap is inside the gt bounding box. """
 
     def __init__(self, visual_model):
         super(HeatmapMetric, self).__init__(visual_model, None)
 
-    def document(self, orig_image_sizes, predicted_heatmaps, gt_bboxes):
-        batch_size = len(gt_bboxes)
-        for sample_ind in range(batch_size):
-            sample_gt_bboxes = gt_bboxes[sample_ind]
-            gt_bbox_num = len(sample_gt_bboxes)
-            sample_gt_bboxes = get_resized_gt_bboxes(sample_gt_bboxes, orig_image_sizes[sample_ind])
+    def map_pred_to_bbox(self, sample_predicted_heatmaps, sample_gt_bboxes):
+        gt_bbox_num = len(sample_gt_bboxes)
+        heatmap_to_matching_bbox = {}
+        for predicted_heatmap_ind in range(len(sample_predicted_heatmaps)):
+            heatmap_to_matching_bbox[predicted_heatmap_ind] = []
+            predicted_heatmap = sample_predicted_heatmaps[predicted_heatmap_ind]
+            max_heatmap_ind = torch.argmax(predicted_heatmap)
+            max_heatmap_loc = (torch.div(max_heatmap_ind, predicted_heatmap.shape[1], rounding_mode='floor').item(),
+                               max_heatmap_ind % predicted_heatmap.shape[1])
 
-            sample_predicted_heatmaps = predicted_heatmaps[sample_ind]
-            tp = 0
-            fp = 0
-            identified_gt_inds = {}
-            for predicted_heatmap_ind in range(len(sample_predicted_heatmaps)):
-                predicted_heatmap = sample_predicted_heatmaps[predicted_heatmap_ind]
-                max_heatmap_ind = torch.argmax(predicted_heatmap)
-                max_heatmap_loc = (torch.div(max_heatmap_ind, predicted_heatmap.shape[1], rounding_mode='floor').item(),
-                                   max_heatmap_ind % predicted_heatmap.shape[1])
-                for gt_bbox_ind in range(gt_bbox_num):
-                    gt_bbox = sample_gt_bboxes[gt_bbox_ind]
-                    if gt_bbox[0] <= max_heatmap_loc[0] <= gt_bbox[2] and \
-                            gt_bbox[1] <= max_heatmap_loc[1] <= gt_bbox[3]:
-                        tp += 1
-                        identified_gt_inds[gt_bbox_ind] = True
-                        break
-                    fp += 1
-            fn = gt_bbox_num - len(identified_gt_inds)
+            for gt_bbox_ind in range(gt_bbox_num):
+                gt_bbox = sample_gt_bboxes[gt_bbox_ind]
+                if gt_bbox[0] <= max_heatmap_loc[0] <= gt_bbox[2] and \
+                        gt_bbox[1] <= max_heatmap_loc[1] <= gt_bbox[3]:
+                    heatmap_to_matching_bbox[predicted_heatmap_ind].append(gt_bbox_ind)
 
-            self.tp += tp
-            self.fp += fp
-            self.fn += fn
+        return heatmap_to_matching_bbox
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         predicted_heatmaps = [self.visual_model.get_heatmaps_without_inference()]
