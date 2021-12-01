@@ -10,7 +10,8 @@ class ModelConfig:
                  noun_threshold=0.5,
                  textual_learning_rate=1e-4,
                  word_embed_dim=300,
-                 concept_num=80
+                 concept_num=80,
+                 max_token_len=5
                  ):
         self.visual_model = visual_model
         self.pretrained_visual_base_model = pretrained_visual_base_model
@@ -23,6 +24,7 @@ class ModelConfig:
         self.textual_learning_rate = textual_learning_rate
         self.word_embed_dim = word_embed_dim
         self.concept_num = concept_num
+        self.max_token_len = max_token_len
 
     def __str__(self):
         return 'Configuration: ' + str(self.__dict__)

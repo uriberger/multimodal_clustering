@@ -126,13 +126,13 @@ class JointModelTrainer(Trainer):
         image_tensor = sampled_batch['image'].to(self.device)
         captions = sampled_batch['caption']
         batch_size = len(captions)
-        token_lists = self.training_set.prepare_data(captions)
+        char_lists = self.training_set.prepare_data(captions)
 
         # Infer
         self.visual_model.inference(image_tensor)
         if print_info:
             self.log_print(self.visual_model.print_info_on_inference())
-        self.text_model.inference(token_lists)
+        self.text_model.inference(char_lists)
 
         # Train text model, assuming that the visual model is already trained
         # 1. Use visual model for inference
@@ -142,7 +142,7 @@ class JointModelTrainer(Trainer):
             self.log_print('Predicted ' + str(int(predictions_num.item())) + ' concepts according to visual')
 
         # 2. Use the result to train textual model
-        self.text_model.training_step(token_lists, labels_by_visual)
+        self.text_model.training_step(char_lists, labels_by_visual)
 
         # Train visual model, assuming that the text model is already trained
         # 1. Use textual model for inference

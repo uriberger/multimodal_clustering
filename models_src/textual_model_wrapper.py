@@ -84,9 +84,12 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         for caption_ind in range(batch_size):
             predicted_concepts_by_image = [x for x in range(self.config.concept_num)
                                            if labels[caption_ind, x] == 1]
-            for token in inputs[caption_ind]:
-                for concept_ind in predicted_concepts_by_image:
-                    self.model.document_co_occurrence(token, concept_ind)
+            char_list = inputs[caption_ind]
+            for token_len in range(1, self.config.max_token_len + 1):
+                token_list = [char_list[i:i+token_len] for i in range(len(char_list) - token_len + 1)]
+                for token in token_list:
+                    for concept_ind in predicted_concepts_by_image:
+                        self.model.document_co_occurrence(token, concept_ind)
 
     def inference(self, inputs):
         self.model.calculate_probs()
@@ -95,14 +98,19 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         with torch.no_grad():
             output_tensor = torch.zeros(batch_size, self.config.concept_num).to(self.device)
             for caption_ind in range(batch_size):
-                for token in inputs[caption_ind]:
-                    prediction_res = self.model.predict_concept(token)
+                cur_token = ''
+                for char in inputs[caption_ind]:
+                    cur_token += char
+                    prediction_res = self.model.predict_concept(cur_token)
                     if prediction_res is None:
                         # Never seen this token before
                         continue
                     predicted_concept, prob = prediction_res
-                    if output_tensor[caption_ind, predicted_concept] < prob:
-                        output_tensor[caption_ind, predicted_concept] = prob
+                    if prob >= self.config.noun_threshold:
+                        # Found a token
+                        if output_tensor[caption_ind, predicted_concept] < prob:
+                            output_tensor[caption_ind, predicted_concept] = prob
+                        cur_token = ''
 
         self.cached_output = output_tensor
         return output_tensor
