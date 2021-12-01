@@ -145,16 +145,23 @@ class VisualModelWrapper(UnimodalModelWrapper):
             self.inference(image_tensor[[sample_ind], :, :, :])
             predicted_class_list = self.predict_concept_lists()[0]
             for predicted_class in predicted_class_list:
+                class_str = ' (associated classes: '
                 if predicted_class in concept_to_str:
-                    class_str = str(concept_to_str[predicted_class])
+                    class_str += str(concept_to_str[predicted_class])
                 else:
-                    class_str = '[]'
+                    class_str += 'None'
+                class_str += ')'
                 activation_map = self.extract_cam(predicted_class)
                 unnormalized_image_tensor = unnormalize_trans(image_tensor)
                 image_obj = plot_heatmap(unnormalized_image_tensor, activation_map, False)
                 plt.imshow(image_obj)
-                plt.title('Heatmap for cluster ' + str(predicted_class) +
-                          class_str)
+
+                title = 'Heatmap for cluster ' + str(predicted_class) + '\n' + class_str
+                plt.title(title)
+
+                plt.tick_params(axis='x', which='both', bottom=False, top=False, labelbottom=False)
+                plt.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
+
                 plt.show()
 
         self.cached_output = old_cached_output
