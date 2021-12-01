@@ -1,13 +1,16 @@
 models
 cached_dataset_files
+results_csv
 visual_models_evaluation
 venv
 __pycache__
+.idea
 
 
 *.mdl
 2021-*
 image_embedder_*
+*evaluation_by_epoch.csv
 
 # Old files that I don't want on git
 fast_rcnn_model.py
@@ -16,5 +19,5 @@ train_fast_rcnn_from_golden.py
 train_rcnn_from_golden.py
 
 # Large downloaded files I don't want on git
-Concreteness_ratings_Brysbaert_et_al_BRM.txt
 word2vec-google-news-300.gz
+wiki-news-300d-1M.vec
