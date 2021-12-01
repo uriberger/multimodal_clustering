@@ -7,8 +7,11 @@ from dataset_builders.pascal_voc import PascalVOC
 from dataset_builders.wiki_scenes import WikiScenes
 
 
+datasets_dir = os.path.join('..', 'datasets')
+
+
 def create_dataset_builder(dataset_name):
-    root_dir = os.path.join('..', 'datasets', dataset_name)
+    root_dir = os.path.join(datasets_dir, dataset_name)
     if dataset_name == 'cifar-10':
         dataset_generator = Cifar10(root_dir, 1)
         val_slice_str = 'test'

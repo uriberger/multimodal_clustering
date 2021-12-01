@@ -1,15 +1,16 @@
 from utils.general_utils import generate_dataset
+from dataset_builders.dataset_builder_creator import datasets_dir
 import os
 import yaml
 
 cache_dirname = 'cached_dataset_files'
 category_dataset_filename = os.path.join(cache_dirname, 'category_dataset')
 extended_category_dataset_filename_prefix = os.path.join(cache_dirname, 'extended_category_dataset_')
-fountain_dataset_filename = 'fountain_dataset'
+fountain_dataset_filename = os.path.join(cache_dirname, 'fountain_dataset')
 category_filename = 'multilingual_concepts_categories.tsv'
 extended_category_filename_prefix = 'category_dataset_'
 extended_category_filename_suffix = '.txt'
-fountain_filename = 'mcrae_typicality.yaml'
+fountain_filename = os.path.join(datasets_dir, 'mcrae_typicality.yaml')
 
 
 def generate_category_dataset():
