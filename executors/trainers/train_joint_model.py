@@ -136,17 +136,17 @@ class JointModelTrainer(Trainer):
 
         # Train text model, assuming that the visual model is already trained
         # 1. Use visual model for inference
-        labels_by_visual = self.visual_model.predict_concept_indicators()
+        labels_by_visual = self.visual_model.predict_cluster_indicators()
         if print_info:
             predictions_num = sum([torch.sum(labels_by_visual[i]) for i in range(batch_size)])
-            self.log_print('Predicted ' + str(int(predictions_num.item())) + ' concepts according to visual')
+            self.log_print('Predicted ' + str(int(predictions_num.item())) + ' clusters according to visual')
 
         # 2. Use the result to train textual model
         self.text_model.training_step(token_lists, labels_by_visual)
 
         # Train visual model, assuming that the text model is already trained
         # 1. Use textual model for inference
-        labels_by_text = self.text_model.predict_concept_indicators()
+        labels_by_text = self.text_model.predict_cluster_indicators()
         if print_info:
             self.log_print(self.text_model.print_info_on_inference())
 

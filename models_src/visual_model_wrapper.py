@@ -17,7 +17,7 @@ class VisualModelWrapper(UnimodalModelWrapper):
             if config.visual_model_path:
                 orig_state_dict = torch.load(config.visual_model_path, map_location=self.device)
                 cleaned_state_dict = clean_state_dict(orig_state_dict)
-                adjusted_state_dict = adjust_projection_in_state_dict(cleaned_state_dict, config.concept_num)
+                adjusted_state_dict = adjust_projection_in_state_dict(cleaned_state_dict, config.cluster_num)
                 self.model.load_state_dict(adjusted_state_dict)
 
             if config.freeze_parameters:
@@ -33,7 +33,7 @@ class VisualModelWrapper(UnimodalModelWrapper):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
 
     def generate_model(self):
-        return generate_visual_model(self.config.visual_model, self.config.concept_num,
+        return generate_visual_model(self.config.visual_model, self.config.cluster_num,
                                      self.config.pretrained_visual_base_model)
 
     def generate_cam_extractor(self):
@@ -71,11 +71,11 @@ class VisualModelWrapper(UnimodalModelWrapper):
         output = self.cached_output
 
         batch_size = output.shape[0]
-        concept_num = self.config.concept_num
+        cluster_num = self.config.cluster_num
 
         best_winner = torch.max(torch.tensor(
             [len([i for i in range(batch_size) if torch.argmax(output[i, :]).item() == j])
-             for j in range(concept_num)])).item()
+             for j in range(cluster_num)])).item()
         return 'Best winner won ' + str(best_winner) + ' times out of ' + str(batch_size)
 
     def eval(self):
@@ -92,13 +92,13 @@ class VisualModelWrapper(UnimodalModelWrapper):
 
         return activation_map
 
-    def predict_concept_indicators(self):
+    def predict_cluster_indicators(self):
         with torch.no_grad():
             prob_output = torch.sigmoid(self.cached_output)
-            concepts_indicator = torch.zeros(prob_output.shape).to(self.device)
-            concepts_indicator[prob_output > self.config.object_threshold] = 1
+            clusters_indicator = torch.zeros(prob_output.shape).to(self.device)
+            clusters_indicator[prob_output > self.config.object_threshold] = 1
 
-        return concepts_indicator
+        return clusters_indicator
 
     def predict_classes(self):
         return torch.max(self.cached_output, dim=1).indices.tolist()
@@ -112,7 +112,7 @@ class VisualModelWrapper(UnimodalModelWrapper):
         for sample_ind in range(batch_size):
             activation_maps.append([])
             self.inference(image_tensor[[sample_ind], :, :, :])
-            predicted_class_list = self.predict_concept_lists()[0]
+            predicted_class_list = self.predict_cluster_lists()[0]
             for predicted_class in predicted_class_list:
                 activation_map = self.extract_cam(predicted_class)
                 activation_maps[-1].append(activation_map)
@@ -137,17 +137,17 @@ class VisualModelWrapper(UnimodalModelWrapper):
 
         return predicted_bboxes
 
-    def plot_heatmap(self, image_tensor, concept_to_str):
+    def plot_heatmap(self, image_tensor, cluster_to_str):
         old_cached_output = self.cached_output  # We don't want to change the cache
 
         batch_size = image_tensor.shape[0]
         for sample_ind in range(batch_size):
             self.inference(image_tensor[[sample_ind], :, :, :])
-            predicted_class_list = self.predict_concept_lists()[0]
+            predicted_class_list = self.predict_cluster_lists()[0]
             for predicted_class in predicted_class_list:
                 class_str = ' (associated classes: '
-                if predicted_class in concept_to_str:
-                    class_str += str(concept_to_str[predicted_class])
+                if predicted_class in cluster_to_str:
+                    class_str += str(cluster_to_str[predicted_class])
                 else:
                     class_str += 'None'
                 class_str += ')'
@@ -169,7 +169,7 @@ class VisualModelWrapper(UnimodalModelWrapper):
     def get_heatmaps_without_inference(self):
         # Get heatmaps for a single sample, assuming that inference was already executed
         heatmaps = []
-        predicted_class_list = self.predict_concept_lists()[0]
+        predicted_class_list = self.predict_cluster_lists()[0]
         for predicted_class in predicted_class_list:
             activation_map = self.extract_cam(predicted_class)
             heatmap = resize_activation_map(activation_map)

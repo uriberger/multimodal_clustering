@@ -8,7 +8,7 @@ from metrics import \
     CategorizationMetric, \
     ConcretenessPredictionMetric, \
     VisualPromptClassificationMetric, \
-    ConceptCounterMetric, \
+    ClusterCounterMetric, \
     HeatmapMetric
 
 # Datasets
@@ -51,7 +51,7 @@ class CommonEvaluator(Executor):
                 CategorizationMetric(self.text_model, category_dataset, ignore_unknown_words=False),
                 ConcretenessPredictionMetric(self.text_model, concreteness_dataset, token_count),
                 VisualPromptClassificationMetric(self.visual_model, self.text_model, class_mapping),
-                ConceptCounterMetric(self.text_model, token_count)
+                ClusterCounterMetric(self.text_model, token_count)
             ]
         else:
             self.metrics = [self.metric_name_to_object(x) for x in metric_list]

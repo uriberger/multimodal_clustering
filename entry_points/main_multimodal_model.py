@@ -23,7 +23,7 @@ set_write_to_log(timestamp)
 model_config = ModelConfig(
     visual_model='resnet18',
     text_model='lstm',
-    concept_num=100,
+    cluster_num=100,
     noun_threshold=0.52,
     object_threshold=0.51,
     visual_learning_rate=5e-5,

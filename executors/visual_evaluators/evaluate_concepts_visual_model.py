@@ -7,7 +7,7 @@ from models_src.textual_model_wrapper import TextualCountsModelWrapper
 from utils.general_utils import visual_dir, text_dir
 
 
-class VisualConceptEvaluator(VisualModelEvaluator):
+class VisualClusterEvaluator(VisualModelEvaluator):
 
     def __init__(self, test_set, class_mapping, gt_classes_file_path, model_str, indent):
         if gt_classes_file_path is None:
@@ -16,7 +16,7 @@ class VisualConceptEvaluator(VisualModelEvaluator):
             self.multi_label = True
             self.gt_classes_data = torch.load(gt_classes_file_path)
 
-        super(VisualConceptEvaluator, self).__init__(test_set, class_mapping, 'concepts', model_str, indent)
+        super(VisualClusterEvaluator, self).__init__(test_set, class_mapping, 'clusters', model_str, indent)
 
         class_num = len([x for x in self.class_mapping.values() if ' ' not in x])
         self.metric = VisualKnownClassesClassificationMetric(None, class_num)
@@ -24,7 +24,7 @@ class VisualConceptEvaluator(VisualModelEvaluator):
     def inference(self, inputs):
         self.model.inference(inputs)
         if self.multi_label:
-            return self.model.predict_concept_indicators()
+            return self.model.predict_cluster_indicators()
         else:
             return torch.tensor(self.model.predict_classes()).view(1, inputs.shape[0]).transpose(1, 0)
 
@@ -41,15 +41,15 @@ class VisualConceptEvaluator(VisualModelEvaluator):
         return visual_model, inference_func
 
     def metric_pre_calculations(self):
-        self.concept_to_gt_class = self.text_model.create_concept_to_gt_class_mapping(self.class_mapping)
+        self.cluster_to_gt_class = self.text_model.create_cluster_to_gt_class_mapping(self.class_mapping)
 
     def predict_classes(self, sample_ind):
         if self.multi_label:
-            concept_indicators = self.embedding_mat[sample_ind]
-            predicted_concepts = [x for x in range(self.embedding_mat.shape[1]) if concept_indicators[x] == 1]
-            predicted_class_lists = [self.concept_to_gt_class[x] for x in predicted_concepts]
+            cluster_indicators = self.embedding_mat[sample_ind]
+            predicted_clusters = [x for x in range(self.embedding_mat.shape[1]) if cluster_indicators[x] == 1]
+            predicted_class_lists = [self.cluster_to_gt_class[x] for x in predicted_clusters]
             predicted_classes = [inner for outer in predicted_class_lists for inner in outer]
         else:
-            predicted_concept = self.embedding_mat[sample_ind].item()
-            predicted_classes = self.concept_to_gt_class[predicted_concept]
+            predicted_cluster = self.embedding_mat[sample_ind].item()
+            predicted_classes = self.cluster_to_gt_class[predicted_cluster]
         return predicted_classes

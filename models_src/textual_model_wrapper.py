@@ -2,7 +2,7 @@ from models_src.unimodal_model_wrapper import UnimodalModelWrapper
 from models_src.baselines.word_co_occurrence_model import WordCoOccurrenceModel
 import torch
 import numpy as np
-from models_src.word_concept_count_model import WordConceptCountModel
+from models_src.word_cluster_count_model import WordClusterCountModel
 import abc
 from utils.text_utils import generate_text_model
 from utils.text_utils import prepare_data
@@ -30,11 +30,11 @@ def generate_textual_model(device, config_or_str, dir_name, model_name, indent):
         return None
 
 
-def generate_textual_counts_model(model_str, concept_num):
+def generate_textual_counts_model(model_str, cluster_num):
     if model_str == 'counts_generative':
-        model = WordConceptCountModel(concept_num, 'generative')
+        model = WordClusterCountModel(cluster_num, 'generative')
     elif model_str == 'counts_discriminative':
-        model = WordConceptCountModel(concept_num, 'discriminative')
+        model = WordClusterCountModel(cluster_num, 'discriminative')
 
     return model
 
@@ -45,24 +45,24 @@ class TextualModelWrapper(UnimodalModelWrapper):
         super(TextualModelWrapper, self).__init__(device, config, model_dir, model_name, indent)
 
     @abc.abstractmethod
-    def predict_concept_insantiating_words(self, sentences):
+    def predict_cluster_insantiating_words(self, sentences):
         return
 
     @abc.abstractmethod
-    def predict_concepts_for_word(self, word):
+    def predict_clusters_for_word(self, word):
         return
 
     @abc.abstractmethod
-    def predict_concept_for_word(self, word):
+    def predict_cluster_for_word(self, word):
         return
 
     @abc.abstractmethod
-    def estimate_concept_instantiation_per_word(self, sentences):
+    def estimate_cluster_instantiation_per_word(self, sentences):
         return
 
     def print_info_on_inference(self):
-        predictions_num = torch.sum(self.predict_concept_indicators()).item()
-        return 'Predicted ' + str(predictions_num) + ' concepts according to text'
+        predictions_num = torch.sum(self.predict_cluster_indicators()).item()
+        return 'Predicted ' + str(predictions_num) + ' clusters according to text'
 
 
 class TextualCountsModelWrapper(TextualModelWrapper):
@@ -72,7 +72,7 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         self.model.calculate_probs()
 
     def generate_model(self):
-        return generate_textual_counts_model(self.config.text_model, self.config.concept_num)
+        return generate_textual_counts_model(self.config.text_model, self.config.cluster_num)
 
     def training_step(self, inputs, labels):
         loss = self.criterion(self.cached_output, labels)
@@ -82,27 +82,27 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         batch_size = len(inputs)
 
         for caption_ind in range(batch_size):
-            predicted_concepts_by_image = [x for x in range(self.config.concept_num)
+            predicted_clusters_by_image = [x for x in range(self.config.cluster_num)
                                            if labels[caption_ind, x] == 1]
             for token in inputs[caption_ind]:
-                for concept_ind in predicted_concepts_by_image:
-                    self.model.document_co_occurrence(token, concept_ind)
+                for cluster_ind in predicted_clusters_by_image:
+                    self.model.document_co_occurrence(token, cluster_ind)
 
     def inference(self, inputs):
         self.model.calculate_probs()
         batch_size = len(inputs)
 
         with torch.no_grad():
-            output_tensor = torch.zeros(batch_size, self.config.concept_num).to(self.device)
+            output_tensor = torch.zeros(batch_size, self.config.cluster_num).to(self.device)
             for caption_ind in range(batch_size):
                 for token in inputs[caption_ind]:
-                    prediction_res = self.model.predict_concept(token)
+                    prediction_res = self.model.predict_cluster(token)
                     if prediction_res is None:
                         # Never seen this token before
                         continue
-                    predicted_concept, prob = prediction_res
-                    if output_tensor[caption_ind, predicted_concept] < prob:
-                        output_tensor[caption_ind, predicted_concept] = prob
+                    predicted_cluster, prob = prediction_res
+                    if output_tensor[caption_ind, predicted_cluster] < prob:
+                        output_tensor[caption_ind, predicted_cluster] = prob
 
         self.cached_output = output_tensor
         return output_tensor
@@ -113,76 +113,76 @@ class TextualCountsModelWrapper(TextualModelWrapper):
     def load_model(self):
         self.model = torch.load(self.get_model_path())
 
-    def predict_concept_indicators(self):
-        concept_indicators = torch.zeros(self.cached_output.shape).to(self.device)
-        concept_indicators[self.cached_output > self.config.noun_threshold] = 1
-        return concept_indicators
+    def predict_cluster_indicators(self):
+        cluster_indicators = torch.zeros(self.cached_output.shape).to(self.device)
+        cluster_indicators[self.cached_output > self.config.noun_threshold] = 1
+        return cluster_indicators
 
-    def predict_concept_insantiating_words(self, sentences):
+    def predict_cluster_insantiating_words(self, sentences):
         res = []
         for sentence in sentences:
             res.append([])
             for token in sentence:
-                concept_instantiating_token = False
+                cluster_instantiating_token = False
                 while True:
-                    prediction_res = self.model.predict_concept(token)
+                    prediction_res = self.model.predict_cluster(token)
                     if prediction_res is None:
                         # Never seen this token before
                         break
-                    predicted_concept, prob = prediction_res
+                    predicted_cluster, prob = prediction_res
                     if prob >= self.config.noun_threshold:
-                        concept_instantiating_token = True
+                        cluster_instantiating_token = True
                     break
-                if concept_instantiating_token:
+                if cluster_instantiating_token:
                     res[-1].append(1)
                 else:
                     res[-1].append(0)
 
         return res
 
-    def predict_concepts_for_word(self, word):
-        concept_conditioned_on_word = self.model.get_concept_conditioned_on_word(word)
-        if concept_conditioned_on_word is None:
-            # return [0]*self.config.concept_num
+    def predict_clusters_for_word(self, word):
+        cluster_conditioned_on_word = self.model.get_cluster_conditioned_on_word(word)
+        if cluster_conditioned_on_word is None:
+            # return [0]*self.config.cluster_num
             return None
 
-        concept_indicators = [1 if x >= self.config.noun_threshold else 0 for x in concept_conditioned_on_word]
-        return concept_indicators
+        cluster_indicators = [1 if x >= self.config.noun_threshold else 0 for x in cluster_conditioned_on_word]
+        return cluster_indicators
 
-    def predict_concept_for_word(self, word):
-        concept_conditioned_on_word = self.model.get_concept_conditioned_on_word(word)
-        if concept_conditioned_on_word is None:
-            # return [0]*self.config.concept_num
+    def predict_cluster_for_word(self, word):
+        cluster_conditioned_on_word = self.model.get_cluster_conditioned_on_word(word)
+        if cluster_conditioned_on_word is None:
+            # return [0]*self.config.cluster_num
             return None
 
-        return np.argmax(concept_conditioned_on_word)
+        return np.argmax(cluster_conditioned_on_word)
 
-    def estimate_concept_instantiation_per_word(self, sentences):
+    def estimate_cluster_instantiation_per_word(self, sentences):
         res = []
         for sentence in sentences:
             res.append([])
             for token in sentence:
-                prediction_res = self.model.predict_concept(token)
+                prediction_res = self.model.predict_cluster(token)
                 if prediction_res is None:
                     # Never seen this token before
                     res[-1].append(0)
                 else:
-                    predicted_concept, prob = prediction_res
+                    predicted_cluster, prob = prediction_res
                     res[-1].append(prob)
 
         return res
 
-    def create_concept_to_gt_class_mapping(self, class_mapping):
-        gt_class_to_prediction = {i: self.model.predict_concept(class_mapping[i])
+    def create_cluster_to_gt_class_mapping(self, class_mapping):
+        gt_class_to_prediction = {i: self.model.predict_cluster(class_mapping[i])
                                   for i in class_mapping.keys()
                                   if ' ' not in class_mapping[i]}
-        gt_class_to_concept = {x[0]: x[1][0] for x in gt_class_to_prediction.items() if x[1] is not None}
-        concept_num = self.config.concept_num
-        concept_to_gt_class = {concept_ind: [] for concept_ind in range(concept_num)}
-        for gt_class_ind, concept_ind in gt_class_to_concept.items():
-            concept_to_gt_class[concept_ind].append(gt_class_ind)
+        gt_class_to_cluster = {x[0]: x[1][0] for x in gt_class_to_prediction.items() if x[1] is not None}
+        cluster_num = self.config.cluster_num
+        cluster_to_gt_class = {cluster_ind: [] for cluster_ind in range(cluster_num)}
+        for gt_class_ind, cluster_ind in gt_class_to_cluster.items():
+            cluster_to_gt_class[cluster_ind].append(gt_class_ind)
 
-        return concept_to_gt_class
+        return cluster_to_gt_class
 
 
 class TextualRNNModelWrapper(TextualModelWrapper):
@@ -200,10 +200,10 @@ class TextualRNNModelWrapper(TextualModelWrapper):
 
     def generate_model(self):
         model_str = self.config.text_model
-        concept_num = self.config.concept_num
+        cluster_num = self.config.cluster_num
         word_embed_dim = self.config.word_embed_dim
 
-        return generate_text_model(model_str, concept_num, word_embed_dim)
+        return generate_text_model(model_str, cluster_num, word_embed_dim)
 
     def training_step(self, inputs, labels):
         loss = self.criterion(self.cached_output, labels)
@@ -240,20 +240,20 @@ class TextualRNNModelWrapper(TextualModelWrapper):
 
         output = self.model(input_tensor)[0]
         ''' The current 'output' variable contains the hidden states of each word in the sequence, for each
-        sentence in the batch. However, the expected output of the model is a value for each concept and each
-        sentence, representing how likely it is that this concept is instantiated in this sentence. So, we'll take
+        sentence in the batch. However, the expected output of the model is a value for each cluster and each
+        sentence, representing how likely it is that this cluster is instantiated in this sentence. So, we'll take
         the maximum of the values from all the words as the proxy for this probability. '''
         output = torch.max(output, dim=1).values
         self.cached_output = output
         return output
 
-    def predict_concept_indicators(self):
+    def predict_cluster_indicators(self):
         with torch.no_grad():
             prob_output = torch.sigmoid(self.cached_output)
-            concepts_indicator = torch.zeros(prob_output.shape).to(self.device)
-            concepts_indicator[prob_output > self.config.noun_threshold] = 1
+            clusters_indicator = torch.zeros(prob_output.shape).to(self.device)
+            clusters_indicator[prob_output > self.config.noun_threshold] = 1
 
-        return concepts_indicator
+        return clusters_indicator
 
     def dump_model(self):
         torch.save(self.model.state_dict(), self.get_model_path())
@@ -261,29 +261,29 @@ class TextualRNNModelWrapper(TextualModelWrapper):
     def load_model(self):
         self.model.load_state_dict(torch.load(self.get_model_path(), map_location=torch.device(self.device)))
 
-    def predict_concept_insantiating_words(self, sentences):
+    def predict_cluster_insantiating_words(self, sentences):
         res = []
         for sent_ind in range(len(sentences)):
             sentence = sentences[sent_ind]
             res.append([])
             for token_ind in range(len(sentence)):
-                concept_instantiating_token = \
+                cluster_instantiating_token = \
                     torch.max(self.cached_output[sent_ind, token_ind, :]) >= self.config.noun_threshold
-                if concept_instantiating_token:
+                if cluster_instantiating_token:
                     res[-1].append(1)
                 else:
                     res[-1].append(0)
 
         return res
 
-    def predict_concepts_for_word(self, word):
+    def predict_clusters_for_word(self, word):
         old_cached_output = self.cached_output
 
         self.inference([[word]])
-        concept_indicators = self.cached_output[0, 0, :] >= self.config.noun_threshold
+        cluster_indicators = self.cached_output[0, 0, :] >= self.config.noun_threshold
 
         self.cached_loss = old_cached_output
-        return concept_indicators
+        return cluster_indicators
 
 
 class TextualSimpleCountsModelWrapper(TextualModelWrapper):
@@ -294,19 +294,19 @@ class TextualSimpleCountsModelWrapper(TextualModelWrapper):
     def generate_model(self):
         return WordCoOccurrenceModel()
 
-    def predict_concept_insantiating_words(self, sentences):
+    def predict_cluster_insantiating_words(self, sentences):
         return
 
-    def predict_concepts_for_word(self, word):
+    def predict_clusters_for_word(self, word):
         return
 
-    def predict_concept_for_word(self, word):
+    def predict_cluster_for_word(self, word):
         if word in self.word_to_cluster:
             return self.word_to_cluster[word]
         else:
             return None
 
-    def estimate_concept_instantiation_per_word(self, sentences):
+    def estimate_cluster_instantiation_per_word(self, sentences):
         return
 
     def train(self, training_set):
@@ -327,7 +327,7 @@ class TextualSimpleCountsModelWrapper(TextualModelWrapper):
                 for j in range(i+1, len(token_list)):
                     self.model.document_co_occurrence(token_list[i], token_list[j])
 
-        self.word_to_cluster = self.model.categorize_words(self.config.concept_num)
+        self.word_to_cluster = self.model.categorize_words(self.config.cluster_num)
 
     def dump_model(self):
         torch.save([self.model, self.word_to_cluster], self.get_model_path())

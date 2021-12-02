@@ -282,7 +282,7 @@ class HeatmapMetric(BBoxPredictionMetric):
 
 class NounIdentificationMetric(SensitivitySpecificityMetric):
     """ This metric uses the model to predict if a word is a noun (by asking
-    if it instantiates a concept). It then compares the prediction to the
+    if it instantiates a cluster). It then compares the prediction to the
     ground-truth (extracted from a pretrained pos tagger) and reports the
     results. """
 
@@ -310,7 +310,7 @@ class NounIdentificationMetric(SensitivitySpecificityMetric):
         return gt_res
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        predictions = self.text_model.predict_concept_insantiating_words(text_inputs)
+        predictions = self.text_model.predict_cluster_insantiating_words(text_inputs)
         text_gt = self.prepare_ground_truth(text_inputs)
 
         batch_size = len(text_inputs)
@@ -352,7 +352,7 @@ class ConcretenessPredictionMetric(Metric):
     """ This metric uses a concreteness dataset: a human-annotated dataset
     that gives every word a number between 1 and 5, representing how
     concrete is this word. We compare it to our prediction: a word that
-    instantiates a concept is concrete (5) and is otherwise in-concrete (1).
+    instantiates a cluster is concrete (5) and is otherwise in-concrete (1).
     """
 
     def __init__(self, text_model, concreteness_dataset, token_count, predicted_concreteness=None):
@@ -395,7 +395,7 @@ class ConcretenessPredictionMetric(Metric):
             if self.predicted_concreteness:
                 concreteness_estimation = self.predicted_concreteness[token]
             else:
-                concreteness_estimation = self.text_model.estimate_concept_instantiation_per_word([[token]])[0][0]
+                concreteness_estimation = self.text_model.estimate_cluster_instantiation_per_word([[token]])[0][0]
             concreteness_prediction = concreteness_estimation >= self.text_model.config.noun_threshold
             estimation_absolute_error = abs(gt_concreteness - concreteness_estimation)
             prediction_absolute_error = abs(gt_concreteness - concreteness_prediction)
@@ -502,8 +502,8 @@ class ConcretenessPredictionMetric(Metric):
 class SentenceImageMatchingMetric(Metric):
     """ This metric chooses 2 random samples, and checks if the model knows
     to align the correct sentence to the correct image.
-    This is performed by predicting the concepts for one image, and for the
-    two sentences, and checking the hamming distance of the concepts vector
+    This is performed by predicting the clusters for one image, and for the
+    two sentences, and checking the hamming distance of the clusters vector
     predicted according to the image to that predicted according to each
     sentence. If the hamming distance is lower from the correct sentence,
     this is considered a correct prediction. """
@@ -515,23 +515,23 @@ class SentenceImageMatchingMetric(Metric):
         self.overall_count = 0
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        concepts_by_image = self.visual_model.predict_concept_indicators()
-        concepts_by_text = self.text_model.predict_concept_indicators()
+        clusters_by_image = self.visual_model.predict_cluster_indicators()
+        clusters_by_text = self.text_model.predict_cluster_indicators()
 
         batch_size = len(text_inputs) // 2
         for pair_sample_ind in range(batch_size):
             single_sample_ind = 2 * pair_sample_ind
-            sample_concepts_by_image = concepts_by_image[single_sample_ind]
-            sample_concepts_by_first_caption = concepts_by_text[single_sample_ind]
-            sample_concepts_by_second_caption = concepts_by_text[single_sample_ind + 1]
+            sample_clusters_by_image = clusters_by_image[single_sample_ind]
+            sample_clusters_by_first_caption = clusters_by_text[single_sample_ind]
+            sample_clusters_by_second_caption = clusters_by_text[single_sample_ind + 1]
             first_hamming_distance = torch.sum(
                 torch.abs(
-                    sample_concepts_by_image - sample_concepts_by_first_caption
+                    sample_clusters_by_image - sample_clusters_by_first_caption
                 )
             ).item()
             second_hamming_distance = torch.sum(
                 torch.abs(
-                    sample_concepts_by_image - sample_concepts_by_second_caption
+                    sample_clusters_by_image - sample_clusters_by_second_caption
                 )
             ).item()
 
@@ -599,7 +599,7 @@ class VisualKnownClassesClassificationMetric(VisualClassificationMetric):
         self.class_num = class_num
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        predicted_classes = self.visual_model.predict_concept_lists()
+        predicted_classes = self.visual_model.predict_cluster_lists()
 
         gt_classes_str = visual_metadata['gt_classes']
         gt_classes = [int(x) for x in gt_classes_str.split(',')]
@@ -626,13 +626,13 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
 
         # Maintain a list of pairs of (predicted clusters, gt classes) for future calculations
         self.predicted_clusters_gt_classes = []
-        ''' Mapping mode: Two possible heuristics for choosing concept to class mapping:
-        First, for each concept choose the class with which it co-occurred the most.
-        Second, for each concept choose the class with which it has the largest IoU. '''
+        ''' Mapping mode: Two possible heuristics for choosing cluster to class mapping:
+        First, for each cluster choose the class with which it co-occurred the most.
+        Second, for each cluster choose the class with which it has the largest IoU. '''
         self.mapping_mode = mapping_mode
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        predicted_classes = self.visual_model.predict_concept_lists()
+        predicted_classes = self.visual_model.predict_cluster_lists()
         self.document(predicted_classes, visual_metadata['gt_classes'])
 
     def document(self, predicted_classes, gt_classes):
@@ -641,20 +641,20 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
             [(predicted_classes[i], gt_classes[i]) for i in range(batch_size)]
 
     def evaluate(self):
-        # Get a unique list of concepts
-        concepts_with_repetition = [x[0] for x in self.predicted_clusters_gt_classes]
-        concept_list = list(set([inner for outer in concepts_with_repetition for inner in outer]))
-        self.class_num = len(concept_list)
+        # Get a unique list of clusters
+        clusters_with_repetition = [x[0] for x in self.predicted_clusters_gt_classes]
+        cluster_list = list(set([inner for outer in clusters_with_repetition for inner in outer]))
+        self.class_num = len(cluster_list)
 
-        # First, document for each concept how many times each class co-occurred with it
-        concept_class_co_occur = {x: {} for x in concept_list}
+        # First, document for each cluster how many times each class co-occurred with it
+        cluster_class_co_occur = {x: {} for x in cluster_list}
 
-        predicted_concept_count = {x: 0 for x in concept_list}
+        predicted_cluster_count = {x: 0 for x in cluster_list}
         gt_class_count = {}
-        for predicted_concepts, gt_classes in self.predicted_clusters_gt_classes:
-            for predicted_concept in predicted_concepts:
+        for predicted_clusters, gt_classes in self.predicted_clusters_gt_classes:
+            for predicted_cluster in predicted_clusters:
                 # Increment count
-                predicted_concept_count[predicted_concept] += 1
+                predicted_cluster_count[predicted_cluster] += 1
                 # Go over gt classes
                 for gt_class in gt_classes:
                     # Increment count
@@ -662,79 +662,79 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
                         gt_class_count[gt_class] = 0
                     gt_class_count[gt_class] += 1
                     # Document co-occurrence
-                    if gt_class not in concept_class_co_occur[predicted_concept]:
-                        concept_class_co_occur[predicted_concept][gt_class] = 0
-                    concept_class_co_occur[predicted_concept][gt_class] += 1
+                    if gt_class not in cluster_class_co_occur[predicted_cluster]:
+                        cluster_class_co_occur[predicted_cluster][gt_class] = 0
+                    cluster_class_co_occur[predicted_cluster][gt_class] += 1
 
-        ''' Two possible heuristics for choosing concept to class mapping:
-        First, for each concept choose the class with which it co-occurred the most.
-        Second, for each concept choose the class with which it has the largest IoU. '''
-        # First option: for each concept, choose the class with which it co-occurred the most
+        ''' Two possible heuristics for choosing cluster to class mapping:
+        First, for each cluster choose the class with which it co-occurred the most.
+        Second, for each cluster choose the class with which it has the largest IoU. '''
+        # First option: for each cluster, choose the class with which it co-occurred the most
         if self.mapping_mode == 'co_occur':
-            concept_to_class = {
-                x: max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
-                if len(concept_class_co_occur[x]) > 0 else None
-                for x in concept_list
+            cluster_to_class = {
+                x: max(cluster_class_co_occur[x], key=cluster_class_co_occur[x].get)
+              if len(cluster_class_co_occur[x]) > 0 else None
+                for x in cluster_list
             }
 
             # Finally, go over the results again and use the mapping to evaluate
-            for predicted_concepts, gt_classes in self.predicted_clusters_gt_classes:
-                predicted_classes = [concept_to_class[x] for x in predicted_concepts]
+            for predicted_clusters, gt_classes in self.predicted_clusters_gt_classes:
+                predicted_classes = [cluster_to_class[x] for x in predicted_clusters]
                 self.evaluate_classification([predicted_classes], [gt_classes])
 
             # Apart from the classification results, we want to measure the intersection of our classes and the gt classes
-            intersections = {x: concept_class_co_occur[x][concept_to_class[x]] for x in concept_list}
-            unions = {x: predicted_concept_count[x] +  # Concept count
-                         gt_class_count[concept_to_class[x]] -  # Class count
+            intersections = {x: cluster_class_co_occur[x][cluster_to_class[x]] for x in cluster_list}
+            unions = {x: predicted_cluster_count[x] +  # Cluster count
+                         gt_class_count[cluster_to_class[x]] -  # Class count
                          intersections[x]  # Intersection count
-                      for x in concept_list}
+                      for x in cluster_list}
             self.ious = {x: intersections[x] / unions[x] if unions[x] > 0 else 0
-                         for x in concept_list}
+                         for x in cluster_list}
 
-            concept_to_class = {
-                x: max(concept_class_co_occur[x], key=concept_class_co_occur[x].get)
-                if len(concept_class_co_occur[x]) > 0 else None
-                for x in concept_list
+            cluster_to_class = {
+                x: max(cluster_class_co_occur[x], key=cluster_class_co_occur[x].get)
+                if len(cluster_class_co_occur[x]) > 0 else None
+                for x in cluster_list
             }
-        # Second option: for each concept choose the class with which it has the largest IoU
+        # Second option: for each cluster choose the class with which it has the largest IoU
         elif self.mapping_mode == 'iou':
-            intersections = concept_class_co_occur
+            intersections = cluster_class_co_occur
             unions = {
-                concept_ind: {
+                cluster_ind: {
                     class_ind:
-                        predicted_concept_count[concept_ind] +  # Concept count
+                        predicted_cluster_count[cluster_ind] +  # Cluster count
                         gt_class_count[class_ind] -  # Class count
-                        intersections[concept_ind][class_ind]  # Intersection count
-                        if class_ind in intersections[concept_ind] else 0
+                        intersections[cluster_ind][class_ind]  # Intersection count
+                        if class_ind in intersections[cluster_ind] else 0
                     for class_ind in gt_class_count.keys()
                 }
-                for concept_ind in concept_list
+                for cluster_ind in cluster_list
             }
             ious = {
-                concept_ind: {
+                cluster_ind: {
                     class_ind:
-                        intersections[concept_ind][class_ind] / unions[concept_ind][class_ind]
-                        if unions[concept_ind][class_ind] > 0 else 0
+                        intersections[cluster_ind][class_ind] / unions[cluster_ind][class_ind]
+                        if unions[cluster_ind][class_ind] > 0 else 0
                     for class_ind in gt_class_count.keys()
                 }
-                for concept_ind in concept_list
+                for cluster_ind in cluster_list
             }
 
-            # Now, for each concept, choose the class with which it co-occurred the most
-            concept_to_class = {
+            # Now, for each cluster, choose the class with which it co-occurred the most
+            cluster_to_class = {
                 x: max(ious[x], key=ious[x].get)
                 if len(ious[x]) > 0 else None
-                for x in concept_list
+                for x in cluster_list
             }
 
-            self.ious = {concept_ind: ious[concept_ind][concept_to_class[concept_ind]] for concept_ind in concept_list}
+            self.ious = {cluster_ind: ious[cluster_ind][cluster_to_class[cluster_ind]] for cluster_ind in cluster_list}
 
         # Finally, go over the results again and use the mapping to evaluate
-        for predicted_concepts, gt_classes in self.predicted_clusters_gt_classes:
-            predicted_classes = [concept_to_class[x] for x in predicted_concepts]
+        for predicted_clusters, gt_classes in self.predicted_clusters_gt_classes:
+            predicted_classes = [cluster_to_class[x] for x in predicted_clusters]
             self.evaluate_classification([predicted_classes], [gt_classes])
 
-        self.concept_to_class = concept_to_class
+        self.cluster_to_class = cluster_to_class
 
     def report(self):
         """In this metric we have post analysis, we'll do it in the report function as this function is
@@ -746,10 +746,10 @@ class VisualUnknownClassesClassificationMetric(VisualClassificationMetric):
                ' mean ' + str(statistics.mean(self.ious.values())) + ' median ' + \
                str(statistics.median(self.ious.values())) + '\n'
 
-        res += 'Concept class pairs: '
-        for concept_ind, iou in self.ious.items():
-            class_ind = self.concept_to_class[concept_ind]
-            res += '(' + str(concept_ind) + ',' + str(class_ind) + ',' + "{:.2f}".format(iou) + ') '
+        res += 'Cluster class pairs: '
+        for cluster_ind, iou in self.ious.items():
+            class_ind = self.cluster_to_class[cluster_ind]
+            res += '(' + str(cluster_ind) + ',' + str(class_ind) + ',' + "{:.2f}".format(iou) + ') '
 
         return res
 
@@ -772,14 +772,14 @@ class VisualPromptClassificationMetric(VisualClassificationMetric):
     def __init__(self, visual_model, text_model, class_mapping):
         super(VisualPromptClassificationMetric, self).__init__(visual_model)
         self.text_model = text_model
-        self.concept_to_gt_class = self.text_model.create_concept_to_gt_class_mapping(class_mapping)
+        self.cluster_to_gt_class = self.text_model.create_cluster_to_gt_class_mapping(class_mapping)
         self.class_num = len(class_mapping)
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
         batch_size = len(text_inputs)
-        predicted_concepts = self.visual_model.predict_concept_lists()
+        predicted_clusters = self.visual_model.predict_cluster_lists()
         for sample_ind in range(batch_size):
-            predicted_class_lists = [self.concept_to_gt_class[x] for x in predicted_concepts[sample_ind]]
+            predicted_class_lists = [self.cluster_to_gt_class[x] for x in predicted_clusters[sample_ind]]
             predicted_classes = [inner for outer in predicted_class_lists for inner in outer]
 
             gt_classes = visual_metadata['gt_classes'][sample_ind]
@@ -881,14 +881,14 @@ class CategorizationMetric(Metric):
         for category, word_list in self.category_dataset.items():
             for word in word_list:
                 # Prediction
-                prediction = self.text_model.predict_concept_for_word(word)
+                prediction = self.text_model.predict_cluster_for_word(word)
                 if prediction is not None:
                     # The word is known
                     predicted_labels.append(prediction)
                 elif not self.ignore_unknown_words:
                     ''' The word is unknown, but we were told not to ignore unknown words, so we'll label it by a new
                     cluster. '''
-                    new_cluster_ind = self.text_model.config.concept_num
+                    new_cluster_ind = self.text_model.config.cluster_num
                     predicted_labels.append(new_cluster_ind)
 
                 if (prediction is not None) or (not self.ignore_unknown_words):
@@ -904,19 +904,19 @@ class CategorizationMetric(Metric):
 
     def calculate_fuzzy_scatter_metric(self):
         all_words = list(set([word for inner in self.category_dataset.values() for word in inner]))
-        concept_to_word_list = {}
+        cluster_to_word_list = {}
         for word in all_words:
-            prediction = self.text_model.predict_concepts_for_word(word)
+            prediction = self.text_model.predict_clusters_for_word(word)
             if prediction is None:
                 continue
-            predicted_concepts = [x for x in range(len(prediction)) if prediction[x] == 1]
-            for concept in predicted_concepts:
-                if concept not in concept_to_word_list:
-                    concept_to_word_list[concept] = []
-                concept_to_word_list[concept].append(word)
+            predicted_clusters = [x for x in range(len(prediction)) if prediction[x] == 1]
+            for cluster in predicted_clusters:
+                if cluster not in cluster_to_word_list:
+                    cluster_to_word_list[cluster] = []
+                cluster_to_word_list[cluster].append(word)
 
         self.results['fuzzy_homogeneity'], self.results['fuzzy_completeness'], self.results['fuzzy_v_measure_score'] = \
-            self.fuzzy_v_measure_score(self.category_dataset, concept_to_word_list)
+            self.fuzzy_v_measure_score(self.category_dataset, cluster_to_word_list)
 
     @staticmethod
     def calc_purity_collocation(gt_labels, predicted_labels):
@@ -1040,12 +1040,12 @@ class CategorizationMetric(Metric):
         return True
 
 
-class ConceptCounterMetric(Metric):
-    """ This metric counts how many active concepts we have.
-        An active concept is a concept with at least one word that crosses the threshold. """
+class ClusterCounterMetric(Metric):
+    """ This metric counts how many active clusters we have.
+        An active cluster is a cluster with at least one word that crosses the threshold. """
 
     def __init__(self, text_model, token_count):
-        super(ConceptCounterMetric, self).__init__(None, text_model)
+        super(ClusterCounterMetric, self).__init__(None, text_model)
 
         self.token_count = token_count
 
@@ -1056,23 +1056,23 @@ class ConceptCounterMetric(Metric):
         if self.results is None:
             self.calc_results()
 
-        res = 'Used concept number: ' + str(self.results['used_concept_num'])
+        res = 'Used cluster number: ' + str(self.results['used_cluster_num'])
         return res
 
     def calc_results(self):
         self.results = {}
-        used_concept_indicators = [False] * self.text_model.config.concept_num
+        used_cluster_indicators = [False] * self.text_model.config.cluster_num
         text_threshold = self.text_model.config.noun_threshold
 
         for token in self.token_count.keys():
-            prediction_res = self.text_model.model.predict_concept(token)
+            prediction_res = self.text_model.model.predict_cluster(token)
             if prediction_res is not None:
-                predicted_concept, prob = prediction_res
+                predicted_cluster, prob = prediction_res
                 if prob >= text_threshold:
-                    used_concept_indicators[predicted_concept] = True
+                    used_cluster_indicators[predicted_cluster] = True
 
-        used_concept_num = len([x for x in used_concept_indicators if x is True])
-        self.results['used_concept_num'] = used_concept_num
+        used_cluster_num = len([x for x in used_cluster_indicators if x is True])
+        self.results['used_cluster_num'] = used_cluster_num
 
     def uses_external_dataset(self):
         return True

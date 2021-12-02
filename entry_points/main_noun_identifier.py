@@ -29,13 +29,13 @@ training_set, _, _ = coco.build_dataset(training_set_config)
 test_set_config = DatasetConfig(1, slice_str='val')
 test_set, gt_classes_file_path, gt_bboxes_file_path = coco.build_dataset(test_set_config)
 
-concept_num = 65
+cluster_num = 65
 log_print(function_name, 0, 'Datasets generated')
 
 config = ModelConfig(
     text_model='counts_generative',
-    concept_num=concept_num,
-    noun_threshold=(1/concept_num + 1/(10*concept_num))
+    cluster_num=cluster_num,
+    noun_threshold=(1/cluster_num + 1/(10*cluster_num))
 )
 log_print(function_name, 0, str(config))
 

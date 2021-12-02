@@ -21,7 +21,7 @@ set_write_to_log(timestamp)
 model_config = ModelConfig(
     visual_model='resnet50',
     text_model='counts_generative',
-    concept_num=100,
+    cluster_num=100,
     object_threshold=0.5,
     noun_threshold=0.03,
     pretrained_visual_base_model=False,

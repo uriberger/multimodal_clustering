@@ -13,10 +13,10 @@ class NounIdentifierTrainer(Trainer):
     def train_on_batch(self, index, sampled_batch, print_info):
         caption = sampled_batch['caption']
         token_list = self.training_set.prepare_data(caption)[0]
-        concept_inds = sampled_batch[1]
+        cluster_inds = sampled_batch[1]
 
         self.model.inference(token_list)
-        self.model.training_step(token_list, concept_inds)
+        self.model.training_step(token_list, cluster_inds)
 
     def pre_training(self):
         self.log_print('Training noun identifier from golden dataset...')

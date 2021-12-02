@@ -18,20 +18,20 @@ class HeatmapDemonstrator(Demonstrator):
         self.text_model = \
             generate_textual_model(self.device, 'counts_generative', textual_model_dir, model_name, indent + 1)
 
-        gt_class_to_concept = {i: self.text_model.model.predict_concept(class_mapping[i])[0]
+        gt_class_to_cluster = {i: self.text_model.model.predict_cluster(class_mapping[i])[0]
                                for i in range(len(class_mapping))
                                if ' ' not in class_mapping[i]}
-        concept_to_gt_class_ind = {}
-        for gt_class_ind, concept_ind in gt_class_to_concept.items():
-            if concept_ind not in concept_to_gt_class_ind:
-                concept_to_gt_class_ind[concept_ind] = []
-            concept_to_gt_class_ind[concept_ind].append(gt_class_ind)
+        cluster_to_gt_class_ind = {}
+        for gt_class_ind, cluster_ind in gt_class_to_cluster.items():
+            if cluster_ind not in cluster_to_gt_class_ind:
+                cluster_to_gt_class_ind[cluster_ind] = []
+            cluster_to_gt_class_ind[cluster_ind].append(gt_class_ind)
 
-        concept_to_gt_class_str = {x: [class_mapping[i] for i in concept_to_gt_class_ind[x]]
-                                   for x in concept_to_gt_class_ind.keys()}
+        cluster_to_gt_class_str = {x: [class_mapping[i] for i in cluster_to_gt_class_ind[x]]
+                                   for x in cluster_to_gt_class_ind.keys()}
 
-        self.concept_to_gt_class_str = concept_to_gt_class_str
+        self.cluster_to_gt_class_str = cluster_to_gt_class_str
 
     def demonstrate_item(self, index, sampled_batch, print_info):
         image_tensor = sampled_batch['image']
-        self.visual_model.plot_heatmap(image_tensor, self.concept_to_gt_class_str)
+        self.visual_model.plot_heatmap(image_tensor, self.cluster_to_gt_class_str)

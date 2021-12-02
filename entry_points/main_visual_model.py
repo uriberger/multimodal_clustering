@@ -10,7 +10,7 @@ from executors.visual_evaluators.clustering_evaluators.evaluate_clustering_singl
 from executors.visual_evaluators.clustering_evaluators.evaluate_clustering_multi_label import ClusteringMultiLabelEvaluator
 from executors.visual_evaluators.prompt_evaluators.evaluate_prompt_single_label import PromptSingleLabelEvaluator
 from executors.visual_evaluators.prompt_evaluators.evaluate_prompt_multi_label import PromptMultiLabelEvaluator
-from executors.visual_evaluators.evaluate_concepts_visual_model import VisualConceptEvaluator
+from executors.visual_evaluators.evaluate_clusters_visual_model import VisualClusterEvaluator
 
 
 timestamp = get_timestamp_str()
@@ -44,7 +44,7 @@ model_str = 'RN50'
 
 # evaluate_method = 'clustering'
 evaluate_method = 'prompt'
-# evaluate_method = 'concepts'
+# evaluate_method = 'ours'
 if evaluate_method == 'clustering':
     if multi_label:
         evaluator = ClusteringMultiLabelEvaluator(test_set, class_mapping, gt_classes_file, model_type, model_str, 1)
@@ -55,10 +55,10 @@ elif evaluate_method == 'prompt':
         evaluator = PromptMultiLabelEvaluator(test_set, class_mapping, gt_classes_file, model_type, model_str, 1)
     else:
         evaluator = PromptSingleLabelEvaluator(test_set, class_mapping, model_type, model_str, 1)
-elif evaluate_method == 'concepts':
+elif evaluate_method == 'ours':
     if not multi_label:
         gt_classes_file = None
-    evaluator = VisualConceptEvaluator(test_set, class_mapping, gt_classes_file, model_str, 1)
+    evaluator = VisualClusterEvaluator(test_set, class_mapping, gt_classes_file, model_str, 1)
 
 evaluator.evaluate()
 log_print(function_name, 0, 'Finished testing')

@@ -270,28 +270,28 @@ def plot_heatmap(image_tensor, activation_map, explicitly_upsample):
     return result
 
 
-def generate_visual_model(model_str, concept_num, pretrained_base):
+def generate_visual_model(model_str, cluster_num, pretrained_base):
     if model_str == 'resnet18':
         model = models.resnet18(pretrained=pretrained_base)
-        model.fc = nn.Linear(512, concept_num)
+        model.fc = nn.Linear(512, cluster_num)
     elif model_str == 'resnet34':
         model = models.resnet34(pretrained=pretrained_base)
-        model.fc = nn.Linear(512, concept_num)
+        model.fc = nn.Linear(512, cluster_num)
     elif model_str == 'resnet50':
         model = models.resnet50(pretrained=pretrained_base)
-        model.fc = nn.Linear(2048, concept_num)
+        model.fc = nn.Linear(2048, cluster_num)
     elif model_str == 'resnet101':
         model = models.resnet101(pretrained=pretrained_base)
-        model.fc = nn.Linear(2048, concept_num)
+        model.fc = nn.Linear(2048, cluster_num)
     elif model_str == 'vgg16':
         model = models.vgg16(pretrained=pretrained_base)
         model.avgpool = nn.AdaptiveAvgPool2d((1, 1))
-        model.classifier = nn.Linear(512, concept_num)
+        model.classifier = nn.Linear(512, cluster_num)
     elif model_str == 'googlenet':
         model = models.googlenet(pretrained=pretrained_base, aux_logits=False)
-        model.fc = nn.Linear(1024, concept_num)
+        model.fc = nn.Linear(1024, cluster_num)
     elif model_str == 'simclr':
         model = SimCLRModel(output_encoder=False)
-        model.g = nn.Linear(2048, concept_num)
+        model.g = nn.Linear(2048, cluster_num)
 
     return model

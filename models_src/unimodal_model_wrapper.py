@@ -34,15 +34,15 @@ class UnimodalModelWrapper(ModelWrapper):
         return
 
     @abc.abstractmethod
-    def predict_concept_indicators(self):
+    def predict_cluster_indicators(self):
         return
 
-    def predict_concept_lists(self):
-        concept_indicators = self.predict_concept_indicators()
-        predicted_concept_lists = [[x for x in range(self.config.concept_num) if concept_indicators[i, x] == 1]
-                                   for i in range(concept_indicators.shape[0])]
+    def predict_cluster_lists(self):
+        cluster_indicators = self.predict_cluster_indicators()
+        predicted_cluster_lists = [[x for x in range(self.config.cluster_num) if cluster_indicators[i, x] == 1]
+                                   for i in range(cluster_indicators.shape[0])]
 
-        return predicted_concept_lists
+        return predicted_cluster_lists
 
     def print_info_on_loss(self):
         return 'Loss: ' + str(self.cached_loss)

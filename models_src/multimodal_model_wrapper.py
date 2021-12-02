@@ -7,21 +7,21 @@ import pytorch_metric_learning.losses as losses
 import pytorch_metric_learning.distances as distances
 
 
-class MultimodalConceptClassifier(nn.Module):
+class MultimodalClusterClassifier(nn.Module):
 
     def __init__(self, config):
-        super(MultimodalConceptClassifier, self).__init__()
-        self.visual_model = generate_visual_model(config.visual_model, config.concept_num,
+        super(MultimodalClusterClassifier, self).__init__()
+        self.visual_model = generate_visual_model(config.visual_model, config.cluster_num,
                                                   config.pretrained_visual_base_model)
-        self.text_model = generate_text_model(config.text_model, config.concept_num, config.word_embed_dim)
+        self.text_model = generate_text_model(config.text_model, config.cluster_num, config.word_embed_dim)
 
     def forward(self, visual_input, text_input):
         visual_output = self.visual_model(visual_input)
 
         text_output = self.text_model(text_input)[0]
         ''' The current 'text_output' variable contains the hidden states of each word in the sequence, for each
-            sentence in the batch. However, the expected output of the model is a value for each concept and each
-            sentence, representing how likely it is that this concept is instantiated in this sentence. So, we'll take
+            sentence in the batch. However, the expected output of the model is a value for each cluster and each
+            sentence, representing how likely it is that this cluster is instantiated in this sentence. So, we'll take
             the maximum of the values from all the words as the proxy for this probability. '''
         text_output = torch.max(text_output, dim=1).values
 
@@ -49,7 +49,7 @@ class MultimodalModelWrapper(ModelWrapper):
         self.word_to_idx[''] = 0
 
     def generate_model(self):
-        return MultimodalConceptClassifier(self.config)
+        return MultimodalClusterClassifier(self.config)
 
     def training_step(self):
         # loss = self.criterion(self.cached_output[0], self.cached_output[1])
@@ -122,12 +122,12 @@ class MultimodalModelWrapper(ModelWrapper):
         return visual_output, textual_output
 
     def print_info_on_inference(self):
-        visual_concepts_indicator, text_concepts_indicator = self.predict_multimodal_concept_indicators()
+        visual_clusters_indicator, text_clusters_indicator = self.predict_multimodal_cluster_indicators()
 
-        res = 'Predicted ' + str(torch.sum(visual_concepts_indicator).item()) + ' concepts for image and '
-        res += str(torch.sum(text_concepts_indicator).item()) + ' concepts for text '
+        res = 'Predicted ' + str(torch.sum(visual_clusters_indicator).item()) + ' clusters for image and '
+        res += str(torch.sum(text_clusters_indicator).item()) + ' clusters for text '
 
-        intersection_size = torch.sum(visual_concepts_indicator * text_concepts_indicator).item()
+        intersection_size = torch.sum(visual_clusters_indicator * text_clusters_indicator).item()
         res += 'out of which ' + str(intersection_size) + ' are shared'
 
         return res
@@ -141,18 +141,18 @@ class MultimodalModelWrapper(ModelWrapper):
     def load_model(self):
         self.model.load_state_dict(torch.load(self.get_model_path(), map_location=torch.device(self.device)))
 
-    def predict_multimodal_concept_indicators(self):
+    def predict_multimodal_cluster_indicators(self):
         visual_output, text_output = self.cached_output
 
         with torch.no_grad():
-            # Visual concept indicators
+            # Visual cluster indicators
             prob_output = torch.sigmoid(visual_output)
-            visual_concepts_indicator = torch.zeros(prob_output.shape).to(self.device)
-            visual_concepts_indicator[prob_output > self.config.object_threshold] = 1
+            visual_clusters_indicator = torch.zeros(prob_output.shape).to(self.device)
+            visual_clusters_indicator[prob_output > self.config.object_threshold] = 1
 
-            # Textual concept indicators
+            # Textual cluster indicators
             prob_output = torch.sigmoid(text_output)
-            text_concepts_indicator = torch.zeros(prob_output.shape).to(self.device)
-            text_concepts_indicator[prob_output > self.config.noun_threshold] = 1
+            text_clusters_indicator = torch.zeros(prob_output.shape).to(self.device)
+            text_clusters_indicator[prob_output > self.config.noun_threshold] = 1
 
-        return visual_concepts_indicator, text_concepts_indicator
+        return visual_clusters_indicator, text_clusters_indicator

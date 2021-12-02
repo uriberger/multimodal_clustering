@@ -23,18 +23,18 @@ class PromptEvaluator(VisualModelEvaluator):
         
         return norm_image_features @ norm_text_features.T
 
-    def concept_similarity_func(self, image_concepts, text_concepts):
-        hamming_dist = torch.sum(torch.fmod(image_concepts + text_concepts, 2))
-        concept_num = image_concepts.shape[0]
-        return concept_num - hamming_dist
+    def cluster_similarity_func(self, image_clusters, text_clusters):
+        hamming_dist = torch.sum(torch.fmod(image_clusters + text_clusters, 2))
+        cluster_num = image_clusters.shape[0]
+        return cluster_num - hamming_dist
 
-    def predict_visual_concepts_from_input(self, inputs):
+    def predict_visual_clusters_from_input(self, inputs):
         self.model.inference(inputs)
-        return self.model.predict_concept_indicators()
+        return self.model.predict_cluster_indicators()
 
-    def predict_text_concepts_from_input(self, inputs):
+    def predict_text_clusters_from_input(self, inputs):
         self.text_model.inference(inputs)
-        return self.text_model.predict_concept_indicators()
+        return self.text_model.predict_cluster_indicators()
 
     def clip_text_inference(self, inputs):
         model_inputs = clip.tokenize(inputs).to(self.device)
@@ -51,13 +51,13 @@ class PromptEvaluator(VisualModelEvaluator):
             text_model_wrapper = TextualCountsModelWrapper(self.device, None, 'models/text', model_str, self.indent + 1)
 
             model = visual_model_wrapper
-            inference_func = self.predict_visual_concepts_from_input
+            inference_func = self.predict_visual_clusters_from_input
             # inference_func = model.inference
 
             self.text_model = text_model_wrapper
-            self.text_inference_func = self.predict_text_concepts_from_input
+            self.text_inference_func = self.predict_text_clusters_from_input
             # self.text_inference_func = text_model_wrapper.inference
-            self.im_txt_similarity_func = self.concept_similarity_func
+            self.im_txt_similarity_func = self.cluster_similarity_func
             # self.im_txt_similarity_func = clip_similarity_func
         else:
             # No such model type
