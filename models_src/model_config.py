@@ -4,7 +4,7 @@ class ModelConfig:
                  pretrained_visual_base_model=True,
                  visual_model_path=None,
                  freeze_parameters=False,
-                 object_threshold=0.5,
+                 visual_threshold=0.5,
                  visual_learning_rate=1e-4,
                  text_model='counts_generative',
                  text_threshold=0.5,
@@ -16,7 +16,7 @@ class ModelConfig:
         self.pretrained_visual_base_model = pretrained_visual_base_model
         self.visual_model_path = visual_model_path
         self.freeze_parameters = freeze_parameters
-        self.object_threshold = object_threshold
+        self.visual_threshold = visual_threshold
         self.visual_learning_rate = visual_learning_rate
         self.text_model = text_model
         self.text_threshold = text_threshold

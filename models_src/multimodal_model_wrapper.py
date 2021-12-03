@@ -148,7 +148,7 @@ class MultimodalModelWrapper(ModelWrapper):
             # Visual cluster indicators
             prob_output = torch.sigmoid(visual_output)
             visual_clusters_indicator = torch.zeros(prob_output.shape).to(self.device)
-            visual_clusters_indicator[prob_output > self.config.object_threshold] = 1
+            visual_clusters_indicator[prob_output > self.config.visual_threshold] = 1
 
             # Textual cluster indicators
             prob_output = torch.sigmoid(text_output)

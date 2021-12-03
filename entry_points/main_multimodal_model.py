@@ -25,7 +25,7 @@ model_config = ModelConfig(
     text_model='lstm',
     cluster_num=100,
     text_threshold=0.52,
-    object_threshold=0.51,
+    visual_threshold=0.51,
     visual_learning_rate=5e-5,
     pretrained_visual_base_model=True
 )

@@ -96,7 +96,7 @@ class VisualModelWrapper(UnimodalModelWrapper):
         with torch.no_grad():
             prob_output = torch.sigmoid(self.cached_output)
             clusters_indicator = torch.zeros(prob_output.shape).to(self.device)
-            clusters_indicator[prob_output > self.config.object_threshold] = 1
+            clusters_indicator[prob_output > self.config.visual_threshold] = 1
 
         return clusters_indicator
 
