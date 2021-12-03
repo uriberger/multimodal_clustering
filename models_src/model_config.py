@@ -7,7 +7,7 @@ class ModelConfig:
                  object_threshold=0.5,
                  visual_learning_rate=1e-4,
                  text_model='counts_generative',
-                 noun_threshold=0.5,
+                 text_threshold=0.5,
                  textual_learning_rate=1e-4,
                  word_embed_dim=300,
                  cluster_num=80
@@ -19,7 +19,7 @@ class ModelConfig:
         self.object_threshold = object_threshold
         self.visual_learning_rate = visual_learning_rate
         self.text_model = text_model
-        self.noun_threshold = noun_threshold
+        self.text_threshold = text_threshold
         self.textual_learning_rate = textual_learning_rate
         self.word_embed_dim = word_embed_dim
         self.cluster_num = cluster_num

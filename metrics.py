@@ -396,7 +396,7 @@ class ConcretenessPredictionMetric(Metric):
                 concreteness_estimation = self.predicted_concreteness[token]
             else:
                 concreteness_estimation = self.text_model.estimate_cluster_instantiation_per_word([[token]])[0][0]
-            concreteness_prediction = concreteness_estimation >= self.text_model.config.noun_threshold
+            concreteness_prediction = concreteness_estimation >= self.text_model.config.text_threshold
             estimation_absolute_error = abs(gt_concreteness - concreteness_estimation)
             prediction_absolute_error = abs(gt_concreteness - concreteness_prediction)
             self.estimation_absolute_error_sum += estimation_absolute_error
@@ -1062,7 +1062,7 @@ class ClusterCounterMetric(Metric):
     def calc_results(self):
         self.results = {}
         used_cluster_indicators = [False] * self.text_model.config.cluster_num
-        text_threshold = self.text_model.config.noun_threshold
+        text_threshold = self.text_model.config.text_threshold
 
         for token in self.token_count.keys():
             prediction_res = self.text_model.model.predict_cluster(token)

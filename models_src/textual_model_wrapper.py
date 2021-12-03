@@ -115,7 +115,7 @@ class TextualCountsModelWrapper(TextualModelWrapper):
 
     def predict_cluster_indicators(self):
         cluster_indicators = torch.zeros(self.cached_output.shape).to(self.device)
-        cluster_indicators[self.cached_output > self.config.noun_threshold] = 1
+        cluster_indicators[self.cached_output > self.config.text_threshold] = 1
         return cluster_indicators
 
     def predict_cluster_insantiating_words(self, sentences):
@@ -130,7 +130,7 @@ class TextualCountsModelWrapper(TextualModelWrapper):
                         # Never seen this token before
                         break
                     predicted_cluster, prob = prediction_res
-                    if prob >= self.config.noun_threshold:
+                    if prob >= self.config.text_threshold:
                         cluster_instantiating_token = True
                     break
                 if cluster_instantiating_token:
@@ -146,7 +146,7 @@ class TextualCountsModelWrapper(TextualModelWrapper):
             # return [0]*self.config.cluster_num
             return None
 
-        cluster_indicators = [1 if x >= self.config.noun_threshold else 0 for x in cluster_conditioned_on_word]
+        cluster_indicators = [1 if x >= self.config.text_threshold else 0 for x in cluster_conditioned_on_word]
         return cluster_indicators
 
     def predict_cluster_for_word(self, word):
@@ -251,7 +251,7 @@ class TextualRNNModelWrapper(TextualModelWrapper):
         with torch.no_grad():
             prob_output = torch.sigmoid(self.cached_output)
             clusters_indicator = torch.zeros(prob_output.shape).to(self.device)
-            clusters_indicator[prob_output > self.config.noun_threshold] = 1
+            clusters_indicator[prob_output > self.config.text_threshold] = 1
 
         return clusters_indicator
 
@@ -268,7 +268,7 @@ class TextualRNNModelWrapper(TextualModelWrapper):
             res.append([])
             for token_ind in range(len(sentence)):
                 cluster_instantiating_token = \
-                    torch.max(self.cached_output[sent_ind, token_ind, :]) >= self.config.noun_threshold
+                    torch.max(self.cached_output[sent_ind, token_ind, :]) >= self.config.text_threshold
                 if cluster_instantiating_token:
                     res[-1].append(1)
                 else:
@@ -280,7 +280,7 @@ class TextualRNNModelWrapper(TextualModelWrapper):
         old_cached_output = self.cached_output
 
         self.inference([[word]])
-        cluster_indicators = self.cached_output[0, 0, :] >= self.config.noun_threshold
+        cluster_indicators = self.cached_output[0, 0, :] >= self.config.text_threshold
 
         self.cached_loss = old_cached_output
         return cluster_indicators

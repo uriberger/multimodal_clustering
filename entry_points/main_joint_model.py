@@ -23,7 +23,7 @@ model_config = ModelConfig(
     text_model='counts_generative',
     cluster_num=100,
     object_threshold=0.5,
-    noun_threshold=0.03,
+    text_threshold=0.03,
     pretrained_visual_base_model=False,
     freeze_parameters=False
 )
