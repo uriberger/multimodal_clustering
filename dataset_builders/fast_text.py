@@ -1,9 +1,11 @@
-from utils.general_utils import generate_dataset, for_loop_with_reports
+from utils.general_utils import generate_dataset
+from dataset_builders.dataset_builder import cached_dataset_files_dir
 import io
 import os
 import numpy as np
 
-fast_text_dataset_filename = os.path.join('cached_dataset_files', 'fast_text')
+
+fast_text_dataset_filename = os.path.join(cached_dataset_files_dir, 'fast_text')
 fast_text_filename = 'wiki-news-300d-1M.vec'
 
 

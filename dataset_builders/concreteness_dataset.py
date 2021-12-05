@@ -1,9 +1,10 @@
 from utils.general_utils import generate_dataset, for_loop_with_reports
-from dataset_builders.dataset_builder_creator import datasets_dir
+from dataset_builders.dataset_builder import datasets_dir, cached_dataset_files_dir
 from loggable_object import LoggableObject
 import os
 
-concreteness_dataset_filename = os.path.join('cached_dataset_files', 'concreteness_dataset')
+
+concreteness_dataset_filename = os.path.join(cached_dataset_files_dir, 'concreteness_dataset')
 concreteness_filename = os.path.join(datasets_dir, 'Concreteness_ratings_Brysbaert_et_al_BRM.txt')
 
 

@@ -1,13 +1,11 @@
 import os
+from dataset_builders.dataset_builder import datasets_dir
 from dataset_builders.cifar import Cifar10, Cifar100
 from dataset_builders.imagenet import ImageNet
 from dataset_builders.coco import Coco
 from dataset_builders.flickr30 import Flickr30
 from dataset_builders.pascal_voc import PascalVOC
 from dataset_builders.wiki_scenes import WikiScenes
-
-
-datasets_dir = os.path.join('..', 'datasets')
 
 
 def create_dataset_builder(dataset_name):

@@ -1,5 +1,11 @@
 import abc
 from loggable_object import LoggableObject
+import os
+
+
+project_root_dir = '..'
+datasets_dir = os.path.join(project_root_dir, '..', 'datasets')
+cached_dataset_files_dir = os.path.join(project_root_dir, 'cached_dataset_files')
 
 
 class DatasetBuilder(LoggableObject):
@@ -7,7 +13,7 @@ class DatasetBuilder(LoggableObject):
     def __init__(self, indent):
         super(DatasetBuilder, self).__init__(indent)
 
-        self.cached_dataset_files_dir = 'cached_dataset_files'
+        self.cached_dataset_files_dir = cached_dataset_files_dir
 
     @abc.abstractmethod
     def get_class_mapping(self):

@@ -16,7 +16,7 @@ class Cifar(DatasetBuilder):
         self.slices = ['train', 'test']
         self.dict_key_mapping = dict_key_mapping
 
-        self.cache_data_path_prefix = os.path.join('cached_dataset_files', name + '_data_')
+        self.cache_data_path_prefix = os.path.join(self.cached_dataset_files_dir, name + '_data_')
 
     @abc.abstractmethod
     def get_train_batch_file_paths(self):
