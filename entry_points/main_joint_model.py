@@ -18,15 +18,7 @@ function_name = 'main_joint_model'
 os.mkdir(timestamp)
 set_write_to_log(timestamp)
 
-model_config = ModelConfig(
-    visual_model='resnet50',
-    text_model='counts_generative',
-    cluster_num=100,
-    visual_threshold=0.5,
-    text_threshold=0.03,
-    pretrained_visual_base_model=False,
-    freeze_parameters=False
-)
+model_config = ModelConfig()
 log_print(function_name, 0, str(model_config))
 
 log_print(function_name, 0, 'Generating dataset_files...')

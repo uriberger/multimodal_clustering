@@ -28,7 +28,7 @@ class JointModelTrainer(Trainer):
             self.text_model_dir = os.path.join(loaded_model_dir, text_dir)
             self.model_name = loaded_model_name
             visual_config = None
-            textual_config = config.text_model
+            textual_config = config.text_underlying_model
         self.visual_model = VisualModelWrapper(self.device, visual_config, self.visual_model_dir,
                                                self.model_name, indent + 1)
         self.text_model = generate_textual_model(self.device, textual_config, self.text_model_dir,

@@ -11,9 +11,9 @@ class MultimodalClusterClassifier(nn.Module):
 
     def __init__(self, config):
         super(MultimodalClusterClassifier, self).__init__()
-        self.visual_model = generate_visual_model(config.visual_model, config.cluster_num,
+        self.visual_model = generate_visual_model(config.visual_underlying_model, config.cluster_num,
                                                   config.pretrained_visual_base_model)
-        self.text_model = generate_text_model(config.text_model, config.cluster_num, config.word_embed_dim)
+        self.text_model = generate_text_model(config.text_underlying_model, config.cluster_num, config.word_embed_dim)
 
     def forward(self, visual_input, text_input):
         visual_output = self.visual_model(visual_input)

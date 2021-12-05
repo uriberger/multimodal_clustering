@@ -13,7 +13,7 @@ def generate_textual_model(device, config_or_str, dir_name, model_name, indent):
     Config can either be a model configuration, in case of a new model,
     or a string representing the name of the model, in case we want to
     load an existing model. """
-    count_models = ['counts_generative', 'counts_discriminative']
+    count_models = ['generative', 'discriminative']
     rnn_models = ['lstm', 'gru']
 
     if isinstance(config_or_str, str):
@@ -21,7 +21,7 @@ def generate_textual_model(device, config_or_str, dir_name, model_name, indent):
         model_str = config_or_str
     else:
         config = config_or_str
-        model_str = config_or_str.text_model
+        model_str = config_or_str.text_underlying_model
     if model_str in count_models:
         return TextualCountsModelWrapper(device, config, dir_name, model_name, indent)
     elif model_str in rnn_models:
@@ -31,10 +31,7 @@ def generate_textual_model(device, config_or_str, dir_name, model_name, indent):
 
 
 def generate_textual_counts_model(model_str, cluster_num):
-    if model_str == 'counts_generative':
-        model = WordClusterCountModel(cluster_num, 'generative')
-    elif model_str == 'counts_discriminative':
-        model = WordClusterCountModel(cluster_num, 'discriminative')
+    model = WordClusterCountModel(cluster_num, model_str)
 
     return model
 
@@ -72,7 +69,7 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         self.model.calculate_probs()
 
     def generate_model(self):
-        return generate_textual_counts_model(self.config.text_model, self.config.cluster_num)
+        return generate_textual_counts_model(self.config.text_underlying_model, self.config.cluster_num)
 
     def training_step(self, inputs, labels):
         loss = self.criterion(self.cached_output, labels)
@@ -199,7 +196,7 @@ class TextualRNNModelWrapper(TextualModelWrapper):
         self.word_to_idx[''] = 0
 
     def generate_model(self):
-        model_str = self.config.text_model
+        model_str = self.config.text_underlying_model
         cluster_num = self.config.cluster_num
         word_embed_dim = self.config.word_embed_dim
 

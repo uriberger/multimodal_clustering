@@ -14,13 +14,7 @@ class VisualModelWrapper(UnimodalModelWrapper):
         self.model.to(self.device)
 
         if config is not None:
-            if config.visual_model_path:
-                orig_state_dict = torch.load(config.visual_model_path, map_location=self.device)
-                cleaned_state_dict = clean_state_dict(orig_state_dict)
-                adjusted_state_dict = adjust_projection_in_state_dict(cleaned_state_dict, config.cluster_num)
-                self.model.load_state_dict(adjusted_state_dict)
-
-            if config.freeze_parameters:
+            if config.freeze_visual_parameters:
                 for param in self.model.parameters():
                     param.requires_grad = False
                 last_layer = list(self.model.modules())[-1]
@@ -33,23 +27,23 @@ class VisualModelWrapper(UnimodalModelWrapper):
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
 
     def generate_model(self):
-        return generate_visual_model(self.config.visual_model, self.config.cluster_num,
-                                     self.config.pretrained_visual_base_model)
+        return generate_visual_model(self.config.visual_underlying_model, self.config.cluster_num,
+                                     self.config.pretrained_visual_underlying_model)
 
     def generate_cam_extractor(self):
-        if self.config.visual_model == 'resnet18':
+        if self.config.visual_underlying_model == 'resnet18':
             self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
-        elif self.config.visual_model == 'resnet34':
+        elif self.config.visual_underlying_model == 'resnet34':
             self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
-        elif self.config.visual_model == 'resnet50':
+        elif self.config.visual_underlying_model == 'resnet50':
             self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
-        elif self.config.visual_model == 'resnet101':
+        elif self.config.visual_underlying_model == 'resnet101':
             self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
-        elif self.config.visual_model == 'vgg16':
+        elif self.config.visual_underlying_model == 'vgg16':
             self.cam_extractor = CAM(self.model, target_layer='features', fc_layer='classifier')
-        elif self.config.visual_model == 'googlenet':
+        elif self.config.visual_underlying_model == 'googlenet':
             self.cam_extractor = CAM(self.model, target_layer='inception5b', fc_layer='fc')
-        elif self.config.visual_model == 'simclr':
+        elif self.config.visual_underlying_model == 'simclr':
             self.cam_extractor = CAM(self.model, target_layer='f.7', fc_layer='g')
 
     def training_step(self, inputs, labels):

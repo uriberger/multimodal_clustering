@@ -33,7 +33,7 @@ cluster_num = 65
 log_print(function_name, 0, 'Datasets generated')
 
 config = ModelConfig(
-    text_model='counts_generative',
+    text_model='generative',
     cluster_num=cluster_num,
     text_threshold=(1/cluster_num + 1/(10*cluster_num))
 )
