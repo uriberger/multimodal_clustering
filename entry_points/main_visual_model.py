@@ -1,5 +1,5 @@
 import os
-from utils.general_utils import log_print, set_write_to_log, get_timestamp_str
+from utils.general_utils import log_print, init_entry_point
 
 # Dataset
 from datasets_src.dataset_config import DatasetConfig
@@ -13,10 +13,8 @@ from executors.visual_evaluators.prompt_evaluators.evaluate_prompt_multi_label i
 from executors.visual_evaluators.evaluate_clusters_visual_model import VisualClusterEvaluator
 
 
-timestamp = get_timestamp_str()
 function_name = 'main_visual_model'
-os.mkdir(timestamp)
-set_write_to_log(timestamp)
+timestamp = init_entry_point(True)
 
 log_print(function_name, 0, 'Generating dataset_files...')
 dataset_name = 'ImageNet'

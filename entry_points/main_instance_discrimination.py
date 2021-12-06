@@ -1,6 +1,6 @@
 # General
 import os
-from utils.general_utils import log_print, set_write_to_log
+from utils.general_utils import log_print, init_entry_point
 from datetime import datetime
 
 # Dataset
@@ -11,10 +11,8 @@ from datasets_src.dataset_config import DatasetConfig
 from executors.trainers.train_instance_discrimination import InstanceDiscriminationTrainer
 
 
-timestamp = str(datetime.now()).replace(' ', '_')
 function_name = 'main_instance_discrimination'
-os.mkdir(timestamp)
-set_write_to_log(timestamp)
+timestamp = init_entry_point(True)
 
 log_print(function_name, 0, 'Generating dataset files...')
 coco_dir = os.path.join('..', 'datasets', 'COCO')

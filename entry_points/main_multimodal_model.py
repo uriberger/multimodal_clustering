@@ -1,6 +1,6 @@
 # General
 import os
-from utils.general_utils import log_print, set_write_to_log
+from utils.general_utils import log_print, init_entry_point
 from datetime import datetime
 
 # Dataset
@@ -15,10 +15,8 @@ from executors.trainers.train_multimodal_model import MultimodalModelTrainer
 # from executors.evaluate_joint_model import JointModelEvaluator
 
 
-timestamp = str(datetime.now()).replace(' ', '_')
 function_name = 'main_joint_model'
-os.mkdir(timestamp)
-set_write_to_log(timestamp)
+timestamp = init_entry_point(True)
 
 model_config = ModelConfig()
 log_print(function_name, 0, str(model_config))

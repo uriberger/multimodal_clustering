@@ -10,14 +10,14 @@ from models_src.textual_model_wrapper import generate_textual_model
 
 class JointModelTrainer(Trainer):
 
-    def __init__(self, timestamp, training_set, epoch_num, config, test_data, indent,
+    def __init__(self, model_root_dir, training_set, epoch_num, config, test_data, indent,
                  loaded_model_dir=None, loaded_model_name=None):
         super().__init__(training_set, epoch_num, 50, indent)
 
-        self.timestamp = timestamp
+        self.model_root_dir = model_root_dir
         if loaded_model_dir is None:
-            self.visual_model_dir = os.path.join(timestamp, visual_dir)
-            self.text_model_dir = os.path.join(timestamp, text_dir)
+            self.visual_model_dir = os.path.join(model_root_dir, visual_dir)
+            self.text_model_dir = os.path.join(model_root_dir, text_dir)
             os.mkdir(self.visual_model_dir)
             os.mkdir(self.text_model_dir)
             self.model_name = default_model_name
@@ -90,7 +90,7 @@ class JointModelTrainer(Trainer):
         if self.first_epoch:
             csv_filename = 'first_' + csv_filename
 
-        with open(os.path.join(self.timestamp, csv_filename), 'w', newline='') as csvfile:
+        with open(os.path.join(self.model_root_dir, csv_filename), 'w', newline='') as csvfile:
             step_num = len(self.evaluation_results)
             fieldnames = ['metric'] + [str(x) for x in range(step_num)]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)

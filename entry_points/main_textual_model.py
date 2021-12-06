@@ -1,5 +1,5 @@
 import os
-from utils.general_utils import log_print, set_write_to_log
+from utils.general_utils import log_print, init_entry_point
 from datetime import datetime
 
 # Dataset
@@ -10,10 +10,8 @@ from dataset_builders.dataset_builder_creator import create_dataset_builder
 from executors.evaluate_textual_model import TextualModelEvaluator
 
 
-timestamp = str(datetime.now()).replace(' ', '_')
 function_name = 'main_textual_model'
-os.mkdir(timestamp)
-set_write_to_log(timestamp)
+init_entry_point(True)
 
 log_print(function_name, 0, 'Generating dataset_files...')
 dataset_name = 'COCO'

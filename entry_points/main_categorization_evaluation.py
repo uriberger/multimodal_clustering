@@ -1,6 +1,6 @@
 import os
 import torch
-from utils.general_utils import log_print, set_write_to_log, models_dir, text_dir, get_timestamp_str
+from utils.general_utils import log_print, models_dir, text_dir, init_entry_point
 
 # Dataset
 from datasets_src.dataset_config import DatasetConfig
@@ -14,10 +14,8 @@ from metrics import CategorizationMetric
 from models_src.textual_model_wrapper import TextualCountsModelWrapper, TextualSimpleCountsModelWrapper
 
 
-timestamp = get_timestamp_str()
 function_name = 'main_categorization_evaluation'
-os.mkdir(timestamp)
-set_write_to_log(timestamp)
+timestamp = init_entry_point(True)
 
 log_print(function_name, 0, 'Generating dataset_files...')
 dataset_name = 'COCO'
@@ -31,8 +29,8 @@ log_print(function_name, 0, 'Datasets generated')
 
 log_print(function_name, 0, 'Testing...')
 
-model_name = 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100'
-# model_name = 'simple_count_model'
+# model_name = 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100'
+model_name = 'model'
 
 text_model_dir = os.path.join(models_dir, text_dir)
 model = TextualCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)

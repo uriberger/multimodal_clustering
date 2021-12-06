@@ -3,9 +3,11 @@ import torch
 import time
 from datetime import datetime
 
+
 write_to_log = False
 log_fp = None
 
+project_root_dir = '..'
 models_dir = 'models'
 visual_dir = 'visual'
 text_dir = 'text'
@@ -16,7 +18,7 @@ def set_write_to_log(output_dir):
     global write_to_log
     global log_fp
     write_to_log = True
-    log_path = os.path.join(output_dir, 'log.txt')
+    log_path = os.path.join(project_root_dir, output_dir, 'log.txt')
     log_fp = open(log_path, 'w')
 
 
@@ -31,6 +33,15 @@ def log_print(class_name, indent, my_str):
         log_fp.flush()
     else:
         print(full_str)
+
+
+def init_entry_point(should_write_to_log):
+    timestamp = get_timestamp_str()
+    os.mkdir(os.path.join(project_root_dir, timestamp))
+    if should_write_to_log:
+        set_write_to_log(timestamp)
+
+    return timestamp
 
 
 def generate_dataset(filepath, generation_func, *args):

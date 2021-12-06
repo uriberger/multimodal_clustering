@@ -1,6 +1,6 @@
 import os
 import torch
-from utils.general_utils import log_print, set_write_to_log, models_dir, text_dir, get_timestamp_str
+from utils.general_utils import log_print, models_dir, text_dir, init_entry_point
 
 # Dataset
 from datasets_src.dataset_config import DatasetConfig
@@ -14,10 +14,8 @@ from metrics import ConcretenessPredictionMetric
 from models_src.textual_model_wrapper import TextualCountsModelWrapper
 
 
-timestamp = get_timestamp_str()
 function_name = 'main_concreteness_evaluation'
-os.mkdir(timestamp)
-set_write_to_log(timestamp)
+timestamp = init_entry_point(True)
 
 log_print(function_name, 0, 'Generating dataset_files...')
 dataset_name = 'COCO'
