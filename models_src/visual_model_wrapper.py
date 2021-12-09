@@ -1,4 +1,4 @@
-from models_src.unimodal_model_wrapper import UnimodalModelWrapper
+from models_src.bimodal_model_wrapper import BimodalModelWrapper
 import torch
 from torchcam.cams import CAM
 from utils.visual_utils import predict_bbox, plot_heatmap, generate_visual_model, unnormalize_trans,\
@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from models_src.simclr import clean_state_dict, adjust_projection_in_state_dict
 
 
-class VisualModelWrapper(UnimodalModelWrapper):
+class VisualModelWrapper(BimodalModelWrapper):
 
     def __init__(self, device, config, model_dir, model_name, indent):
         super().__init__(device, config, model_dir, model_name, indent)

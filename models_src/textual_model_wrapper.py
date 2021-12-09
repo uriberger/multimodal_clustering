@@ -1,4 +1,4 @@
-from models_src.unimodal_model_wrapper import UnimodalModelWrapper
+from models_src.bimodal_model_wrapper import BimodalModelWrapper
 from models_src.baselines.word_co_occurrence_model import WordCoOccurrenceModel
 import torch
 import numpy as np
@@ -36,7 +36,7 @@ def generate_textual_counts_model(model_str, cluster_num):
     return model
 
 
-class TextualModelWrapper(UnimodalModelWrapper):
+class TextualModelWrapper(BimodalModelWrapper):
 
     def __init__(self, device, config, model_dir, model_name, indent):
         super(TextualModelWrapper, self).__init__(device, config, model_dir, model_name, indent)
