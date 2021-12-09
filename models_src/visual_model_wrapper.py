@@ -11,40 +11,40 @@ class VisualModelWrapper(UnimodalModelWrapper):
 
     def __init__(self, device, config, model_dir, model_name, indent):
         super().__init__(device, config, model_dir, model_name, indent)
-        self.model.to(self.device)
+        self.underlying_model.to(self.device)
 
         if config is not None:
             if config.freeze_visual_parameters:
-                for param in self.model.parameters():
+                for param in self.underlying_model.parameters():
                     param.requires_grad = False
-                last_layer = list(self.model.modules())[-1]
+                last_layer = list(self.underlying_model.modules())[-1]
                 last_layer.weight.requires_grad = True
                 last_layer.bias.requires_grad = True
 
         self.generate_cam_extractor()
 
         learning_rate = self.config.visual_learning_rate
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.optimizer = torch.optim.Adam(self.underlying_model.parameters(), lr=learning_rate)
 
-    def generate_model(self):
+    def generate_underlying_model(self):
         return generate_visual_model(self.config.visual_underlying_model, self.config.cluster_num,
                                      self.config.pretrained_visual_underlying_model)
 
     def generate_cam_extractor(self):
         if self.config.visual_underlying_model == 'resnet18':
-            self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
+            self.cam_extractor = CAM(self.underlying_model, target_layer='layer4', fc_layer='fc')
         elif self.config.visual_underlying_model == 'resnet34':
-            self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
+            self.cam_extractor = CAM(self.underlying_model, target_layer='layer4', fc_layer='fc')
         elif self.config.visual_underlying_model == 'resnet50':
-            self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
+            self.cam_extractor = CAM(self.underlying_model, target_layer='layer4', fc_layer='fc')
         elif self.config.visual_underlying_model == 'resnet101':
-            self.cam_extractor = CAM(self.model, target_layer='layer4', fc_layer='fc')
+            self.cam_extractor = CAM(self.underlying_model, target_layer='layer4', fc_layer='fc')
         elif self.config.visual_underlying_model == 'vgg16':
-            self.cam_extractor = CAM(self.model, target_layer='features', fc_layer='classifier')
+            self.cam_extractor = CAM(self.underlying_model, target_layer='features', fc_layer='classifier')
         elif self.config.visual_underlying_model == 'googlenet':
-            self.cam_extractor = CAM(self.model, target_layer='inception5b', fc_layer='fc')
+            self.cam_extractor = CAM(self.underlying_model, target_layer='inception5b', fc_layer='fc')
         elif self.config.visual_underlying_model == 'simclr':
-            self.cam_extractor = CAM(self.model, target_layer='f.7', fc_layer='g')
+            self.cam_extractor = CAM(self.underlying_model, target_layer='f.7', fc_layer='g')
 
     def training_step(self, inputs, labels):
         loss = self.criterion(self.cached_output, labels)
@@ -57,7 +57,7 @@ class VisualModelWrapper(UnimodalModelWrapper):
         self.optimizer.zero_grad()
 
     def inference(self, inputs):
-        output = self.model(inputs)
+        output = self.underlying_model(inputs)
         self.cached_output = output
         return output
 
@@ -73,13 +73,13 @@ class VisualModelWrapper(UnimodalModelWrapper):
         return 'Best winner won ' + str(best_winner) + ' times out of ' + str(batch_size)
 
     def eval(self):
-        self.model.eval()
+        self.underlying_model.eval()
 
-    def dump_model(self):
-        torch.save(self.model.state_dict(), self.get_model_path())
+    def dump_underlying_model(self):
+        torch.save(self.underlying_model.state_dict(), self.get_underlying_model_path())
 
-    def load_model(self):
-        self.model.load_state_dict(torch.load(self.get_model_path(), map_location=torch.device(self.device)))
+    def load_underlying_model(self):
+        self.underlying_model.load_state_dict(torch.load(self.get_underlying_model_path(), map_location=torch.device(self.device)))
 
     def extract_cam(self, class_ind):
         activation_map = self.cam_extractor(class_ind, self.cached_output)

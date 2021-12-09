@@ -66,9 +66,9 @@ class TextualCountsModelWrapper(TextualModelWrapper):
 
     def __init__(self, device, config, model_dir, model_name, indent):
         super().__init__(device, config, model_dir, model_name, indent)
-        self.model.calculate_probs()
+        self.underlying_model.calculate_probs()
 
-    def generate_model(self):
+    def generate_underlying_model(self):
         return generate_textual_counts_model(self.config.text_underlying_model, self.config.cluster_num)
 
     def training_step(self, inputs, labels):
@@ -83,17 +83,17 @@ class TextualCountsModelWrapper(TextualModelWrapper):
                                            if labels[caption_ind, x] == 1]
             for token in inputs[caption_ind]:
                 for cluster_ind in predicted_clusters_by_image:
-                    self.model.document_co_occurrence(token, cluster_ind)
+                    self.underlying_model.document_co_occurrence(token, cluster_ind)
 
     def inference(self, inputs):
-        self.model.calculate_probs()
+        self.underlying_model.calculate_probs()
         batch_size = len(inputs)
 
         with torch.no_grad():
             output_tensor = torch.zeros(batch_size, self.config.cluster_num).to(self.device)
             for caption_ind in range(batch_size):
                 for token in inputs[caption_ind]:
-                    prediction_res = self.model.predict_cluster(token)
+                    prediction_res = self.underlying_model.predict_cluster(token)
                     if prediction_res is None:
                         # Never seen this token before
                         continue
@@ -104,11 +104,11 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         self.cached_output = output_tensor
         return output_tensor
 
-    def dump_model(self):
-        torch.save(self.model, self.get_model_path())
+    def dump_underlying_model(self):
+        torch.save(self.underlying_model, self.get_underlying_model_path())
 
-    def load_model(self):
-        self.model = torch.load(self.get_model_path())
+    def load_underlying_model(self):
+        self.underlying_model = torch.load(self.get_underlying_model_path())
 
     def predict_cluster_indicators(self):
         cluster_indicators = torch.zeros(self.cached_output.shape).to(self.device)
@@ -122,7 +122,7 @@ class TextualCountsModelWrapper(TextualModelWrapper):
             for token in sentence:
                 cluster_instantiating_token = False
                 while True:
-                    prediction_res = self.model.predict_cluster(token)
+                    prediction_res = self.underlying_model.predict_cluster(token)
                     if prediction_res is None:
                         # Never seen this token before
                         break
@@ -138,7 +138,7 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         return res
 
     def predict_clusters_for_word(self, word):
-        cluster_conditioned_on_word = self.model.get_cluster_conditioned_on_word(word)
+        cluster_conditioned_on_word = self.underlying_model.get_cluster_conditioned_on_word(word)
         if cluster_conditioned_on_word is None:
             # return [0]*self.config.cluster_num
             return None
@@ -147,7 +147,7 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         return cluster_indicators
 
     def predict_cluster_for_word(self, word):
-        cluster_conditioned_on_word = self.model.get_cluster_conditioned_on_word(word)
+        cluster_conditioned_on_word = self.underlying_model.get_cluster_conditioned_on_word(word)
         if cluster_conditioned_on_word is None:
             # return [0]*self.config.cluster_num
             return None
@@ -159,7 +159,7 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         for sentence in sentences:
             res.append([])
             for token in sentence:
-                prediction_res = self.model.predict_cluster(token)
+                prediction_res = self.underlying_model.predict_cluster(token)
                 if prediction_res is None:
                     # Never seen this token before
                     res[-1].append(0)
@@ -170,7 +170,7 @@ class TextualCountsModelWrapper(TextualModelWrapper):
         return res
 
     def create_cluster_to_gt_class_mapping(self, class_mapping):
-        gt_class_to_prediction = {i: self.model.predict_cluster(class_mapping[i])
+        gt_class_to_prediction = {i: self.underlying_model.predict_cluster(class_mapping[i])
                                   for i in class_mapping.keys()
                                   if ' ' not in class_mapping[i]}
         gt_class_to_cluster = {x[0]: x[1][0] for x in gt_class_to_prediction.items() if x[1] is not None}
@@ -186,16 +186,16 @@ class TextualRNNModelWrapper(TextualModelWrapper):
 
     def __init__(self, device, config, model_dir, model_name, indent):
         super().__init__(device, config, model_dir, model_name, indent)
-        self.model.to(self.device)
+        self.underlying_model.to(self.device)
 
         learning_rate = self.config.textual_learning_rate
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.optimizer = torch.optim.Adam(self.underlying_model.parameters(), lr=learning_rate)
 
         # We need to keep a dictionary that will tell us the index of each word in the embedding matrix
         self.word_to_idx = {}
         self.word_to_idx[''] = 0
 
-    def generate_model(self):
+    def generate_underlying_model(self):
         model_str = self.config.text_underlying_model
         cluster_num = self.config.cluster_num
         word_embed_dim = self.config.word_embed_dim
@@ -235,7 +235,7 @@ class TextualRNNModelWrapper(TextualModelWrapper):
             sequence = indices_of_inputs[i]
             input_tensor[i, 0:sent_len] = torch.tensor(sequence[:sent_len])
 
-        output = self.model(input_tensor)[0]
+        output = self.underlying_model(input_tensor)[0]
         ''' The current 'output' variable contains the hidden states of each word in the sequence, for each
         sentence in the batch. However, the expected output of the model is a value for each cluster and each
         sentence, representing how likely it is that this cluster is instantiated in this sentence. So, we'll take
@@ -252,11 +252,12 @@ class TextualRNNModelWrapper(TextualModelWrapper):
 
         return clusters_indicator
 
-    def dump_model(self):
-        torch.save(self.model.state_dict(), self.get_model_path())
+    def dump_underlying_model(self):
+        torch.save(self.underlying_model.state_dict(), self.get_underlying_model_path())
 
-    def load_model(self):
-        self.model.load_state_dict(torch.load(self.get_model_path(), map_location=torch.device(self.device)))
+    def load_underlying_model(self):
+        self.underlying_model.load_state_dict(torch.load(self.get_underlying_model_path(),
+                                                         map_location=torch.device(self.device)))
 
     def predict_cluster_insantiating_words(self, sentences):
         res = []
@@ -288,7 +289,7 @@ class TextualSimpleCountsModelWrapper(TextualModelWrapper):
     def __init__(self, device, config, model_dir, model_name, indent):
         super(TextualSimpleCountsModelWrapper, self).__init__(device, config, model_dir, model_name, indent)
 
-    def generate_model(self):
+    def generate_underlying_model(self):
         return WordCoOccurrenceModel()
 
     def predict_cluster_insantiating_words(self, sentences):
@@ -311,23 +312,23 @@ class TextualSimpleCountsModelWrapper(TextualModelWrapper):
             caption = sample['caption']
             token_list = prepare_data([caption])[0]
             for token in token_list:
-                self.model.document_word(token)
+                self.underlying_model.document_word(token)
 
-        self.model.create_co_occurrence_matrix()
+        self.underlying_model.create_co_occurrence_matrix()
 
         for sample in training_set.caption_data:
             caption = sample['caption']
             token_list = prepare_data([caption])[0]
             for token in token_list:
-                self.model.document_word_occurrence(token)
+                self.underlying_model.document_word_occurrence(token)
             for i in range(len(token_list)):
                 for j in range(i+1, len(token_list)):
-                    self.model.document_co_occurrence(token_list[i], token_list[j])
+                    self.underlying_model.document_co_occurrence(token_list[i], token_list[j])
 
-        self.word_to_cluster = self.model.categorize_words(self.config.cluster_num)
+        self.word_to_cluster = self.underlying_model.categorize_words(self.config.cluster_num)
 
-    def dump_model(self):
-        torch.save([self.model, self.word_to_cluster], self.get_model_path())
+    def dump_underlying_model(self):
+        torch.save([self.underlying_model, self.word_to_cluster], self.get_underlying_model_path())
 
-    def load_model(self):
-        self.model, self.word_to_cluster = torch.load(self.get_model_path())
+    def load_underlying_model(self):
+        self.underlying_model, self.word_to_cluster = torch.load(self.get_underlying_model_path())

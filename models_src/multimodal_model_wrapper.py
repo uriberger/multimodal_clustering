@@ -38,17 +38,17 @@ class MultimodalModelWrapper(ModelWrapper):
         # self.criterion = nn.BCEWithLogitsLoss()
         self.criterion = losses.ContrastiveLoss(distance=distances.CosineSimilarity(),
                                                 pos_margin=1, neg_margin=0)
-        self.model.to(self.device)
+        self.underlying_model.to(self.device)
 
         learning_rate = self.config.visual_learning_rate
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=learning_rate)
+        self.optimizer = torch.optim.Adam(self.underlying_model.parameters(), lr=learning_rate)
         self.cached_output = None
 
         # We need to keep a dictionary that will tell us the index of each word in the embedding matrix
         self.word_to_idx = {}
         self.word_to_idx[''] = 0
 
-    def generate_model(self):
+    def generate_underlying_model(self):
         return MultimodalClusterClassifier(self.config)
 
     def training_step(self):
@@ -117,7 +117,7 @@ class MultimodalModelWrapper(ModelWrapper):
             sequence = indices_of_inputs[i]
             text_input_tensor[i, 0:sent_len] = torch.tensor(sequence[:sent_len])
 
-        visual_output, textual_output = self.model(visual_inputs, text_input_tensor)
+        visual_output, textual_output = self.underlying_model(visual_inputs, text_input_tensor)
         self.cached_output = (visual_output, textual_output)
         return visual_output, textual_output
 
@@ -135,11 +135,12 @@ class MultimodalModelWrapper(ModelWrapper):
     def print_info_on_loss(self):
         return 'Loss: ' + str(self.cached_loss)
 
-    def dump_model(self):
-        torch.save(self.model.state_dict(), self.get_model_path())
+    def dump_underlying_model(self):
+        torch.save(self.underlying_model.state_dict(), self.get_underlying_model_path())
 
-    def load_model(self):
-        self.model.load_state_dict(torch.load(self.get_model_path(), map_location=torch.device(self.device)))
+    def load_underlying_model(self):
+        self.underlying_model.load_state_dict(torch.load(self.get_underlying_model_path(),
+                                                         map_location=torch.device(self.device)))
 
     def predict_multimodal_cluster_indicators(self):
         visual_output, text_output = self.cached_output

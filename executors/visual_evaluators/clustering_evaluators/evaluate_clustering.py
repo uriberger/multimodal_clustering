@@ -27,7 +27,7 @@ class ClusteringEvaluator(VisualModelEvaluator):
             inference_func = model.encode_image
         elif model_type == 'unimodal':
             model_wrapper = VisualModelWrapper(self.device, None, 'models/visual', model_str, self.indent + 1)
-            model = model_wrapper.model
+            model = model_wrapper.underlying_model
             model.fc = nn.Identity()
             inference_func = model.forward
         elif model_type == 'simclr':

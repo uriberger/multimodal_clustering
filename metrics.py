@@ -1065,7 +1065,7 @@ class ClusterCounterMetric(Metric):
         text_threshold = self.text_model.config.text_threshold
 
         for token in self.token_count.keys():
-            prediction_res = self.text_model.model.predict_cluster(token)
+            prediction_res = self.text_model.underlying_model.predict_cluster(token)
             if prediction_res is not None:
                 predicted_cluster, prob = prediction_res
                 if prob >= text_threshold:

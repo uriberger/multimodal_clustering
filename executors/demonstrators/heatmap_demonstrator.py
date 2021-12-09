@@ -18,7 +18,7 @@ class HeatmapDemonstrator(Demonstrator):
         self.text_model = \
             generate_textual_model(self.device, 'generative', textual_model_dir, model_name, indent + 1)
 
-        gt_class_to_cluster = {i: self.text_model.model.predict_cluster(class_mapping[i])[0]
+        gt_class_to_cluster = {i: self.text_model.underlying_model.predict_cluster(class_mapping[i])[0]
                                for i in range(len(class_mapping))
                                if ' ' not in class_mapping[i]}
         cluster_to_gt_class_ind = {}

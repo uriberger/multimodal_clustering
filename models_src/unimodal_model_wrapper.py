@@ -14,7 +14,7 @@ class UnimodalModelWrapper(ModelWrapper):
         self.cached_loss = None
 
     @abc.abstractmethod
-    def generate_model(self):
+    def generate_underlying_model(self):
         return
 
     @abc.abstractmethod
@@ -26,11 +26,11 @@ class UnimodalModelWrapper(ModelWrapper):
         return
 
     @abc.abstractmethod
-    def dump_model(self):
+    def dump_underlying_model(self):
         return
 
     @abc.abstractmethod
-    def load_model(self):
+    def load_underlying_model(self):
         return
 
     @abc.abstractmethod
