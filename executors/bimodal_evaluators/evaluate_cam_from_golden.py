@@ -2,7 +2,7 @@ from bimodal_evaluator import BimodalEvaluator
 import torch.utils.data as data
 import metrics
 import os
-from models_src.visual_model_wrapper import VisualModelWrapper
+from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
 from utils.general_utils import visual_dir
 
 

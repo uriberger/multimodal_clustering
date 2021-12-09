@@ -6,7 +6,6 @@ from dataset_builders.concreteness_dataset import generate_concreteness_dataset
 class WordCoOccurrenceModel:
 
     def __init__(self):
-        self.del_me = 0
         self.word_to_ind = {}
         self.ind_to_word = []
         self.cur_ind = 0
@@ -25,8 +24,6 @@ class WordCoOccurrenceModel:
         self.co_occurrence_matrix[word_ind, word_ind] += 1
 
     def document_co_occurrence(self, word1, word2):
-        if (word1 == 'a' and word2 == '.') or (word1 == '.' and word2 == 'a'):
-            self.del_me += 1
         word1_ind = self.word_to_ind[word1]
         word2_ind = self.word_to_ind[word2]
 

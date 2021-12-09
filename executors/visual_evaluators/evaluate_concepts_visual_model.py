@@ -2,8 +2,8 @@ import torch
 import os
 from executors.visual_evaluators.evaluate_visual_model import VisualModelEvaluator
 from metrics import VisualKnownClassesClassificationMetric
-from models_src.visual_model_wrapper import VisualModelWrapper
-from models_src.textual_model_wrapper import TextualCountsModelWrapper
+from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
+from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 from utils.general_utils import visual_dir, text_dir
 
 
@@ -34,7 +34,7 @@ class VisualClusterEvaluator(VisualModelEvaluator):
         visual_model.eval()
 
         text_model_dir = os.path.join(self.models_dir, text_dir)
-        self.text_model = TextualCountsModelWrapper(self.device, None, text_model_dir, model_str, self.indent + 1)
+        self.text_model = TextCountsModelWrapper(self.device, None, text_model_dir, model_str, self.indent + 1)
 
         inference_func = self.inference
 

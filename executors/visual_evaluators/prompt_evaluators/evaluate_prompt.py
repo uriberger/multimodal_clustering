@@ -1,6 +1,6 @@
 from executors.visual_evaluators.evaluate_visual_model import VisualModelEvaluator
-from models_src.visual_model_wrapper import VisualModelWrapper
-from models_src.textual_model_wrapper import TextualCountsModelWrapper
+from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
+from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 import clip
 import torch
 import abc
@@ -48,7 +48,7 @@ class PromptEvaluator(VisualModelEvaluator):
             self.im_txt_similarity_func = self.clip_similarity_func
         elif model_type == 'unimodal':
             visual_model_wrapper = VisualModelWrapper(self.device, None, 'models/visual', model_str, self.indent + 1)
-            text_model_wrapper = TextualCountsModelWrapper(self.device, None, 'models/text', model_str, self.indent + 1)
+            text_model_wrapper = TextCountsModelWrapper(self.device, None, 'models/text', model_str, self.indent + 1)
 
             model = visual_model_wrapper
             inference_func = self.predict_visual_clusters_from_input

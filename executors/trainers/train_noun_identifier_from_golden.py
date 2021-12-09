@@ -1,4 +1,4 @@
-from models_src.textual_model_wrapper import TextualCountsModelWrapper
+from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 from trainer import Trainer
 from utils.general_utils import default_model_name
 
@@ -8,7 +8,7 @@ class NounIdentifierTrainer(Trainer):
     def __init__(self, timestamp, training_set, config, indent):
         super().__init__(training_set, 1, 1, indent)
 
-        self.model = TextualCountsModelWrapper(self.device, config, timestamp, default_model_name, indent+1)
+        self.model = TextCountsModelWrapper(self.device, config, timestamp, default_model_name, indent + 1)
 
     def train_on_batch(self, index, sampled_batch, print_info):
         caption = sampled_batch['caption']

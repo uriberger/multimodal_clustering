@@ -4,7 +4,7 @@ from utils.general_utils import generate_dataset, for_loop_with_reports, visual_
 from metrics import BBoxMetric
 from executors.executor import Executor
 import os
-from models_src.visual_model_wrapper import VisualModelWrapper
+from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
 
 
 class TwoPhaseBBoxEvaluator(Executor):

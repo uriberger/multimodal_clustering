@@ -1,5 +1,5 @@
 from executors.demonstrators.demonstrator import Demonstrator
-from models_src.visual_model_wrapper import VisualModelWrapper
+from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
 import os
 import torch
 from PIL import ImageDraw

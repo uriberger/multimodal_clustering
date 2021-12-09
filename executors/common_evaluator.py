@@ -16,8 +16,8 @@ from dataset_builders.category_dataset import generate_fountain_category_dataset
 from dataset_builders.concreteness_dataset import generate_concreteness_dataset
 
 # Models
-from models_src.visual_model_wrapper import VisualModelWrapper
-from models_src.textual_model_wrapper import TextualCountsModelWrapper
+from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
+from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 
 
 class CommonEvaluator(Executor):
@@ -37,7 +37,7 @@ class CommonEvaluator(Executor):
         # Models
         self.visual_model = VisualModelWrapper(self.device, None, visual_model_dir, model_name, indent + 1)
         self.visual_model.eval()
-        self.text_model = TextualCountsModelWrapper(self.device, None, text_model_dir, model_name, indent + 1)
+        self.text_model = TextCountsModelWrapper(self.device, None, text_model_dir, model_name, indent + 1)
         self.text_model.underlying_model.calculate_probs()
 
         # Datasets

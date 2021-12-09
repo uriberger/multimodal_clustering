@@ -11,8 +11,7 @@ from dataset_builders.category_dataset import generate_fountain_category_dataset
 from metrics import CategorizationMetric
 
 # Models
-from models_src.textual_model_wrapper import TextualCountsModelWrapper, TextualSimpleCountsModelWrapper
-
+from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 
 function_name = 'main_categorization_evaluation'
 timestamp = init_entry_point(True)
@@ -33,7 +32,7 @@ log_print(function_name, 0, 'Testing...')
 model_name = 'model'
 
 text_model_dir = os.path.join(models_dir, text_dir)
-model = TextualCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+model = TextCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
 # model = TextualSimpleCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
 metric = CategorizationMetric(model, category_dataset, ignore_unknown_words=True)
 log_print(function_name, 1, metric.report())

@@ -11,7 +11,7 @@ from dataset_builders.concreteness_dataset import generate_concreteness_dataset
 from metrics import ConcretenessPredictionMetric
 
 # Models
-from models_src.textual_model_wrapper import TextualCountsModelWrapper
+from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 
 
 function_name = 'main_concreteness_evaluation'
@@ -32,7 +32,7 @@ log_print(function_name, 0, 'Testing...')
 model_name = 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100'
 
 text_model_dir = os.path.join(models_dir, text_dir)
-model = TextualCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+model = TextCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
 metric = ConcretenessPredictionMetric(model, concreteness_dataset, token_count)
 log_print(function_name, 1, metric.report())
 

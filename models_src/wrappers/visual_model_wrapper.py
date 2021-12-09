@@ -1,13 +1,12 @@
-from models_src.bimodal_model_wrapper import BimodalModelWrapper
+from models_src.wrappers.cluster_model_wrapper import ClusterModelWrapper
 import torch
 from torchcam.cams import CAM
 from utils.visual_utils import predict_bbox, plot_heatmap, generate_visual_model, unnormalize_trans,\
     resize_activation_map
 import matplotlib.pyplot as plt
-from models_src.simclr import clean_state_dict, adjust_projection_in_state_dict
 
 
-class VisualModelWrapper(BimodalModelWrapper):
+class VisualModelWrapper(ClusterModelWrapper):
 
     def __init__(self, device, config, model_dir, model_name, indent):
         super().__init__(device, config, model_dir, model_name, indent)
@@ -182,3 +181,9 @@ class VisualModelWrapper(BimodalModelWrapper):
 
         self.cached_output = old_cached_output
         return heatmaps
+
+    def get_threshold(self):
+        return self.config.visual_threshold
+
+    def get_name(self):
+        return 'visual'

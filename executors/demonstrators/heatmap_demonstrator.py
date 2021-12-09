@@ -1,6 +1,6 @@
 from executors.demonstrators.demonstrator import Demonstrator
-from models_src.visual_model_wrapper import VisualModelWrapper
-from models_src.textual_model_wrapper import generate_textual_model
+from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
+from models_src.wrappers.text_model_wrapper import generate_text_model
 import os
 from utils.general_utils import visual_dir, text_dir
 
@@ -16,7 +16,7 @@ class HeatmapDemonstrator(Demonstrator):
         self.visual_model = VisualModelWrapper(self.device, None, visual_model_dir, model_name, indent + 1)
         self.visual_model.eval()
         self.text_model = \
-            generate_textual_model(self.device, 'generative', textual_model_dir, model_name, indent + 1)
+            generate_text_model(self.device, 'generative', textual_model_dir, model_name, indent + 1)
 
         gt_class_to_cluster = {i: self.text_model.underlying_model.predict_cluster(class_mapping[i])[0]
                                for i in range(len(class_mapping))

@@ -310,7 +310,7 @@ class NounIdentificationMetric(SensitivitySpecificityMetric):
         return gt_res
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        predictions = self.text_model.predict_cluster_insantiating_words(text_inputs)
+        predictions = self.text_model.predict_cluster_associated_words(text_inputs)
         text_gt = self.prepare_ground_truth(text_inputs)
 
         batch_size = len(text_inputs)
@@ -395,7 +395,7 @@ class ConcretenessPredictionMetric(Metric):
             if self.predicted_concreteness:
                 concreteness_estimation = self.predicted_concreteness[token]
             else:
-                concreteness_estimation = self.text_model.estimate_cluster_instantiation_per_word([[token]])[0][0]
+                concreteness_estimation = self.text_model.estimate_word_concreteness([[token]])[0][0]
             concreteness_prediction = concreteness_estimation >= self.text_model.config.text_threshold
             estimation_absolute_error = abs(gt_concreteness - concreteness_estimation)
             prediction_absolute_error = abs(gt_concreteness - concreteness_prediction)

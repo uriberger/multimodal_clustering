@@ -4,8 +4,8 @@ from utils.general_utils import visual_dir, text_dir, default_model_name
 import torch
 from executors.trainers.trainer import Trainer
 from executors.common_evaluator import CommonEvaluator
-from models_src.visual_model_wrapper import VisualModelWrapper
-from models_src.textual_model_wrapper import generate_textual_model
+from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
+from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 
 
 class JointModelTrainer(Trainer):
@@ -31,7 +31,7 @@ class JointModelTrainer(Trainer):
             textual_config = config.text_underlying_model
         self.visual_model = VisualModelWrapper(self.device, visual_config, self.visual_model_dir,
                                                self.model_name, indent + 1)
-        self.text_model = generate_textual_model(self.device, textual_config, self.text_model_dir,
+        self.text_model = TextCountsModelWrapper(self.device, textual_config, self.text_model_dir,
                                                  self.model_name, indent + 1)
 
         self.visual_loss_history = []

@@ -8,16 +8,17 @@
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
 import abc
-from models_src.model_wrapper import ModelWrapper
+from models_src.wrappers.model_wrapper import ModelWrapper
+import torch
 import torch.nn as nn
 
 
-class BimodalModelWrapper(ModelWrapper):
-    """ This is the base class for bimodal model wrapper.
+class ClusterModelWrapper(ModelWrapper):
+    """ This is the base class for cluster model wrappers.
         The visual wrapper and text wrapper will inherit from this class. """
 
     def __init__(self, device, config, model_dir, model_name, indent):
-        super(BimodalModelWrapper, self).__init__(device, config, model_dir, model_name, indent)
+        super(ClusterModelWrapper, self).__init__(device, config, model_dir, model_name, indent)
         self.cached_output = None
         self.criterion = nn.BCEWithLogitsLoss()
         self.cached_loss = None
@@ -36,14 +37,27 @@ class BimodalModelWrapper(ModelWrapper):
     def inference(self, inputs):
         return
 
-    """Predict a list of N bits (where N is the total number of clusters), where the ith entry is 1 iff the input to
-    the last inference is associated with the ith cluster. """
+    """ Get the relevant threshold for the model. """
 
     @abc.abstractmethod
-    def predict_cluster_indicators(self):
+    def get_threshold(self):
+        return
+
+    """ The name of the model (text/visual). """
+
+    @abc.abstractmethod
+    def get_name(self):
         return
 
     # Implemented methods
+
+    """ Predict a list of N bits (where N is the total number of clusters), where the ith entry is 1 iff the input to
+        the last inference is associated with the ith cluster. """
+
+    def predict_cluster_indicators(self):
+        cluster_indicators = torch.zeros(self.cached_output.shape).to(self.device)
+        cluster_indicators[self.cached_output >= self.get_threshold()] = 1
+        return cluster_indicators
 
     """Same as predict_cluster_indicators but here its in the form of the list of cluster indices. """
 
@@ -55,7 +69,11 @@ class BimodalModelWrapper(ModelWrapper):
         return predicted_cluster_lists
 
     def print_info_on_loss(self):
-        return 'Loss: ' + str(self.cached_loss)
+        return self.get_name() + ' loss: ' + str(self.cached_loss)
+
+    def print_info_on_inference(self):
+        predictions_num = torch.sum(self.predict_cluster_indicators()).item()
+        return 'Predicted ' + str(predictions_num) + ' clusters according to ' + self.get_name()
 
     # Abstract methods inherited from ModelWrapper class
 

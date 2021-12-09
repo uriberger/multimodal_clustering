@@ -6,7 +6,7 @@ from dataset_builders.concreteness_dataset import generate_concreteness_dataset
 from dataset_builders.category_dataset import generate_category_dataset
 import os
 import spacy
-from models_src.textual_model_wrapper import TextualCountsModelWrapper
+from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 from metrics import NounIdentificationMetric, ConcretenessPredictionMetric, CategorizationMetric
 
 
@@ -19,7 +19,7 @@ class TextualModelEvaluator(Executor):
         self.test_set = test_set
 
         text_model_dir = os.path.join(models_dir, text_dir)
-        self.model = TextualCountsModelWrapper(self.device, None, text_model_dir, model_name, indent + 1)
+        self.model = TextCountsModelWrapper(self.device, None, text_model_dir, model_name, indent + 1)
         self.concreteness_dataset = generate_concreteness_dataset()
         self.category_dataset = generate_category_dataset()
         self.nlp = spacy.load("en_core_web_sm")
