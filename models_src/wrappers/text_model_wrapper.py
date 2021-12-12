@@ -10,9 +10,8 @@
 from models_src.wrappers.cluster_model_wrapper import ClusterModelWrapper
 from models_src.baselines.word_co_occurrence_model import WordCoOccurrenceModel
 import torch
-from models_src.word_cluster_count_model import WordClusterCountModel
+from models_src.underlying_models.word_cluster_count_model import WordClusterCountModel
 import abc
-from utils.text_utils import prepare_data
 
 
 class TextModelWrapper(ClusterModelWrapper):
