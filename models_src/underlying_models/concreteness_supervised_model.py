@@ -1,3 +1,12 @@
+###############################################
+### Unsupervised Multimodal Word Clustering ###
+### as a First Step of Language Acquisition ###
+###############################################
+# Written by Uri Berger, December 2021.
+#
+# COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
+# ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
+
 from loggable_object import LoggableObject
 from nltk.corpus import wordnet as wn
 from nltk.corpus.reader.wordnet import POS_LIST
@@ -6,37 +15,55 @@ from sklearn import svm
 from dataset_builders.fast_text import generate_fast_text
 
 
-class ConcretenessSupervisedBaseline(LoggableObject):
+class ConcretenessSupervisedModel(LoggableObject):
+    """ This class is a supervised model for concreteness prediction.
+        It's an SVM regression model that uses part-of-speech tags, common suffixes and pretrained embeddings as
+        features.
+        The model was presented in the paper "Predicting  word  concreteness  and  imagery" by Jean Charbonnier and
+        Christian Wartena.
+    """
 
-    def __init__(self, use_pos_tags, use_suffix, use_embeddings, indent):
-        super(ConcretenessSupervisedBaseline, self).__init__(indent)
+    def __init__(self, use_pos_tags, use_suffix, use_embeddings, suffix_num, fast_text_dim, indent):
+        super(ConcretenessSupervisedModel, self).__init__(indent)
 
-        self.suffix_num = 200
-        self.fast_text_dim = 300
+        self.suffix_num = suffix_num
+        self.fast_text_dim = fast_text_dim
 
-        self.emb_dim = 0
+        # Each word is converted to a vector using its input features.
+        # Find the dimension of this vector
+        self.word_vec_dim = 0
         if use_pos_tags:
-            self.emb_dim += len(POS_LIST)
+            self.word_vec_dim += len(POS_LIST)
         if use_suffix:
-            self.emb_dim += self.suffix_num
+            self.word_vec_dim += self.suffix_num
         if use_embeddings:
-            self.emb_dim += self.fast_text_dim
+            self.word_vec_dim += self.fast_text_dim
 
         self.use_pos_tags = use_pos_tags
         self.use_suffix = use_suffix
         self.use_embeddings = use_embeddings
 
-    def get_pos_vector(self, word):
+    """ Get the part-of-speech vector for a given word.
+        The part-of-speech vector is a vector of the normalized counts of this word part-of-speech tags in the WordNet
+        dataset.
+    """
+
+    @staticmethod
+    def get_pos_vector(word):
         res_vec = [len(wn.synsets(word, pos=pos_tag)) for pos_tag in POS_LIST]
         synset_num = sum(res_vec)
         if synset_num > 0:
             res_vec = [x/synset_num for x in res_vec]
         else:
+            # This is an unknown words, return 0 for all pos tags
             res_vec = [0]*len(POS_LIST)
 
         return np.array(res_vec)
 
+    """ Find the most common suffixes in out training set. """
+
     def find_common_suffixes(self, training_set):
+        # First go over the entire training set and create a suffix->count mapping
         suffix_count = {}
         suffix_max_len = 4
         for word in training_set.keys():
@@ -46,9 +73,15 @@ class ConcretenessSupervisedBaseline(LoggableObject):
                     suffix_count[cur_suffix] = 0
                 suffix_count[cur_suffix] += 1
 
+        # Now, find the self.suffix_num most common suffixes
         all_suffixes = list(suffix_count.items())
         all_suffixes.sort(key=lambda x: x[1], reverse=True)
         self.common_suffixes = [x[0] for x in all_suffixes[:self.suffix_num]]
+
+    """ Get the common suffixes vector of a given word.
+        The common suffixes vector is a vector of size self.suffix_num, where the ith entry is 1 if the current word has
+        the ith common suffix, and 0 otherwise. 
+    """
 
     def get_suffix_vector(self, word):
         res_vec = [
@@ -57,11 +90,16 @@ class ConcretenessSupervisedBaseline(LoggableObject):
         ]
         return np.array(res_vec)
 
+    """ Get the pretrained fast-text embedding vector for the input word. """
+
     def get_embedding_vector(self, word):
         if word in self.fast_text:
             return self.fast_text[word]
         else:
+            # Fast-text isn't familiar with this word
             return np.zeros(self.fast_text_dim)
+
+    """ Get the vector representation of the input word, using the model features. """
 
     def get_word_vector(self, word):
         word_vector = np.array([])
@@ -74,15 +112,18 @@ class ConcretenessSupervisedBaseline(LoggableObject):
 
         return word_vector
 
-    def train(self, training_set):
-        self.log_print('Collecting common suffixes...')
+    """ Train the SVM regression model on the given training set.
+        This function returns a mapping of word->concreteness prediction.
+    """
 
+    def train(self, training_set):
         if self.use_suffix:
+            self.log_print('Collecting common suffixes...')
             self.find_common_suffixes(training_set)
         if self.use_embeddings:
             self.fast_text = generate_fast_text({x: True for x in training_set.keys()})
 
-        X = np.zeros((len(training_set), self.emb_dim))
+        X = np.zeros((len(training_set), self.word_vec_dim))
         y = np.zeros(len(training_set))
         word_to_ind = {}
         ind_to_word = []

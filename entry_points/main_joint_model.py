@@ -1,13 +1,13 @@
 # General
 import os
-from utils.general_utils import log_print, visual_dir, text_dir, default_model_name, init_entry_point, project_root_dir
+from utils.general_utils import log_print, init_entry_point, project_root_dir
 
 # Dataset
 from dataset_builders.dataset_builder_creator import create_dataset_builder
 from datasets_src.dataset_config import DatasetConfig
 
 # Model
-from models_src.model_config import ModelConfig
+from models_src.model_configs.cluster_model_config import ClusterModelConfig
 
 # Executors
 from executors.trainers.train_joint_model import JointModelTrainer
@@ -16,7 +16,7 @@ from executors.trainers.train_joint_model import JointModelTrainer
 function_name = 'main_joint_model'
 timestamp = init_entry_point(True)
 
-model_config = ModelConfig()
+model_config = ClusterModelConfig()
 log_print(function_name, 0, str(model_config))
 
 log_print(function_name, 0, 'Generating dataset_files...')

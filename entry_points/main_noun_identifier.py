@@ -1,14 +1,13 @@
 # General
 import os
 from utils.general_utils import log_print, init_entry_point, default_model_name
-from datetime import datetime
 
 # Dataset
 from dataset_builders.coco import Coco
 from datasets_src.dataset_config import DatasetConfig
 
 # Model
-from models_src.model_config import ModelConfig
+from models_src.model_configs.cluster_model_config import ClusterModelConfig
 
 # Executors
 from executors.trainers.train_noun_identifier_from_golden import NounIdentifierTrainer
@@ -30,7 +29,7 @@ test_set, gt_classes_file_path, gt_bboxes_file_path = coco.build_dataset(test_se
 cluster_num = 65
 log_print(function_name, 0, 'Datasets generated')
 
-config = ModelConfig(
+config = ClusterModelConfig(
     text_model='generative',
     cluster_num=cluster_num,
     text_threshold=(1/cluster_num + 1/(10*cluster_num))

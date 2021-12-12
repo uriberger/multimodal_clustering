@@ -7,8 +7,11 @@
 # COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
-class ModelConfig:
-    """ Contains configuration settings for our models.
+from models_src.model_configs.model_config import ModelConfig
+
+
+class ClusterModelConfig(ModelConfig):
+    """ Contains configuration settings for our clustering models.
 
 
     visual_underlying_model: The underlying visual model, used to extract the clusters vector from the raw image
@@ -42,6 +45,8 @@ class ModelConfig:
                  text_threshold=0.03,
                  cluster_num=100
                  ):
+        super(ClusterModelConfig, self).__init__()
+
         self.visual_underlying_model = visual_underlying_model
         self.pretrained_visual_underlying_model = pretrained_visual_underlying_model
         self.freeze_visual_parameters = freeze_visual_parameters
@@ -50,13 +55,3 @@ class ModelConfig:
         self.text_underlying_model = text_underlying_model
         self.text_threshold = text_threshold
         self.cluster_num = cluster_num
-
-    def __str__(self):
-        return 'Configuration: ' + str(self.__dict__)
-
-    def __eq__(self, other):
-        if not isinstance(other, ModelConfig):
-            # don't attempt to compare against unrelated types
-            return NotImplemented
-
-        return self.__dict__ == other.__dict__

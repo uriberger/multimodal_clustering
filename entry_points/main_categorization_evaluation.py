@@ -1,6 +1,6 @@
 import os
 import torch
-from utils.general_utils import log_print, models_dir, text_dir, init_entry_point
+from utils.general_utils import log_print, models_dir, text_dir, init_entry_point, project_root_dir
 
 # Dataset
 from datasets_src.dataset_config import DatasetConfig
@@ -31,7 +31,7 @@ log_print(function_name, 0, 'Testing...')
 # model_name = 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100'
 model_name = 'model'
 
-text_model_dir = os.path.join(models_dir, text_dir)
+text_model_dir = os.path.join(project_root, models_dir, text_dir)
 model = TextCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
 # model = TextualSimpleCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
 metric = CategorizationMetric(model, category_dataset, ignore_unknown_words=True)
