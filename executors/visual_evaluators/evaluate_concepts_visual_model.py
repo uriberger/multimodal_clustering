@@ -26,7 +26,7 @@ class VisualClusterEvaluator(VisualModelEvaluator):
         if self.multi_label:
             return self.model.predict_cluster_indicators()
         else:
-            return torch.tensor(self.model.predict_classes()).view(1, inputs.shape[0]).transpose(1, 0)
+            return torch.tensor(self.model.predict_most_probable_clusters()).view(1, inputs.shape[0]).transpose(1, 0)
 
     def generate_model(self, model_type, model_str):
         visual_model_dir = os.path.join(self.models_dir, visual_dir)

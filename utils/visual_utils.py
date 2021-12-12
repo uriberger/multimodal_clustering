@@ -295,3 +295,14 @@ def generate_visual_model(model_str, cluster_num, pretrained_base):
         model.g = nn.Linear(2048, cluster_num)
 
     return model
+
+
+def predict_bboxes_with_activation_maps(activation_maps):
+    predicted_bboxes = []
+    for sample_activation_maps in activation_maps:
+        predicted_bboxes.append([])
+        for predicted_class_activation_map in sample_activation_maps:
+            bbox = predict_bbox(predicted_class_activation_map)
+            predicted_bboxes[-1].append(bbox)
+
+    return predicted_bboxes

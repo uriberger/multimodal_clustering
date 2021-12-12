@@ -49,6 +49,12 @@ class ClusterModelWrapper(ModelWrapper):
     def get_name(self):
         return
 
+    """ Change the underlying model to evaluation mode. """
+
+    @abc.abstractmethod
+    def eval(self):
+        return
+
     # Implemented methods
 
     """ Predict a list of N bits (where N is the total number of clusters), where the ith entry is 1 iff the input to

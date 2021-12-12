@@ -73,10 +73,11 @@ class TwoPhaseBBoxEvaluator(Executor):
 
     def infer_and_record(self, visual_metadata, image_tensor):
         orig_image_size = visual_metadata['orig_image_size']
+        batch_size = image_tensor.shape[0]
         gt_bboxes = visual_metadata['gt_bboxes']
 
         activation_maps = self.model.predict_activation_maps(image_tensor)
-        batch_size = image_tensor.shape[0]
+        activation_maps = [x[1] for x in activation_maps]
         for sample_ind in range(batch_size):
             cur_record = {
                 'orig_image_size': orig_image_size[sample_ind],

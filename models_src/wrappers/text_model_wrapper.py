@@ -115,6 +115,9 @@ class TextCountsModelWrapper(TextModelWrapper):
     def generate_underlying_model(self):
         return WordClusterCountModel(self.config.cluster_num, self.config.text_underlying_model)
 
+    def eval(self):
+        self.underlying_model.calculate_probs()
+
     def training_step(self, inputs, labels):
         loss = self.criterion(self.cached_output, labels)
         loss_val = loss.item()

@@ -1,6 +1,6 @@
 import abc
 import torch
-from utils.visual_utils import calc_ious, get_resized_gt_bboxes
+from utils.visual_utils import calc_ious, get_resized_gt_bboxes, predict_bboxes_with_activation_maps
 from utils.text_utils import noun_tags
 import statistics
 import numpy as np
@@ -227,7 +227,7 @@ class BBoxMetric(BBoxPredictionMetric):
         self.document(orig_image_sizes, predicted_bboxes, gt_bboxes)
 
     def document_with_loaded_results(self, orig_image_sizes, activation_maps, gt_bboxes):
-        predicted_bboxes = self.visual_model.predict_bboxes_with_activation_maps(activation_maps)
+        predicted_bboxes = predict_bboxes_with_activation_maps(activation_maps)
         self.document(orig_image_sizes, predicted_bboxes, gt_bboxes)
 
     def report(self):
@@ -265,10 +265,11 @@ class HeatmapMetric(BBoxPredictionMetric):
         return heatmap_to_matching_bbox
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        predicted_heatmaps = [self.visual_model.get_heatmaps_without_inference()]
-        gt_bboxes = visual_metadata['gt_bboxes']
-        orig_image_sizes = visual_metadata['orig_image_size']
-        self.document(orig_image_sizes, predicted_heatmaps, gt_bboxes)
+        return # Need to delete this function
+        # predicted_heatmaps = [self.visual_model.get_heatmaps_without_inference()]
+        # gt_bboxes = visual_metadata['gt_bboxes']
+        # orig_image_sizes = visual_metadata['orig_image_size']
+        # self.document(orig_image_sizes, predicted_heatmaps, gt_bboxes)
 
     def report(self):
         return self.report_with_name()
