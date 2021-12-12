@@ -31,7 +31,7 @@ class Trainer(Executor):
     """ Dump models' current state. """
 
     @abc.abstractmethod
-    def dump_models(self):
+    def dump_models(self, suffix=None):
         return
 
     """ Actions that should be performed at the end of each training epoch. """
