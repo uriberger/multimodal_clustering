@@ -10,6 +10,7 @@
 import torch
 import abc
 import os
+from utils.general_utils import project_root_dir
 from loggable_object import LoggableObject
 
 
@@ -23,7 +24,7 @@ class ModelWrapper(LoggableObject):
         saved instances (when config is None). """
         super(ModelWrapper, self).__init__(indent)
         self.device = device  # CPU or GPU
-        self.model_dir = model_dir
+        self.model_dir = os.path.join(project_root_dir, model_dir)
         self.dump_path = os.path.join(self.model_dir, model_name)
 
         # Check if we need to load an existing model (the provided configuration is None), or create new model (the

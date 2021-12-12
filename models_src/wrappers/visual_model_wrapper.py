@@ -11,7 +11,7 @@ from models_src.wrappers.cluster_model_wrapper import ClusterModelWrapper
 import torch
 from torchcam.cams import CAM
 from utils.visual_utils import plot_heatmap, generate_visual_model, unnormalize_trans,\
-    resize_activation_map, predict_bboxes_with_activation_maps
+    predict_bboxes_with_activation_maps
 import matplotlib.pyplot as plt
 
 
