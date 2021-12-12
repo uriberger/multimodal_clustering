@@ -6,7 +6,7 @@ from torchvision.transforms.functional import to_pil_image
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 from torchcam.utils import overlay_mask
-from models_src.simclr import SimCLRModel
+from models_src.underlying_models.simclr import SimCLRModel
 import numpy as np
 
 

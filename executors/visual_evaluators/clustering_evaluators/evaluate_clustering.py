@@ -3,7 +3,7 @@ import torch.nn as nn
 from utils.visual_utils import generate_visual_model
 from executors.visual_evaluators.evaluate_visual_model import VisualModelEvaluator
 from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
-from models_src.simclr import SimCLRModel, clean_state_dict
+from models_src.underlying_models.simclr import SimCLRModel, clean_state_dict
 import clip
 import abc
 import os
