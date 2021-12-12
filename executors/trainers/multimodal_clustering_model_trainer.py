@@ -8,7 +8,7 @@ from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
 from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 
 
-class JointModelTrainer(Trainer):
+class MultimodalClusteringModelTrainer(Trainer):
 
     def __init__(self, model_root_dir, training_set, epoch_num, config, test_data, indent,
                  loaded_model_dir=None, loaded_model_name=None):
@@ -51,14 +51,6 @@ class JointModelTrainer(Trainer):
             # Current model is the best model so far
             self.dump_models('best')
 
-    def pre_training(self):
-        self.dump_models()
-
-        self.first_epoch = True
-
-    def post_training(self):
-        self.dump_models()
-
     def generate_metric_to_results_mapping(self):
         metric_to_results = {}
         precision_str = "%.4f"
@@ -87,8 +79,6 @@ class JointModelTrainer(Trainer):
 
     def dump_results_to_csv(self):
         csv_filename = 'evaluation_by_epoch.csv'
-        if self.first_epoch:
-            csv_filename = 'first_' + csv_filename
 
         with open(os.path.join(self.model_root_dir, csv_filename), 'w', newline='') as csvfile:
             step_num = len(self.evaluation_results)
@@ -105,12 +95,6 @@ class JointModelTrainer(Trainer):
         self.dump_models()
 
         if self.test_data is not None:
-            # First dump results of first epoch (we record every few batches)
-            if self.first_epoch:
-                self.dump_results_to_csv()
-                self.evaluation_results = []
-                self.first_epoch = False
-
             self.log_print('Evaluating after finishing the epoch...')
             # If test data was provided, we evaluate after every epoch
             self.evaluate_current_model()
@@ -167,6 +151,6 @@ class JointModelTrainer(Trainer):
                            ', mean visual loss: ' + str(mean_visual_loss))
             self.prev_checkpoint_batch_ind = len(self.loss_history)
 
-        if print_info and self.test_data is not None and self.first_epoch:
+        if print_info and self.test_data is not None:
             self.dump_models()
             self.evaluate_current_model()

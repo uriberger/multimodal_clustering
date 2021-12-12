@@ -10,7 +10,7 @@ from datasets_src.dataset_config import DatasetConfig
 from models_src.model_configs.cluster_model_config import ClusterModelConfig
 
 # Executors
-from executors.trainers.train_joint_model import JointModelTrainer
+from executors.trainers.multimodal_clustering_model_trainer import MultimodalClusteringModelTrainer
 
 
 function_name = 'main_joint_model'
@@ -34,8 +34,8 @@ log_print(function_name, 0, 'Datasets generated')
 
 log_print(function_name, 0, 'Training model...')
 model_root_dir = os.path.join(project_root_dir, timestamp)
-# trainer = JointModelTrainer(model_root_dir, training_set, 2, model_config, None, 1)
-trainer = JointModelTrainer(model_root_dir, training_set, 2, model_config,
-                            [test_set, gt_classes_file_path, gt_bboxes_file_path, class_mapping, token_count], 1)
+# trainer = MultimodalClusteringModelTrainer(model_root_dir, training_set, 2, model_config, None, 1)
+trainer = MultimodalClusteringModelTrainer(model_root_dir, training_set, 2, model_config,
+                                           [test_set, gt_classes_file_path, gt_bboxes_file_path, class_mapping, token_count], 1)
 trainer.train()
 log_print(function_name, 0, 'Finished training model')
