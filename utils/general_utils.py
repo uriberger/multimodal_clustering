@@ -8,7 +8,7 @@ write_to_log = False
 log_fp = None
 
 project_root_dir = '..'
-models_dir = 'models'
+models_dir = os.path.join(project_root_dir, 'models')
 visual_dir = 'visual'
 text_dir = 'text'
 default_model_name = 'model'
