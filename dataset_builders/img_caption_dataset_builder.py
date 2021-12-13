@@ -1,3 +1,12 @@
+###############################################
+### Unsupervised Multimodal Word Clustering ###
+### as a First Step of Language Acquisition ###
+###############################################
+# Written by Uri Berger, December 2021.
+#
+# COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
+# ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
+
 import abc
 import os
 from utils.general_utils import generate_dataset, for_loop_with_reports
@@ -10,7 +19,7 @@ from dataset_builders.dataset_builder import DatasetBuilder
 
 
 class ImageCaptionDatasetBuilder(DatasetBuilder):
-    """ This class is the base class for all external image-caption datasets. """
+    """ This class is the base class for all external image-caption datasets builders. """
 
     def __init__(self, name, indent):
         super(ImageCaptionDatasetBuilder, self).__init__(indent)
@@ -20,6 +29,10 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
         self.file_paths = {}
         for slice_str in self.slices:
             self.file_paths[slice_str] = self.get_filepaths_for_slice(slice_str)
+
+    # Abstract methods
+
+    """ Get the paths of files containing the data, for a specific slice of the dataset. """
 
     def get_filepaths_for_slice(self, slice_str):
         return {
@@ -31,35 +44,67 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
     def generate_caption_data(self, slice_str):
         return generate_dataset(self.file_paths[slice_str]['captions'], self.generate_caption_data_internal, slice_str)
 
+    """ Generate a list of dictionaries that contain image id and a corresponding caption. For example:
+        [
+            {'image_id': 123, 'caption': 'A large dog'},
+            {'image_id': 456, 'caption': 'A white airplane'},
+            ...
+        ]
+    """
+
     @abc.abstractmethod
     def generate_caption_data_internal(self, slice_str):
         return
+
+    """ Generate a mapping from image id to the list of class indices in this image. For example:
+        {123: [1,2,6], 456: [1,3], ...}
+    """
 
     @abc.abstractmethod
     def generate_gt_classes_data(self, slice_str):
         return
 
+    """ Generate a mapping from image id to the list of bounding boxes in this image. Each bounding box is 4 integers:
+    (left x-axis edge, upper y-axis edge, right x-axis edge, lower y-axis edge). For example:
+        {
+            123: [[10, 5, 90, 200], [40, 180, 70, 190]],
+            456: [[100, 100, 110, 150]],
+            ...
+        }
+    """
+
     @abc.abstractmethod
     def generate_gt_bboxes_data(self, slice_str):
         return
 
+    """ Generates both the ground-truth class and bounding boxes at the same time.
+        This may be more convenient as in some of the datasets, both are stored in the same place.
+    """
+
     @abc.abstractmethod
     def generate_gt_classes_bboxes_data(self, slice_str):
+        return
+
+    """ Get the path to the file of a given image id, in a given slice of the dataset. """
+
+    @abc.abstractmethod
+    def get_image_path(self, image_id, slice_str):
         return
 
     @abc.abstractmethod
     def get_class_mapping(self):
         return
 
-    @abc.abstractmethod
-    def get_image_path(self, image_id, slice_str):
-        return
+    # Current class specific functionality
+
+    """ We want to filter images that are:
+        - Grayscale
+        - Contain multiple-words-named classes
+        - Without bbox or classes ground-truth data
+        This function returns a list of image ids of images we want to filter.
+    """
 
     def find_unwanted_images(self, slice_str):
-        """ We want to filter images that are:
-                - Grayscale
-                - Contain multiple-words-named classes
-                - Without bbox or classes ground-truth data"""
         caption_dataset = self.generate_caption_data(slice_str)
         image_ids_by_caption_dataset = list(set([x['image_id'] for x in caption_dataset]))
 
@@ -94,6 +139,8 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
 
         return self.unwanted_images_info['unwanted_image_ids']
 
+    """ This function checks if current image should be filtered, and if so, adds it to the unwanted image list. """
+
     def is_unwanted_image(self, index, item, print_info):
         image_id = item
 
@@ -127,11 +174,13 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
                        ' out of ' + str(dataset_size) +
                        ', time from previous checkpoint ' + str(time_from_prev))
 
-    def filter_unwanted_images(self, slice_str):
-        """ We want to filter images that are:
+    """ We want to filter images that are:
         - Grayscale
         - Contain multiple-words-named classes
-        - Without bbox or classes ground-truth data"""
+        - Without bbox or classes ground-truth data
+    """
+
+    def filter_unwanted_images(self, slice_str):
         unwanted_image_ids = self.find_unwanted_images(slice_str)
 
         caption_dataset = self.generate_caption_data(slice_str)
@@ -146,6 +195,34 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
         torch.save(new_caption_dataset, self.file_paths[slice_str]['captions'])
         torch.save(new_img_classes_dataset, self.file_paths[slice_str]['gt_classes'])
         torch.save(new_img_bboxes_dataset, self.file_paths[slice_str]['gt_bboxes'])
+
+    """ Return a dataset object containing only images, and ignoring the captions. """
+
+    def build_image_only_dataset(self, config):
+        if config.slice_str not in self.slices:
+            self.log_print('No such data slice: ' + str(config.slice_str) +
+                           '. Please specify one of ' + str(self.slices))
+            assert False
+
+        file_paths = self.file_paths[config.slice_str]
+        if config.include_gt_classes:
+            self.generate_gt_classes_data(config.slice_str)
+            gt_classes_file_path = file_paths['gt_classes']
+        else:
+            gt_classes_file_path = None
+        if config.include_gt_bboxes:
+            self.generate_gt_bboxes_data(config.slice_str)
+            gt_bboxes_file_path = file_paths['gt_bboxes']
+        else:
+            gt_bboxes_file_path = None
+
+        self.generate_caption_data(config.slice_str)
+
+        return ImageDataset(file_paths['captions'], self.get_image_path, config), \
+            gt_classes_file_path, \
+            gt_bboxes_file_path
+
+    # Inherited methods
 
     def build_dataset(self, config):
         if config.slice_str not in self.slices:
@@ -177,112 +254,3 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
                                       config), \
             gt_classes_file_path, \
             gt_bboxes_file_path
-
-    def build_image_only_dataset(self, config):
-        if config.slice_str not in self.slices:
-            self.log_print('No such data slice: ' + str(config.slice_str) +
-                           '. Please specify one of ' + str(self.slices))
-            assert False
-
-        file_paths = self.file_paths[config.slice_str]
-        if config.include_gt_classes:
-            self.generate_gt_classes_data(config.slice_str)
-            gt_classes_file_path = file_paths['gt_classes']
-        else:
-            gt_classes_file_path = None
-        if config.include_gt_bboxes:
-            self.generate_gt_bboxes_data(config.slice_str)
-            gt_bboxes_file_path = file_paths['gt_bboxes']
-        else:
-            gt_bboxes_file_path = None
-
-        self.generate_caption_data(config.slice_str)
-
-        return ImageDataset(file_paths['captions'], self.get_image_path, config), \
-            gt_classes_file_path, \
-            gt_bboxes_file_path
-
-    def build_selected_class_caption_dataset(self, class_list, only_single_class_images, slice_str):
-        """ This function returns a dataset of (image, caption) pairs, where the dataset only contains
-         images with classes of the given class list.
-         If only_single_class_images=True, we filter images that contains more than a single class. """
-        _, _, class_mapping = self.generate_bboxes_dataset()
-
-        if only_single_class_images:
-            single_or_multi_str = 'single'
-        else:
-            single_or_multi_str = 'multi'
-
-        if slice_str == 'train':
-            dataset_filename_prefix = self.img_caption_training_set_filename
-        if slice_str == 'val':
-            dataset_filename_prefix = self.img_caption_val_set_filename
-
-        dataset_filename = \
-            dataset_filename_prefix + \
-            '_' + '_'.join([class_mapping[x] for x in class_list]) + \
-            '_' + single_or_multi_str + '_class'
-
-        return generate_dataset(dataset_filename, self.build_selected_class_caption_dataset_internal,
-                                class_list, only_single_class_images, slice_str)
-
-    def build_selected_class_caption_dataset_internal(self, class_list, only_single_class_images, slice_str):
-        self.log_print('Generating dataset...')
-        img_bboxes_training_set, img_bboxes_val_set, class_mapping = self.generate_bboxes_dataset()
-
-        if slice_str == 'train':
-            full_dataset_filename = self.img_caption_training_set_filename
-            boxes_dataset = img_bboxes_training_set
-        if slice_str == 'val':
-            full_dataset_filename = self.img_caption_val_set_filename
-            boxes_dataset = img_bboxes_val_set
-        full_dataset = torch.load(full_dataset_filename)
-
-        img_class_dataset = {x[0]: [y[1] for y in x[1]] for x in boxes_dataset.items()}
-        if only_single_class_images:
-            img_class_dataset = {x[0]: x[1] for x in img_class_dataset.items() if len(x[1]) == 1}
-
-        class_set = set(class_list)
-        selected_dataset = [{'image_id': x['image_id'],
-                             'caption': x['caption'],
-                             'gt_classes': img_class_dataset[x['image_id']]}
-                            for x in full_dataset
-                            if x['image_id'] in img_class_dataset and
-                            len(class_set.intersection(img_class_dataset[x['image_id']])) ==
-                            len(img_class_dataset[x['image_id']])]
-
-        class_names = [class_mapping[x] for x in class_list]
-        if only_single_class_images:
-            at_least_exactly_str = 'exactly'
-        else:
-            at_least_exactly_str = 'at least'
-        self.log_print('Found ' + str(len(selected_dataset)) + ' captions for images containing ' +
-                       at_least_exactly_str + ' one of the classes in ' + str(class_names))
-
-        return selected_dataset
-
-    def build_simplified_caption_dataset(self, orig_dataset, filename):
-        """ orig_dataset is a dataset of (image, caption) pairs. This function returns a simplified
-         dataset of (image, class name). """
-        return generate_dataset(filename, self.build_simplified_caption_dataset_internal, orig_dataset)
-
-    def build_simplified_caption_dataset_internal(self, orig_dataset):
-        self.log_print('Generating dataset...')
-        _, _, class_mapping = self.generate_bboxes_dataset()
-
-        simplified_dataset_with_repetitions = \
-            [{'image_id': x['image_id'],
-              'caption': ' '.join([class_mapping[y] for y in x['gt_classes']]),
-              'gt_classes': x['gt_classes']}
-             for x in orig_dataset]
-        ''' Since in the original dataset each sample has multiple captions, in the simplified dataset
-        we'll have repetitions. So we ant only a unique sample of each image id. '''
-        observed_image_ids = {}
-        simplified_dataset = []
-        for sample in simplified_dataset_with_repetitions:
-            image_id = sample['image_id']
-            if image_id not in observed_image_ids:
-                observed_image_ids[image_id] = True
-                simplified_dataset.append(sample)
-
-        return simplified_dataset
