@@ -230,6 +230,9 @@ class TextOnlyCountsModelWrapper(TextModelWrapper):
     def inference(self, inputs):
         return
 
+    def eval(self):
+        return
+
     def dump_underlying_model(self):
         torch.save([self.underlying_model, self.word_to_cluster, self.concreteness_prediction],
                    self.get_underlying_model_path())
