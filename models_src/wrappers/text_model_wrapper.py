@@ -176,7 +176,7 @@ class TextCountsModelWrapper(TextModelWrapper):
         for sentence in sentences:
             res.append([])
             for token in sentence:
-                prediction_res = self.predict_clusters_for_word(token)
+                prediction_res = self.predict_cluster_for_word(token)
                 if prediction_res is None:
                     # Never seen this token before
                     res[-1].append(0)

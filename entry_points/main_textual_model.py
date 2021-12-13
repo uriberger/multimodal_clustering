@@ -1,13 +1,11 @@
-import os
 from utils.general_utils import log_print, init_entry_point
-from datetime import datetime
 
 # Dataset
 from datasets_src.dataset_config import DatasetConfig
 from dataset_builders.dataset_builder_creator import create_dataset_builder
 
 # Executors
-from executors.evaluate_textual_model import TextualModelEvaluator
+from executors.evaluators.evaluate_textual_model import TextualModelEvaluator
 
 
 function_name = 'main_textual_model'

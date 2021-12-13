@@ -1,5 +1,4 @@
 import os
-import torch
 from utils.general_utils import log_print, models_dir, visual_dir, text_dir, init_entry_point
 
 # Dataset
@@ -7,7 +6,7 @@ from datasets_src.dataset_config import DatasetConfig
 from dataset_builders.dataset_builder_creator import create_dataset_builder
 
 # Evaluator
-from executors.common_evaluator import CommonEvaluator
+from executors.evaluators.common_evaluator import CommonEvaluator
 
 
 function_name = 'main_heatmap_evaluation'

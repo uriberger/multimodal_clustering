@@ -1,4 +1,3 @@
-import os
 from utils.general_utils import log_print, init_entry_point
 
 # Dataset
@@ -6,10 +5,10 @@ from datasets_src.dataset_config import DatasetConfig
 from dataset_builders.dataset_builder_creator import create_dataset_builder
 
 # Executors
-from executors.visual_evaluators.clustering_evaluators.evaluate_clustering_single_label import ClusteringSingleLabelEvaluator
-from executors.visual_evaluators.clustering_evaluators.evaluate_clustering_multi_label import ClusteringMultiLabelEvaluator
-from executors.visual_evaluators.prompt_evaluators.evaluate_prompt_single_label import PromptSingleLabelEvaluator
-from executors.visual_evaluators.prompt_evaluators.evaluate_prompt_multi_label import PromptMultiLabelEvaluator
+from executors.evaluators.visual_evaluators.clustering_evaluators.evaluate_clustering_single_label import ClusteringSingleLabelEvaluator
+from executors.evaluators.visual_evaluators.clustering_evaluators.evaluate_clustering_multi_label import ClusteringMultiLabelEvaluator
+from executors.evaluators.visual_evaluators.prompt_evaluators.evaluate_prompt_single_label import PromptSingleLabelEvaluator
+from executors.evaluators.visual_evaluators.prompt_evaluators.evaluate_prompt_multi_label import PromptMultiLabelEvaluator
 from executors.visual_evaluators.evaluate_clusters_visual_model import VisualClusterEvaluator
 
 

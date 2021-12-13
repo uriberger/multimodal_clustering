@@ -1,4 +1,4 @@
-from executors.visual_evaluators.evaluate_visual_model import VisualModelEvaluator
+from executors.evaluators.visual_evaluators.evaluate_visual_model import VisualModelEvaluator
 from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
 from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 import clip

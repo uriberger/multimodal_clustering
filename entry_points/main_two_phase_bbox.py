@@ -1,14 +1,13 @@
 # General
 import os
 from utils.general_utils import log_print, init_entry_point
-from datetime import datetime
 
 # Dataset
 from dataset_builders.coco import Coco
 from datasets_src.dataset_config import DatasetConfig
 
 # Executors
-from executors.two_phase_evaluator import TwoPhaseBBoxEvaluator
+from executors.evaluators.two_phase_evaluator import TwoPhaseBBoxEvaluator
 
 
 function_name = 'main_two_phase_bbox'

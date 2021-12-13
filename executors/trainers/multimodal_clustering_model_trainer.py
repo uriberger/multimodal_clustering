@@ -11,7 +11,7 @@ import os
 import csv
 from utils.general_utils import visual_dir, text_dir, default_model_name
 from executors.trainers.trainer import Trainer
-from executors.common_evaluator import CommonEvaluator
+from executors.evaluators.common_evaluator import CommonEvaluator
 from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
 from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 

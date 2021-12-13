@@ -1,4 +1,4 @@
-from executors.visual_evaluators.clustering_evaluators.evaluate_clustering import ClusteringEvaluator
+from executors.evaluators.visual_evaluators.clustering_evaluators.evaluate_clustering import ClusteringEvaluator
 from utils.multi_label_threshold_finder import generate_sample_to_predicted_classes_mapping
 import torch
 import numpy as np

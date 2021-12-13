@@ -885,7 +885,7 @@ class CategorizationMetric(Metric):
                 prediction = self.text_model.predict_cluster_for_word(word)
                 if prediction is not None:
                     # The word is known
-                    predicted_labels.append(prediction)
+                    predicted_labels.append(prediction[0])
                 elif not self.ignore_unknown_words:
                     ''' The word is unknown, but we were told not to ignore unknown words, so we'll label it by a new
                     cluster. '''

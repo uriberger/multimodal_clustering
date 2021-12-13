@@ -1,4 +1,4 @@
-from executors.bimodal_evaluators.bimodal_evaluator import BimodalEvaluator
+from executors.evaluators.bimodal_evaluators.bimodal_evaluator import BimodalEvaluator
 from dataset_builders.concreteness_dataset import generate_concreteness_dataset
 from dataset_builders.category_dataset import generate_category_dataset
 import spacy

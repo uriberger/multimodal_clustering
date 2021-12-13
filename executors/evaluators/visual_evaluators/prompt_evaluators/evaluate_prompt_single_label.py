@@ -1,4 +1,4 @@
-from executors.visual_evaluators.prompt_evaluators.evaluate_prompt import PromptEvaluator
+from executors.evaluators.visual_evaluators.prompt_evaluators.evaluate_prompt import PromptEvaluator
 
 
 class PromptSingleLabelEvaluator(PromptEvaluator):

@@ -1,6 +1,6 @@
 import torch
 import os
-from executors.visual_evaluators.evaluate_visual_model import VisualModelEvaluator
+from executors.evaluators.visual_evaluators.evaluate_visual_model import VisualModelEvaluator
 from metrics import VisualKnownClassesClassificationMetric
 from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
 from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
