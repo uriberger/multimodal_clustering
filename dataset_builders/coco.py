@@ -1,3 +1,12 @@
+###############################################
+### Unsupervised Multimodal Word Clustering ###
+### as a First Step of Language Acquisition ###
+###############################################
+# Written by Uri Berger, December 2021.
+#
+# COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
+# ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
+
 import os
 import torch
 import json
@@ -5,6 +14,9 @@ from dataset_builders.img_caption_dataset_builder import ImageCaptionDatasetBuil
 
 
 class Coco(ImageCaptionDatasetBuilder):
+    """ This is the dataset builder class for the MSCOCO dataset, described in the paper
+        'Microsoft COCO: Common Objects in Context' by Lin et al.
+    """
 
     def __init__(self, root_dir_path, indent):
         super(Coco, self).__init__('coco', indent)
@@ -66,12 +78,14 @@ class Coco(ImageCaptionDatasetBuilder):
 
             img_classes_dataset = {}
             img_bboxes_dataset = {}
+            # Go over all the object annotations
             for bbox_annotation in bboxes_data[u'annotations']:
                 image_id = bbox_annotation[u'image_id']
                 if image_id not in img_bboxes_dataset:
                     img_classes_dataset[image_id] = []
                     img_bboxes_dataset[image_id] = []
 
+                # First, extract the bounding box
                 bbox = bbox_annotation[u'bbox']
                 xmin = int(bbox[0])
                 xmax = int(bbox[0] + bbox[2])
@@ -79,6 +93,7 @@ class Coco(ImageCaptionDatasetBuilder):
                 ymax = int(bbox[1] + bbox[3])
                 trnsltd_bbox = [xmin, ymin, xmax, ymax]
 
+                # Next, extract the ground-truth class of this object
                 category_id = bbox_annotation[u'category_id']
                 class_id = category_id_to_class_id[category_id]
 
