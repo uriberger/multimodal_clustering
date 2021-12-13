@@ -1058,12 +1058,14 @@ class ClusterCounterMetric(Metric):
             self.calc_results()
 
         res = 'Used cluster number: ' + str(self.results['used_cluster_num'])
+        res += ', active token number: ' + str(self.results['active_token_count'])
         return res
 
     def calc_results(self):
         self.results = {}
         used_cluster_indicators = [False] * self.text_model.config.cluster_num
         text_threshold = self.text_model.config.text_threshold
+        active_token_count = 0
 
         for token in self.token_count.keys():
             prediction_res = self.text_model.underlying_model.predict_cluster(token)
@@ -1071,9 +1073,11 @@ class ClusterCounterMetric(Metric):
                 predicted_cluster, prob = prediction_res
                 if prob >= text_threshold:
                     used_cluster_indicators[predicted_cluster] = True
+                    active_token_count += 1
 
         used_cluster_num = len([x for x in used_cluster_indicators if x is True])
         self.results['used_cluster_num'] = used_cluster_num
+        self.results['active_token_count'] = active_token_count
 
     def uses_external_dataset(self):
         return True
