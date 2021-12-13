@@ -1,3 +1,12 @@
+###############################################
+### Unsupervised Multimodal Word Clustering ###
+### as a First Step of Language Acquisition ###
+###############################################
+# Written by Uri Berger, December 2021.
+#
+# COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
+# ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
+
 import os
 from dataset_builders.dataset_builder import datasets_dir
 from dataset_builders.cifar import Cifar10, Cifar100
@@ -6,6 +15,13 @@ from dataset_builders.coco import Coco
 from dataset_builders.flickr30 import Flickr30
 from dataset_builders.pascal_voc import PascalVOC
 from dataset_builders.wiki_scenes import WikiScenes
+
+
+""" This utility creates a dataset builder given the dataset name.
+    A dataset builder is an object that builds a torch.utils.data.Data object (the actual dataset), given the external
+    files of the dataset.
+    The utility assumes the name of the dataset is the name of its root directory.
+"""
 
 
 def create_dataset_builder(dataset_name):
