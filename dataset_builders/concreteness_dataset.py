@@ -1,38 +1,65 @@
+###############################################
+### Unsupervised Multimodal Word Clustering ###
+### as a First Step of Language Acquisition ###
+###############################################
+# Written by Uri Berger, December 2021.
+#
+# COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
+# ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
+
 from utils.general_utils import generate_dataset, for_loop_with_reports
 from dataset_builders.dataset_builder import datasets_dir, cached_dataset_files_dir
 from loggable_object import LoggableObject
 import os
 
+""" The methods in this builds the concreteness dataset.
+    The category dataset maps words to a concreteness value on a scale of 1 to 5, annotated by humans.
+"""
 
-concreteness_dataset_filename = os.path.join(cached_dataset_files_dir, 'concreteness_dataset')
-concreteness_filename = os.path.join(datasets_dir, 'Concreteness_ratings_Brysbaert_et_al_BRM.txt')
+output_filename = os.path.join(cached_dataset_files_dir, 'concreteness_dataset')
+input_filename = os.path.join(datasets_dir, 'Concreteness_ratings_Brysbaert_et_al_BRM.txt')
 
 
 def generate_concreteness_dataset():
-    return generate_dataset(concreteness_dataset_filename,
+    return generate_dataset(output_filename,
                             generate_concreteness_dataset_internal,
-                            concreteness_filename)
+                            input_filename)
 
 
 class ConcretenessCollector(LoggableObject):
+    """ This class parses the file containing the concreteness values and creates the dataset object.
+        The assumed file is the dataset by Brysbaert et al., described in the paper
+        "Concreteness  ratings  for  40  thousand generally known english word lemmas".
+    """
 
     def __init__(self, indent):
         super(ConcretenessCollector, self).__init__(indent)
         self.concreteness_dataset = {}
 
     def collect_line(self, index, line, print_info):
+        """ Each line in the input file is of the following format:
+            <word> <bigram indicator> <concreteness mean> ... (some other not interesting columns)
+            We care about the first three columns: the word, whether it's a bigram, and what is the concreteness of the
+            word.
+        """
+
         if index == 0:
             return
 
         split_line = line.split()
+
+        # The first number in each line is the bigram indicator: find it
         for token in split_line:
             if len(token) > 0 and not token[0].isalpha():
                 break
         bigram_indicator = int(token)
+
         if bigram_indicator == 1:
+            # It's a bigram: the first two tokens are the word
             word = split_line[0] + ' ' + split_line[1]
             concreteness = float(split_line[3])
         else:
+            # It's a unigram: the word is only the first token
             word = split_line[0]
             concreteness = float(split_line[2])
 
@@ -42,11 +69,11 @@ class ConcretenessCollector(LoggableObject):
         self.log_print('Starting line ' + str(index) + ', time from previous checkpoint ' + str(time_from_prev))
 
 
-def generate_concreteness_dataset_internal(dataset_filename):
+def generate_concreteness_dataset_internal(dataset_input_filename):
     print('Generating concreteness dataset...')
 
     collector = ConcretenessCollector(1)
-    concreteness_fp = open(dataset_filename, 'r')
+    concreteness_fp = open(dataset_input_filename, 'r')
     checkpoint_len = 10000
     for_loop_with_reports(concreteness_fp, None, checkpoint_len,
                           collector.collect_line, collector.file_progress_report)

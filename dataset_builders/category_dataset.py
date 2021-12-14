@@ -15,6 +15,8 @@ import yaml
 """ The methods in this builds the category dataset.
     The category dataset maps categories (e.g., 'fruit') to a list of words in these categories (e.g., 'banana',
     'apple').
+    This file assumed the category dataset by Fountain and Lapata, presented in the paper
+    "Meaning representation in natural language categorization".
 """
 
 output_filename = os.path.join(cached_dataset_files_dir, 'fountain_dataset')
