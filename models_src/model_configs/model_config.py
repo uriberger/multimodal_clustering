@@ -8,8 +8,7 @@
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
 class ModelConfig:
-    """ Contains configuration settings for our models.
-    """
+    """ Contains configuration settings for our models. """
     def __init__(self):
         return
 
