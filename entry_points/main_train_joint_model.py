@@ -1,3 +1,12 @@
+###############################################
+### Unsupervised Multimodal Word Clustering ###
+### as a First Step of Language Acquisition ###
+###############################################
+# Written by Uri Berger, December 2021.
+#
+# COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
+# ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
+
 # General
 import os
 from utils.general_utils import log_print, init_entry_point, project_root_dir
@@ -13,7 +22,9 @@ from models_src.model_configs.cluster_model_config import ClusterModelConfig
 from executors.trainers.multimodal_clustering_model_trainer import MultimodalClusteringModelTrainer
 
 
-function_name = 'main_joint_model'
+""" The entry point for training our main model. """
+
+function_name = 'main_train_joint_model'
 timestamp = init_entry_point(True)
 
 model_config = ClusterModelConfig()
