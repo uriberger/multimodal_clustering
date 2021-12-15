@@ -1,3 +1,12 @@
+###############################################
+### Unsupervised Multimodal Word Clustering ###
+### as a First Step of Language Acquisition ###
+###############################################
+# Written by Uri Berger, December 2021.
+#
+# COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
+# ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
+
 import torch
 from utils.visual_utils import pil_image_trans
 from datasets_src.img_captions_dataset.img_captions_dataset import ImageCaptionDataset
@@ -5,14 +14,14 @@ from PIL import Image
 
 
 class SingleImageCaptionDataset(ImageCaptionDataset):
-    """A dataset with image samples and corresponding captions.
-    The dataset is comprised of pairs of captions and images.
-    The captions are stored in the dataset from the beginning, the images are loaded online during the __getitem__
-    function execution. Until they are loaded we only keep the image id, and when we need to load the image- we
-    use the provided get_image_path_func which is expected to provide us the path to the image, given its id.
-    The dataset also provides, optionally, the ground-truth classes of each image, and the ground-truth bounding
-    boxes of each image (these options are specified in the configuration).
-    Finally, the class mapping is a mapping from class indices to class names.
+    """ A dataset with image samples and corresponding captions.
+        The dataset is comprised of pairs of captions and images.
+        The captions are stored in the dataset from the beginning, the images are loaded online during the __getitem__
+        function execution. Until they are loaded we only keep the image id, and when we need to load the image- we
+        use the provided get_image_path_func which is expected to provide us the path to the image, given its id.
+        The dataset also provides, optionally, the ground-truth classes of each image, and the ground-truth bounding
+        boxes of each image (these options are specified in the configuration).
+        Finally, the class mapping is a mapping from class indices to class names.
     """
 
     def __init__(self,
@@ -44,7 +53,7 @@ class SingleImageCaptionDataset(ImageCaptionDataset):
 
         item_caption_data = self.caption_data[idx]
 
-        # Image
+        # Load image
         image_id = item_caption_data['image_id']
         image_obj = Image.open(self.get_image_path_func(image_id, self.config.slice_str))
         orig_image_size = image_obj.size
