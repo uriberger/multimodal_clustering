@@ -135,7 +135,7 @@ class VisualModelWrapper(ClusterModelWrapper):
 
     """ Given an input image tensor, run inference and plot the heatmap for each sample. """
 
-    def plot_heatmap(self, image_tensor, cluster_to_str):
+    def demonstrate_heatmap(self, image_tensor, cluster_to_str):
         activation_maps = self.predict_activation_maps(image_tensor)
         batch_size = len(activation_maps)
 

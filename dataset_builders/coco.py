@@ -16,6 +16,8 @@ from dataset_builders.img_caption_dataset_builder import ImageCaptionDatasetBuil
 class Coco(ImageCaptionDatasetBuilder):
     """ This is the dataset builder class for the MSCOCO dataset, described in the paper
         'Microsoft COCO: Common Objects in Context' by Lin et al.
+        Something weird about COCO: They published 2 splits: train, val, test, but they didn't provide labels for the
+        test split. So we're going to use the val set as a test set, and split the training set to training and val.
     """
 
     def __init__(self, root_dir_path, indent):
@@ -23,7 +25,6 @@ class Coco(ImageCaptionDatasetBuilder):
         self.root_dir_path = root_dir_path
 
         self.train_val_annotations_dir = 'train_val_annotations2014'
-        self.test_annotations_dir = 'test_annotations2014'
 
         self.train_bboxes_filepath_suffix = 'instances_train2014.json'
         self.train_bboxes_filepath = os.path.join(root_dir_path, self.train_val_annotations_dir,
@@ -31,9 +32,6 @@ class Coco(ImageCaptionDatasetBuilder):
         self.val_bboxes_filepath_suffix = 'instances_val2014.json'
         self.val_bboxes_filepath = os.path.join(root_dir_path, self.train_val_annotations_dir,
                                                 self.val_bboxes_filepath_suffix)
-        self.test_bboxes_filepath_suffix = 'image_info_test2014.json'
-        self.test_bboxes_filepath = os.path.join(root_dir_path, self.test_annotations_dir,
-                                                 self.test_bboxes_filepath_suffix)
 
         self.train_captions_filepath_suffix = os.path.join(self.train_val_annotations_dir, 'captions_train2014.json')
         self.train_captions_filepath = os.path.join(root_dir_path, self.train_captions_filepath_suffix)
@@ -42,12 +40,11 @@ class Coco(ImageCaptionDatasetBuilder):
 
         self.train_images_dirpath = os.path.join(root_dir_path, 'train2014')
         self.val_images_dirpath = os.path.join(root_dir_path, 'val2014')
-        self.test_images_dirpath = os.path.join(root_dir_path, 'test2014')
 
     def generate_caption_data_internal(self, slice_str):
         if slice_str == 'train':
             external_caption_filepath = self.train_captions_filepath
-        elif slice_str == 'val':
+        elif slice_str == 'test':
             external_caption_filepath = self.val_captions_filepath
         caption_fp = open(external_caption_filepath, 'r')
         caption_data = json.load(caption_fp)
@@ -68,7 +65,7 @@ class Coco(ImageCaptionDatasetBuilder):
         else:
             if slice_str == 'train':
                 external_bboxes_filepath = self.train_bboxes_filepath
-            elif slice_str == 'val':
+            elif slice_str == 'test':
                 external_bboxes_filepath = self.val_bboxes_filepath
             bboxes_fp = open(external_bboxes_filepath, 'r')
             bboxes_data = json.load(bboxes_fp)
@@ -119,10 +116,8 @@ class Coco(ImageCaptionDatasetBuilder):
         image_filename = 'COCO_' + slice_str + '2014_000000' + '{0:06d}'.format(image_id) + '.jpg'
         if slice_str == 'train':
             images_dirpath = self.train_images_dirpath
-        elif slice_str == 'val':
-            images_dirpath = self.val_images_dirpath
         elif slice_str == 'test':
-            images_dirpath = self.test_images_dirpath
+            images_dirpath = self.val_images_dirpath
         image_path = os.path.join(images_dirpath, image_filename)
 
         return image_path

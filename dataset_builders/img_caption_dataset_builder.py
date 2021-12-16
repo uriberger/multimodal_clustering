@@ -9,6 +9,7 @@
 
 import abc
 import os
+import random
 from utils.general_utils import generate_dataset, for_loop_with_reports
 from utils.text_utils import multiple_word_string
 from utils.visual_utils import get_image_shape_from_id
@@ -25,12 +26,14 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
         super(ImageCaptionDatasetBuilder, self).__init__(indent)
         self.name = name
 
-        self.slices = ['train', 'val']
+        self.slices = ['train', 'test']
         self.file_paths = {}
         for slice_str in self.slices:
             self.file_paths[slice_str] = self.get_filepaths_for_slice(slice_str)
 
-    # Abstract methods
+        self.val_data_file_path = os.path.join(self.cached_dataset_files_dir, self.name + '_val_data')
+
+    # Implemented methods
 
     """ Get the paths of files containing the data, for a specific slice of the dataset. """
 
@@ -43,6 +46,27 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
 
     def generate_caption_data(self, slice_str):
         return generate_dataset(self.file_paths[slice_str]['captions'], self.generate_caption_data_internal, slice_str)
+
+    """ Separate a part of the wanted slice (specified using orig_slice_str) as validation data.
+        ratio_from_orig_slice specifies the side of the validation data. If force_create==True, we'll override existing
+        validation data.
+    """
+
+    def generate_val_data_split(self, orig_slice_str, ratio_from_orig_slice, force_create=False):
+        if force_create and os.path.isfile(self.val_data_file_path):
+            os.remove(self.val_data_file_path)
+        return generate_dataset(self.val_data_file_path, self.generate_val_data_split_internal,
+                                orig_slice_str, ratio_from_orig_slice)
+
+    def generate_val_data_split_internal(self, orig_slice_str, ratio_from_orig_slice):
+        caption_data = self.generate_caption_data(orig_slice_str)
+        orig_slice_size = len(caption_data)
+        val_data_size = int(ratio_from_orig_slice*orig_slice_size)
+
+        val_indices = random.sample(range(orig_slice_size), val_data_size)
+        return val_indices
+
+    # Abstract methods
 
     """ Generate a list of dictionaries that contain image id and a corresponding caption. For example:
         [
@@ -246,11 +270,18 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
 
         class_mapping = self.get_class_mapping()
 
+        # Validation data: if we need only validation data (or anything but the validation data), create a list of
+        # relevant indices
+        val_data_indices = None
+        if config.exclude_val_data or config.only_val_data:
+            val_data_indices = self.generate_val_data_split('train', 0.2)
+
         return \
             SingleImageCaptionDataset(file_paths['captions'],
                                       gt_classes_file_path,
                                       class_mapping,
                                       self.get_image_path,
-                                      config), \
+                                      config,
+                                      val_data_indices), \
             gt_classes_file_path, \
             gt_bboxes_file_path

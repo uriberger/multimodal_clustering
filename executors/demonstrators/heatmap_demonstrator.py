@@ -34,4 +34,4 @@ class HeatmapDemonstrator(Demonstrator):
 
     def demonstrate_item(self, index, sampled_batch, print_info):
         image_tensor = sampled_batch['image']
-        self.visual_model.plot_heatmap(image_tensor, self.cluster_to_gt_class_str)
+        self.visual_model.demonstrate_heatmap(image_tensor, self.cluster_to_gt_class_str)

@@ -24,6 +24,10 @@ class DatasetConfig(LoggableObject):
         lemmatize: Lemmeatize the tokens in the captions
 
         slice_str: Which part of the dataset is it (e.g., train)
+
+        exclude_val_data: If True, we should not include the validation data for this dataset
+
+        only_val_data: If True, we should include only the validation data for this dataset
     """
 
     def __init__(self,
@@ -33,7 +37,9 @@ class DatasetConfig(LoggableObject):
                  include_gt_bboxes=False,
                  use_transformations=False,
                  lemmatize=False,
-                 slice_str='train'
+                 slice_str='train',
+                 exclude_val_data=False,
+                 only_val_data=False
                  ):
         super(DatasetConfig, self).__init__(indent)
 
@@ -42,9 +48,15 @@ class DatasetConfig(LoggableObject):
             self.log_print('Can\'t get simplified captions without including gt_classes info!')
             assert False
 
+        if exclude_val_data and only_val_data:
+            self.log_print('Can\'t exclude validation data but only include validation data!')
+            assert False
+
         self.simplified_captions = simplified_captions
         self.include_gt_classes = include_gt_classes
         self.include_gt_bboxes = include_gt_bboxes
         self.use_transformations = use_transformations
         self.lemmatize = lemmatize
         self.slice_str = slice_str
+        self.exclude_val_data = exclude_val_data
+        self.only_val_data = only_val_data

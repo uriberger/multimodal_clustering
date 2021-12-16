@@ -39,7 +39,7 @@ class ImageCaptionDataset(data.Dataset):
             i += 1
 
         return token_count
-
+    
     """ Get the caption data: A list of dictionaries that contain image id and a corresponding caption. For example:
         [
             {'image_id': 123, 'caption': 'A large dog'},

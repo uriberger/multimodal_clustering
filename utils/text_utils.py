@@ -7,7 +7,6 @@
 # COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
-import torch.nn as nn
 import spacy
 
 """ This file contains functions and definitions related to text used across all the project. """
