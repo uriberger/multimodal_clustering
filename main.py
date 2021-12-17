@@ -10,6 +10,7 @@
 import argparse
 
 from entry_points.main_tune_joint_model_parameters import main_tune_joint_model_parameters
+from entry_points.main_filter_unwanted_coco_images import main_filter_unwanted_coco_images
 
 """ Main entry point. """
 
@@ -25,8 +26,10 @@ write_to_log = args.write_to_log
 
 if utility == 'tune_joint_model_parameters':
     main_tune_joint_model_parameters(write_to_log)
+elif utility == 'filter_unwanted_coco_images':
+    main_filter_unwanted_coco_images(write_to_log)
 else:
     print('Unknown utility: ' + str(utility))
     print('Please choose one of: bbox_demonstration, categorization_evaluation, concreteness_evaluation, ' +
           'heatmap_demonstration, heatmap_evaluation, train_join_model, tune_joint_model_parameters, ' +
-          'two_phase_bbox, visual_model')
+          'two_phase_bbox, visual_model, filter_unwanted_coco_images')
