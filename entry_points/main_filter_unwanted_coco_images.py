@@ -40,5 +40,5 @@ def main_filter_unwanted_coco_images(write_to_log=False):
     log_print(function_name, 0, 'Finished filtering train split')
 
     log_print(function_name, 0, 'Filtering from test split...')
-    dataset_builder.filter_unwanted_images('val')
+    dataset_builder.filter_unwanted_images('test')
     log_print(function_name, 0, 'Finished filtering test split')

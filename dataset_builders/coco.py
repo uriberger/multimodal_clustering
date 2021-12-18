@@ -113,7 +113,11 @@ class Coco(ImageCaptionDatasetBuilder):
         return class_mapping
 
     def get_image_path(self, image_id, slice_str):
-        image_filename = 'COCO_' + slice_str + '2014_000000' + '{0:06d}'.format(image_id) + '.jpg'
+        if slice_str == 'test':
+            coco_slice_name = 'val'
+        else:
+            coco_slice_name = 'train'
+        image_filename = 'COCO_' + coco_slice_name + '2014_000000' + '{0:06d}'.format(image_id) + '.jpg'
         if slice_str == 'train':
             images_dirpath = self.train_images_dirpath
         elif slice_str == 'test':
