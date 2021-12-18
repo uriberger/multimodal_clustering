@@ -1,12 +1,12 @@
 import os
 from xml.dom import minidom
 import torch
-from dataset_builders.dataset_builder import DatasetBuilder
+from dataset_builders.classification_dataset_builder import ClassificationDatasetBuilder
 from datasets_src.img_dataset import ImageDataset
 from utils.general_utils import generate_dataset
 
 
-class PascalVOC(DatasetBuilder):
+class PascalVOC(ClassificationDatasetBuilder):
 
     def __init__(self, root_dir_path, indent):
         super(PascalVOC, self).__init__(indent)
@@ -89,7 +89,7 @@ class PascalVOC(DatasetBuilder):
 
         return image_path
 
-    def build_dataset(self, config):
+    def build_dataset(self, config=None):
         self.generate_image_id_list()
         image_id_list = torch.load(self.image_id_file_path)
 

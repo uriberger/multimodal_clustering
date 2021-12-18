@@ -1,6 +1,6 @@
 from utils.visual_utils import pil_image_trans
 import torchvision.datasets as datasets
-from dataset_builders.dataset_builder import DatasetBuilder
+from dataset_builders.classification_dataset_builder import ClassificationDatasetBuilder
 
 
 class MyImageNet(datasets.ImageNet):
@@ -20,7 +20,7 @@ class MyImageNet(datasets.ImageNet):
         }
 
 
-class ImageNet(DatasetBuilder):
+class ImageNet(ClassificationDatasetBuilder):
 
     def __init__(self, root_dir_path, indent):
         super(ImageNet, self).__init__(indent)
@@ -35,7 +35,7 @@ class ImageNet(DatasetBuilder):
 
         return class_mapping
 
-    def build_dataset(self, config):
+    def build_dataset(self, config=None):
         if config.slice_str not in self.slices:
             self.log_print('No such data slice: ' + str(config.slice_str) +
                            '. Please specify one of ' + str(self.slices))

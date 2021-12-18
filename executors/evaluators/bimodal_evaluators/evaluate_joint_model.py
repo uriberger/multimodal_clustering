@@ -1,6 +1,6 @@
 from executors.evaluators.bimodal_evaluators.bimodal_evaluator import BimodalEvaluator
-from dataset_builders.concreteness_dataset import generate_concreteness_dataset
-from dataset_builders.category_dataset import generate_category_dataset
+from dataset_builders.concreteness_dataset import ConcretenessDatasetBuilder
+from dataset_builders.category_dataset import CategoryDatasetBuilder
 import spacy
 from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
 from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
@@ -18,8 +18,8 @@ class JointModelEvaluator(BimodalEvaluator):
         self.evaluate_bbox = evaluate_bbox
 
         # Load datasets
-        self.concreteness_dataset = generate_concreteness_dataset()
-        self.category_dataset = generate_category_dataset()
+        self.concreteness_dataset = ConcretenessDatasetBuilder(self.indent + 1).build_dataset()
+        self.category_dataset = CategoryDatasetBuilder(self.indent + 1).build_dataset()
         self.token_count = token_count
 
         # Load models

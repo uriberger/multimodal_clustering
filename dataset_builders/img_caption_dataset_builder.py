@@ -16,10 +16,10 @@ from utils.visual_utils import get_image_shape_from_id
 import torch
 from datasets_src.img_captions_dataset.single_img_captions_dataset import SingleImageCaptionDataset
 from datasets_src.img_dataset import ImageDataset
-from dataset_builders.dataset_builder import DatasetBuilder
+from dataset_builders.classification_dataset_builder import ClassificationDatasetBuilder
 
 
-class ImageCaptionDatasetBuilder(DatasetBuilder):
+class ImageCaptionDatasetBuilder(ClassificationDatasetBuilder):
     """ This class is the base class for all external image-caption datasets builders. """
 
     def __init__(self, name, indent):
@@ -248,7 +248,7 @@ class ImageCaptionDatasetBuilder(DatasetBuilder):
 
     # Inherited methods
 
-    def build_dataset(self, config):
+    def build_dataset(self, config=None):
         if config.slice_str not in self.slices:
             self.log_print('No such data slice: ' + str(config.slice_str) +
                            '. Please specify one of ' + str(self.slices))

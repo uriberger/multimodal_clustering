@@ -21,8 +21,8 @@ from metrics import \
     HeatmapMetric
 
 # Datasets
-from dataset_builders.category_dataset import generate_fountain_category_dataset
-from dataset_builders.concreteness_dataset import generate_concreteness_dataset
+from dataset_builders.category_dataset import CategoryDatasetBuilder
+from dataset_builders.concreteness_dataset import ConcretenessDatasetBuilder
 
 # Models
 from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
@@ -57,8 +57,8 @@ class CommonEvaluator(Executor):
         # Metrics
         if metric_list is None:
             # Datasets
-            category_dataset = generate_fountain_category_dataset()
-            concreteness_dataset = generate_concreteness_dataset()
+            category_dataset = CategoryDatasetBuilder(self.indent + 1).build_dataset()
+            concreteness_dataset = ConcretenessDatasetBuilder(self.indent + 1).build_dataset()
 
             self.metrics = [
                 # Default metrics
@@ -79,13 +79,13 @@ class CommonEvaluator(Executor):
         if metric_name == 'heatmap_metric':
             return HeatmapMetric(self.visual_model)
         elif metric_name == 'categorization_include_unknown':
-            category_dataset = generate_fountain_category_dataset()
+            category_dataset = CategoryDatasetBuilder(self.indent + 1).build_dataset()
             return CategorizationMetric(self.text_model, category_dataset, ignore_unknown_words=False)
         elif metric_name == 'categorization_ignore_unknown':
-            category_dataset = generate_fountain_category_dataset()
+            category_dataset = CategoryDatasetBuilder(self.indent + 1).build_dataset()
             return CategorizationMetric(self.text_model, category_dataset, ignore_unknown_words=True)
         elif metric_name == 'concreteness_prediction':
-            concreteness_dataset = generate_concreteness_dataset()
+            concreteness_dataset = ConcretenessDatasetBuilder(self.indent + 1).build_dataset()
             return ConcretenessPredictionMetric(self.text_model, concreteness_dataset, self.token_count)
         elif metric_name == 'visual_prompt_classification':
             return VisualPromptClassificationMetric(self.visual_model, self.text_model, self.class_mapping)

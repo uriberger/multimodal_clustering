@@ -8,22 +8,35 @@
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
 from utils.general_utils import generate_dataset, for_loop_with_reports
-from dataset_builders.dataset_builder import datasets_dir, cached_dataset_files_dir
+from dataset_builders.dataset_builder import DatasetBuilder
 from loggable_object import LoggableObject
 import os
 
-""" The methods in this builds the concreteness dataset.
-    The category dataset maps words to a concreteness value on a scale of 1 to 5, annotated by humans.
-"""
 
-output_filename = os.path.join(cached_dataset_files_dir, 'concreteness_dataset')
-input_filename = os.path.join(datasets_dir, 'Concreteness_ratings_Brysbaert_et_al_BRM.txt')
+class ConcretenessDatasetBuilder(DatasetBuilder):
+    """ This class builds the concreteness dataset.
+        The category dataset maps words to a concreteness value on a scale of 1 to 5, annotated by humans.
+    """
 
+    def __init__(self):
+        self.output_filename = os.path.join(self.cached_dataset_files_dir, 'concreteness_dataset')
+        self.input_filename = os.path.join(self.datasets_dir, 'Concreteness_ratings_Brysbaert_et_al_BRM.txt')
 
-def generate_concreteness_dataset():
-    return generate_dataset(output_filename,
-                            generate_concreteness_dataset_internal,
-                            input_filename)
+    def build_dataset(self, config=None):
+        return generate_dataset(self.output_filename,
+                                self.generate_concreteness_dataset_internal,
+                                self.input_filename)
+
+    def generate_concreteness_dataset_internal(self, dataset_input_filename):
+        self.log_print('Generating concreteness dataset...')
+
+        collector = ConcretenessCollector(self.indnet + 1)
+        concreteness_fp = open(dataset_input_filename, 'r')
+        checkpoint_len = 10000
+        for_loop_with_reports(concreteness_fp, None, checkpoint_len,
+                              collector.collect_line, collector.file_progress_report)
+
+        return collector.concreteness_dataset
 
 
 class ConcretenessCollector(LoggableObject):
@@ -67,15 +80,3 @@ class ConcretenessCollector(LoggableObject):
 
     def file_progress_report(self, index, dataset_size, time_from_prev):
         self.log_print('Starting line ' + str(index) + ', time from previous checkpoint ' + str(time_from_prev))
-
-
-def generate_concreteness_dataset_internal(dataset_input_filename):
-    print('Generating concreteness dataset...')
-
-    collector = ConcretenessCollector(1)
-    concreteness_fp = open(dataset_input_filename, 'r')
-    checkpoint_len = 10000
-    for_loop_with_reports(concreteness_fp, None, checkpoint_len,
-                          collector.collect_line, collector.file_progress_report)
-
-    return collector.concreteness_dataset

@@ -1,5 +1,5 @@
 from utils.general_utils import generate_dataset
-from dataset_builders.dataset_builder import cached_dataset_files_dir
+from dataset_builders.classification_dataset_builder import cached_dataset_files_dir
 import io
 import os
 import numpy as np
