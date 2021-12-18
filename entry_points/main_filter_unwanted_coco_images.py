@@ -35,6 +35,10 @@ def main_filter_unwanted_coco_images(write_to_log=False):
     dataset_builder, _, _ = create_dataset_builder(dataset_name)
     log_print(function_name, 0, 'Datasets generated')
 
-    log_print(function_name, 0, 'Filtering...')
-    dataset_builder.filter_unwanted_images()
-    log_print(function_name, 0, 'Finished filtering')
+    log_print(function_name, 0, 'Filtering from train split...')
+    dataset_builder.filter_unwanted_images('train')
+    log_print(function_name, 0, 'Finished filtering train split')
+
+    log_print(function_name, 0, 'Filtering from test split...')
+    dataset_builder.filter_unwanted_images('val')
+    log_print(function_name, 0, 'Finished filtering test split')

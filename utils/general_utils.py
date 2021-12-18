@@ -24,7 +24,7 @@ log_fp = None
 
 # The root of the project: Since we expect the code to start executing in the 'entry_points' directory, the root is one
 # directory above
-project_root_dir = '..'
+project_root_dir = '.'
 # The name of the directory in which we keep trained models
 models_dir = os.path.join(project_root_dir, 'models')
 # The name of the directory inside a specific model root directory that contains the visual encoder model
