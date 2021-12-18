@@ -10,7 +10,7 @@
 import torch
 from models_src.wrappers.model_wrapper import ModelWrapper
 from models_src.underlying_models.concreteness_supervised_model import ConcretenessSupervisedModel
-from dataset_builders.concreteness_dataset import generate_concreteness_dataset
+from dataset_builders.concreteness_dataset import ConcretenessDatasetBuilder
 
 
 class ConcretenessSupervisedWrapper(ModelWrapper):
@@ -40,7 +40,7 @@ class ConcretenessSupervisedWrapper(ModelWrapper):
     # Current class specific functionality
 
     def train_model(self):
-        training_set = generate_concreteness_dataset()
+        training_set = ConcretenessDatasetBuilder(self.indent + 1).build_dataset()
         self.word_to_conc_pred = self.underlying_model.train(training_set)
 
     def estimate_word_concreteness(self, sentences):

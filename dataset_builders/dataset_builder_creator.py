@@ -8,7 +8,7 @@
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
 import os
-from dataset_builders.dataset_builder import datasets_dir
+from dataset_builders.dataset_builder import DatasetBuilder
 from dataset_builders.cifar import Cifar10, Cifar100
 from dataset_builders.imagenet import ImageNet
 from dataset_builders.coco import Coco
@@ -25,7 +25,7 @@ from dataset_builders.wiki_scenes import WikiScenes
 
 
 def create_dataset_builder(dataset_name):
-    root_dir = os.path.join(datasets_dir, dataset_name)
+    root_dir = os.path.join(DatasetBuilder.get_datasets_dir(), dataset_name)
     if dataset_name == 'cifar-10':
         dataset_generator = Cifar10(root_dir, 1)
         val_slice_str = 'test'

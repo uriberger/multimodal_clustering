@@ -4,10 +4,10 @@ import torch
 from utils.general_utils import generate_dataset
 import pickle
 from datasets_src.matrix_based_img_dataset import MatrixBasedImageDataset
-from dataset_builders.dataset_builder import DatasetBuilder
+from dataset_builders.classification_dataset_builder import ClassificationDatasetBuilder
 
 
-class Cifar(DatasetBuilder):
+class Cifar(ClassificationDatasetBuilder):
 
     def __init__(self, root_dir_path, data_dir_name, name, dict_key_mapping, indent):
         super(Cifar, self).__init__(indent)
@@ -64,7 +64,7 @@ class Cifar(DatasetBuilder):
 
         return class_mapping
 
-    def build_dataset(self, config):
+    def build_dataset(self, config=None):
         if config.slice_str not in self.slices:
             self.log_print('No such data slice: ' + str(config.slice_str) +
                            '. Please specify one of ' + str(self.slices))

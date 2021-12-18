@@ -9,7 +9,7 @@
 
 import numpy as np
 from sklearn.cluster import KMeans
-from dataset_builders.concreteness_dataset import generate_concreteness_dataset
+from dataset_builders.concreteness_dataset import ConcretenessDatasetBuilder
 
 
 class WordCoOccurrenceModel:
@@ -68,7 +68,7 @@ class WordCoOccurrenceModel:
     """
 
     def predict_word_concreteness(self, token_count):
-        concreteness_dataset = generate_concreteness_dataset()
+        concreteness_dataset = ConcretenessDatasetBuilder(1).build_dataset()
         norm_co_oc_mat = (self.co_occurrence_matrix.transpose() /
                           np.linalg.norm(self.co_occurrence_matrix, axis=1)).transpose()
 
