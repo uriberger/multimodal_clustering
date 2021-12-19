@@ -18,7 +18,9 @@ class ConcretenessDatasetBuilder(DatasetBuilder):
         The category dataset maps words to a concreteness value on a scale of 1 to 5, annotated by humans.
     """
 
-    def __init__(self):
+    def __init__(self, indent):
+        super(ConcretenessDatasetBuilder, self).__init__(indent)
+        
         self.output_filename = os.path.join(self.cached_dataset_files_dir, 'concreteness_dataset')
         self.input_filename = os.path.join(self.datasets_dir, 'Concreteness_ratings_Brysbaert_et_al_BRM.txt')
 
@@ -30,7 +32,7 @@ class ConcretenessDatasetBuilder(DatasetBuilder):
     def generate_concreteness_dataset_internal(self, dataset_input_filename):
         self.log_print('Generating concreteness dataset...')
 
-        collector = ConcretenessCollector(self.indnet + 1)
+        collector = ConcretenessCollector(self.indent + 1)
         concreteness_fp = open(dataset_input_filename, 'r')
         checkpoint_len = 10000
         for_loop_with_reports(concreteness_fp, None, checkpoint_len,
