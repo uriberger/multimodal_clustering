@@ -225,7 +225,7 @@ class TextOnlyCountsModelWrapper(TextModelWrapper):
                     self.underlying_model.document_word_occurrence(token)
                     for other_token_ind in range(token_ind + 1, token_num):
                         other_token = cur_input[other_token_ind]
-                        self.underlying_model.document_word_occurrence(token, other_token)
+                        self.underlying_model.document_co_occurrence(token, other_token)
 
     def inference(self, inputs):
         return

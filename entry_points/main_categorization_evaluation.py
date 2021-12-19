@@ -12,6 +12,7 @@ from metrics import CategorizationMetric
 
 # Models
 from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
+from models_src.wrappers.text_model_wrapper import TextOnlyCountsModelWrapper
 
 
 def main_categorization_evaluation(write_to_log):
@@ -24,19 +25,18 @@ def main_categorization_evaluation(write_to_log):
 
     training_set_config = DatasetConfig(1)
     training_set, _, _ = coco_builder.build_dataset(training_set_config)
-    token_count = training_set.get_token_count()
     category_dataset = CategoryDatasetBuilder(1).build_dataset()
     log_print(function_name, 0, 'Datasets generated')
 
     log_print(function_name, 0, 'Testing...')
 
     # model_name = 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100'
-    model_name = 'model'
+    model_name = 'text_only_baseline'
 
     text_model_dir = os.path.join(models_dir, text_dir)
-    model = TextCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
-    # model = TextualSimpleCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
-    metric = CategorizationMetric(model, category_dataset, ignore_unknown_words=True)
+    # model = TextCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+    model = TextOnlyCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+    metric = CategorizationMetric(model, category_dataset, ignore_unknown_words=False)
     log_print(function_name, 1, metric.report())
 
     log_print(function_name, 0, 'Finished testing')

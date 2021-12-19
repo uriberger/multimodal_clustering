@@ -34,6 +34,18 @@ class Trainer(Executor):
     def dump_models(self, suffix=None):
         return
 
+    """ Actions that should be performed at the beginning of training. """
+
+    @abc.abstractmethod
+    def pre_training(self):
+        return
+
+    """ Actions that should be performed at the end of training. """
+
+    @abc.abstractmethod
+    def post_training(self):
+        return
+
     """ Actions that should be performed at the end of each training epoch. """
 
     @abc.abstractmethod
@@ -48,16 +60,6 @@ class Trainer(Executor):
 
     # Implemented methods
 
-    """ Actions that should be performed at the beginning of training. """
-
-    def pre_training(self):
-        self.dump_models()
-
-    """ Actions that should be performed at the end of training. """
-
-    def post_training(self):
-        self.dump_models()
-
     """ Train on the training set; This should be the entry point of this class. """
 
     def train(self):
@@ -68,7 +70,7 @@ class Trainer(Executor):
 
             dataloader = data.DataLoader(self.training_set, batch_size=self.batch_size, shuffle=self.shuffle)
 
-            checkpoint_len = 100
+            checkpoint_len = 1000
             self.increment_indent()
             for_loop_with_reports(dataloader, len(dataloader), checkpoint_len,
                                   self.train_on_batch, self.progress_report)

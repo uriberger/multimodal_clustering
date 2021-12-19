@@ -65,6 +65,16 @@ class MultimodalClusteringModelTrainer(Trainer):
         self.visual_model.dump(suffix)
         self.text_model.dump(suffix)
 
+    """ Actions that should be performed at the beginning of training. """
+
+    def pre_training(self):
+        self.dump_models()
+
+    """ Actions that should be performed at the end of training. """
+
+    def post_training(self):
+        self.dump_models()
+
     """ Actions performed after every epoch: we dump the models, evaluate them, and if they are the best so far, we dump
         again as 'best_model'.
     """
