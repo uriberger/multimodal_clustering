@@ -20,11 +20,6 @@ def main_categorization_evaluation(write_to_log):
     init_entry_point(write_to_log)
 
     log_print(function_name, 0, 'Generating dataset_files...')
-    dataset_name = 'COCO'
-    coco_builder, slice_str, multi_label = create_dataset_builder(dataset_name)
-
-    training_set_config = DatasetConfig(1)
-    training_set, _, _ = coco_builder.build_dataset(training_set_config)
     category_dataset = CategoryDatasetBuilder(1).build_dataset()
     log_print(function_name, 0, 'Datasets generated')
 
