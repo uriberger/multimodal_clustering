@@ -30,7 +30,7 @@ class WordClusterCountModel:
                 p(w|c) is estimated using the word, cluster count N(w,c):
                 p(w|c) = N(w,c) / N(c)
                 P(c) is set to 1/N where N is the number of clusters.
-                p(w) is estimated as the sum of p(w|c1), p(w|c2), ..., p(w|cN).
+                p(w) is estimated as the sum of p(c1)*p(w|c1), p(c2)*p(w|c2), ..., p(cN)*p(w|cN).
             """
             self.cluster_to_word_co_occur = []
             for _ in range(cluster_num):
