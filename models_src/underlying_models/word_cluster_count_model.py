@@ -76,20 +76,20 @@ class WordClusterCountModel:
             self.cluster_prob = [1 / self.cluster_num for _ in range(self.cluster_num)]
 
     def get_cluster_conditioned_on_word(self, word):
-        # First, get p(word|ci) for each cluster ci
-        cluster_to_prob = [self.cluster_to_word_prob[x][word]
+        # First, get p(ci)*p(word|ci) for each cluster ci
+        cluster_to_prob = [self.cluster_prob[x]*self.cluster_to_word_prob[x][word]
                            if word in self.cluster_to_word_prob[x]
                            else 0
                            for x in range(self.cluster_num)]
 
-        # Next, estimate p(word) by summing p(word|ci) for each ci
+        # Next, estimate p(word) by summing p(ci)*p(word|ci) for each ci
         word_prob_sum = sum(cluster_to_prob)
         if word_prob_sum == 0:
             # print('Never encountered word \'' + word + '\'.')
             return None
 
         # Finally, estimate p(c|w) for each cluster
-        p_cluster_cond_word = [(cluster_to_prob[x] * self.cluster_prob[x]) / word_prob_sum
+        p_cluster_cond_word = [(cluster_to_prob[x]) / word_prob_sum
                                for x in range(self.cluster_num)]
 
         return p_cluster_cond_word
