@@ -29,7 +29,7 @@ class CamEvaluator(BimodalEvaluator):
         self.log_print('Evaluating CAM model...')
         dataloader = data.DataLoader(self.test_set, batch_size=1, shuffle=True)
         metric_list = [
-            metrics.BBoxMetric(self.model, self.img_bboxes_val_set),
+            metrics.BBoxPredictionMetric(self.model, self.img_bboxes_val_set),
             metrics.VisualKnownClassesClassificationMetric(self.model)
         ]
         self.run_metrics_on_dataset(metric_list, dataloader)

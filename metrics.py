@@ -1,3 +1,12 @@
+###############################################
+### Unsupervised Multimodal Word Clustering ###
+### as a First Step of Language Acquisition ###
+###############################################
+# Written by Uri Berger, December 2021.
+#
+# COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
+# ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
+
 import abc
 import torch
 from utils.visual_utils import calc_ious, get_resized_gt_bboxes, predict_bboxes_with_activation_maps
@@ -9,7 +18,7 @@ from sklearn.metrics.cluster import v_measure_score
 
 class Metric:
     """ This class represents a metric for evaluating the model.
-    It is given the model and inputs, generates a prediction, compares to
+    It is given the model and inputs, generates a prediction for the specific metric, compares to
     the ground-truth and reports the evaluation of the specific metric. """
 
     def __init__(self, visual_model, text_model):
@@ -49,6 +58,7 @@ class Metric:
 
 
 class SensitivitySpecificityMetric(Metric):
+    """ This class represents metrics with the concepts of true/false positive/negatives. """
 
     def __init__(self, visual_model, text_model):
         super(SensitivitySpecificityMetric, self).__init__(visual_model, text_model)
@@ -110,68 +120,91 @@ class SensitivitySpecificityMetric(Metric):
         return
 
 
-class BBoxPredictionMetric(SensitivitySpecificityMetric):
-    """ This is a class from which the bbox and heatmap metrics will inherit. """
+class CompareToGTBBoxMetric(SensitivitySpecificityMetric):
+    """ This is a base class from which the bbox prediction and heatmap metrics will inherit. """
 
     def __init__(self, visual_model):
-        super(BBoxPredictionMetric, self).__init__(visual_model, None)
+        super(CompareToGTBBoxMetric, self).__init__(visual_model, None)
+
+    """ Make a prediction best on the last inference (the inference is assumed to have been done in the Evaluator class
+        that instantiated this metric)."""
 
     @abc.abstractmethod
-    def map_pred_to_bbox(self, sample_predicted_heatmaps, sample_gt_bboxes):
+    def predict(self):
         return
 
-    @staticmethod
-    def try_matching_pred_to_bbox(final_mapping, pred_ind, bbox_ind, matched_preds, matched_bboxes):
-        if pred_ind not in matched_preds and bbox_ind not in matched_bboxes:
-            final_mapping[pred_ind] = bbox_ind
-            matched_preds[pred_ind] = True
-            matched_bboxes[bbox_ind] = True
+    """ Match predictions to ground-truth boxes according to the specific metric's definition of matching. """
+
+    @abc.abstractmethod
+    def match_pred_to_bbox(self, sample_predicted, sample_gt_bboxes):
+        return
+
+    """ This function is given the prediction to matching bbox dictionary. Each prediction may match multiple bboxes,
+        each bbox may match multiple predictions. For the sake of evaluation, we need to choose not more than one bbox
+        per prediction and vice versa. We call this "the final mapping".
+        We can have multiple prediction-bbox final mappings. We use a heuristic to find the best one:
+        First, we map predictions/bboxes with only one match. Only then we map others. """
+
+    def find_best_pred_bbox_final_mapping(self, pred_to_matching_bbox):
+        final_mapping = {}
+        mapped_preds = {}
+        mapped_bboxes = {}
+        # First search for predictions with a single matching bbox
+        for pred_ind, bbox_index_list in pred_to_matching_bbox.items():
+            if len(bbox_index_list) == 1:
+                self.try_mapping_pred_to_bbox(final_mapping, pred_ind, bbox_index_list[0],
+                                              mapped_preds, mapped_bboxes)
+
+        # Next, search for bboxes with a single matching prediction
+        # - Start by building the reversed dictionary (bbox -> matching pred)
+        bbox_to_matching_pred = self.build_bbox_to_matching_pred(pred_to_matching_bbox,
+                                                                 mapped_preds, mapped_bboxes)
+
+        # - Find bboxes with a single match
+        for bbox_ind, pred_index_list in bbox_to_matching_pred.items():
+            if len(pred_index_list) == 1:
+                self.try_mapping_pred_to_bbox(final_mapping, pred_index_list[0], bbox_ind,
+                                              mapped_preds, mapped_bboxes)
+
+        # Finally, match unmatched
+        # - Update the bbox -> matching pred dict (need to do it since we want to ignore preds and bboxes that were
+        #   already mapped
+        bbox_to_matching_pred = self.build_bbox_to_pred_map(pred_to_matching_bbox,
+                                                            mapped_preds, mapped_bboxes)
+        # - Go over the list and try mapping every bbox to each of matching preds, until one succeeds
+        for bbox_ind, pred_index_list in bbox_to_matching_pred.items():
+            while len(pred_index_list) > 0:
+                self.try_mapping_pred_to_bbox(final_mapping, pred_index_list[0], bbox_ind,
+                                              mapped_preds, mapped_bboxes)
+                pred_index_list = pred_index_list[1:]
+
+        return final_mapping
+
+    """ Check if the provided prediction and gt bbox are not already matched. If they don't, match them. """
 
     @staticmethod
-    def build_bbox_to_pred_map(pred_to_matching_bbox, matched_preds, matched_bboxes):
+    def try_mapping_pred_to_bbox(final_mapping, pred_ind, bbox_ind, mapped_preds, mapped_bboxes):
+        if pred_ind not in mapped_preds and bbox_ind not in mapped_bboxes:
+            final_mapping[pred_ind] = bbox_ind
+            mapped_preds[pred_ind] = True
+            mapped_bboxes[bbox_ind] = True
+
+    """ Given the pred to matching bbox dict, build the reversed dict, ignoring bboxes and preds that were already
+        mapped. """
+
+    @staticmethod
+    def build_bbox_to_matching_pred(pred_to_matching_bbox, mapped_preds, mapped_bboxes):
         bbox_to_matching_pred = {}
 
         for pred_ind, bbox_index_list in pred_to_matching_bbox.items():
-            if pred_ind not in matched_preds:
+            if pred_ind not in mapped_preds:
                 for bbox_ind in bbox_index_list:
-                    if bbox_ind not in matched_bboxes:
+                    if bbox_ind not in mapped_bboxes:
                         if bbox_ind not in bbox_to_matching_pred:
                             bbox_to_matching_pred[bbox_ind] = []
                         bbox_to_matching_pred[bbox_ind].append(pred_ind)
 
         return bbox_to_matching_pred
-
-    def find_best_pred_bbox_matching(self, pred_to_matching_bbox):
-        """ We can have multiple prediction-bbox matching. We use a heuristic to find the best one:
-        First, we match predictions/bboxes with only one mapping. Only then we match others. """
-        final_mapping = {}
-        matched_preds = {}
-        matched_bboxes = {}
-        # First search for heatmaps with a single matching bbox
-        for pred_ind, bbox_index_list in pred_to_matching_bbox.items():
-            if len(bbox_index_list) == 1:
-                self.try_matching_pred_to_bbox(final_mapping, pred_ind, bbox_index_list[0],
-                                               matched_preds, matched_bboxes)
-
-        # Next, search for bboxes with a single matching heatmap
-        bbox_to_matching_heatmap = self.build_bbox_to_pred_map(pred_to_matching_bbox,
-                                                                  matched_preds, matched_bboxes)
-
-        for bbox_ind, heatmap_index_list in bbox_to_matching_heatmap.items():
-            if len(heatmap_index_list) == 1:
-                self.try_matching_pred_to_bbox(final_mapping, heatmap_index_list[0], bbox_ind,
-                                               matched_preds, matched_bboxes)
-
-        # Finally, match unmatched
-        bbox_to_matching_pred = self.build_bbox_to_pred_map(pred_to_matching_bbox,
-                                                            matched_preds, matched_bboxes)
-        for bbox_ind, pred_index_list in bbox_to_matching_pred.items():
-            while len(pred_index_list) > 0:
-                self.try_matching_pred_to_bbox(final_mapping, pred_index_list[0], bbox_ind,
-                                                  matched_preds, matched_bboxes)
-                pred_index_list = pred_index_list[1:]
-
-        return final_mapping
 
     def document(self, orig_image_sizes, predicted_list, gt_bboxes):
         batch_size = len(gt_bboxes)
@@ -182,12 +215,15 @@ class BBoxPredictionMetric(SensitivitySpecificityMetric):
             sample_predicted = predicted_list[sample_ind]
             predicted_num = len(sample_predicted)
 
-            # Map predicted to matching bboxes
-            pred_to_matching_bbox = self.map_pred_to_bbox(sample_predicted, sample_gt_bboxes)
+            # Create prediction to matching bbox dictionary
+            pred_to_matching_bbox = self.match_pred_to_bbox(sample_predicted, sample_gt_bboxes)
 
             # Determine final prediction -> bbox mapping
-            final_mapping = self.find_best_pred_bbox_matching(pred_to_matching_bbox)
+            final_mapping = self.find_best_pred_bbox_final_mapping(pred_to_matching_bbox)
 
+            ''' True/false positive/negative: every mapping we created is considered a true positive by definition
+            (because every mapped pred->bbox were matched before). All the predictions/bbox for which no mapping was
+            found are considered false positive/negative. '''
             tp = len(final_mapping)
             fp = predicted_num - tp
             fn = gt_bbox_num - tp
@@ -196,16 +232,28 @@ class BBoxPredictionMetric(SensitivitySpecificityMetric):
             self.fp += fp
             self.fn += fn
 
+    def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
+        predictions = self.predict()
+        gt_bboxes = visual_metadata['gt_bboxes']
+        orig_image_sizes = visual_metadata['orig_image_size']
+        self.document(orig_image_sizes, predictions, gt_bboxes)
 
-class BBoxMetric(BBoxPredictionMetric):
+    def report(self):
+        return self.report_with_name()
+
+
+class BBoxPredictionMetric(CompareToGTBBoxMetric):
     """ This metric predicts bounding boxes, compares the prediction to the
     ground-truth bounding boxes (using intersection-over-union), and reports
     the results. """
 
     def __init__(self, visual_model):
-        super(BBoxMetric, self).__init__(visual_model)
+        super(BBoxPredictionMetric, self).__init__(visual_model)
 
-    def map_pred_to_bbox(self, sample_predicted_bboxes, sample_gt_bboxes):
+    def match_pred_to_bbox(self, sample_predicted_bboxes, sample_gt_bboxes):
+        """ A predicted bounding box is considered matching a ground-truth bounding box if the Intersection-over-Union
+            (IoU) of the two is larger than 0.5 (a commonly used threshold).
+        """
         gt_bbox_num = len(sample_gt_bboxes)
         sample_gt_bboxes = torch.stack([torch.tensor(x) for x in sample_gt_bboxes])
         if len(sample_predicted_bboxes) > 0:
@@ -220,18 +268,14 @@ class BBoxMetric(BBoxPredictionMetric):
 
         return pred_to_matching_gt
 
-    def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        predicted_bboxes = self.visual_model.predict_bboxes(visual_inputs)
-        gt_bboxes = visual_metadata['gt_bboxes']
-        orig_image_sizes = visual_metadata['orig_image_size']
-        self.document(orig_image_sizes, predicted_bboxes, gt_bboxes)
+    def predict(self):
+        return self.visual_model.predict_bboxes()
+
+    """ Document the metric values without predicting, given the predicted activation maps. """
 
     def document_with_loaded_results(self, orig_image_sizes, activation_maps, gt_bboxes):
         predicted_bboxes = predict_bboxes_with_activation_maps(activation_maps)
         self.document(orig_image_sizes, predicted_bboxes, gt_bboxes)
-
-    def report(self):
-        return self.report_with_name()
 
     def get_name(self):
         return 'bbox prediction'
@@ -240,39 +284,35 @@ class BBoxMetric(BBoxPredictionMetric):
         return True
 
 
-class HeatmapMetric(BBoxPredictionMetric):
-    """ This metric measures whether the center of a predicted heatmap is inside the gt bounding box. """
+class HeatmapMetric(CompareToGTBBoxMetric):
+    """ This metric measures whether the maximum-valued pixel of a predicted heatmap is inside the gt bounding box. """
 
     def __init__(self, visual_model):
         super(HeatmapMetric, self).__init__(visual_model, None)
 
-    def map_pred_to_bbox(self, sample_predicted_heatmaps, sample_gt_bboxes):
+    def match_pred_to_bbox(self, sample_predicted_heatmaps, sample_gt_bboxes):
         gt_bbox_num = len(sample_gt_bboxes)
         heatmap_to_matching_bbox = {}
         for predicted_heatmap_ind in range(len(sample_predicted_heatmaps)):
             heatmap_to_matching_bbox[predicted_heatmap_ind] = []
             predicted_heatmap = sample_predicted_heatmaps[predicted_heatmap_ind]
+
+            # Find the location of the maximum-valued pixel of the heatmap
             max_heatmap_ind = torch.argmax(predicted_heatmap)
             max_heatmap_loc = (torch.div(max_heatmap_ind, predicted_heatmap.shape[1], rounding_mode='floor').item(),
                                max_heatmap_ind % predicted_heatmap.shape[1])
 
             for gt_bbox_ind in range(gt_bbox_num):
                 gt_bbox = sample_gt_bboxes[gt_bbox_ind]
+                # Check if maximum valued pixel is inside the gt bounding box
                 if gt_bbox[0] <= max_heatmap_loc[0] <= gt_bbox[2] and \
                         gt_bbox[1] <= max_heatmap_loc[1] <= gt_bbox[3]:
                     heatmap_to_matching_bbox[predicted_heatmap_ind].append(gt_bbox_ind)
 
         return heatmap_to_matching_bbox
 
-    def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        return # Need to delete this function
-        # predicted_heatmaps = [self.visual_model.get_heatmaps_without_inference()]
-        # gt_bboxes = visual_metadata['gt_bboxes']
-        # orig_image_sizes = visual_metadata['orig_image_size']
-        # self.document(orig_image_sizes, predicted_heatmaps, gt_bboxes)
-
-    def report(self):
-        return self.report_with_name()
+    def predict(self):
+        return self.visual_model.predict_activation_maps()
 
     def get_name(self):
         return 'heatmap prediction'
@@ -283,7 +323,7 @@ class HeatmapMetric(BBoxPredictionMetric):
 
 class NounIdentificationMetric(SensitivitySpecificityMetric):
     """ This metric uses the model to predict if a word is a noun (by asking
-    if it instantiates a cluster). It then compares the prediction to the
+    if it is associated with a cluster). It then compares the prediction to the
     ground-truth (extracted from a pretrained pos tagger) and reports the
     results. """
 
@@ -330,7 +370,7 @@ class NounIdentificationMetric(SensitivitySpecificityMetric):
                     self.tn += 1
 
     def calc_majority_baseline_results(self):
-        # Majority baseline means we always predict noun or always predict non-noun
+        # Majority baseline means we always predict noun or always predict not-noun
         if self.noun_count > self.non_noun_count:
             # Better to always predict noun
             accuracy = self.noun_count / (self.noun_count + self.non_noun_count)
@@ -343,7 +383,7 @@ class NounIdentificationMetric(SensitivitySpecificityMetric):
     def report(self):
         majority_basline_accuracy = self.calc_majority_baseline_results()
         return self.report_with_name() + \
-               ', majority baseline accuracy: ' + self.precision_str % majority_basline_accuracy
+            ', majority baseline accuracy: ' + self.precision_str % majority_basline_accuracy
 
     def get_name(self):
         return 'Noun prediction'
@@ -351,148 +391,83 @@ class NounIdentificationMetric(SensitivitySpecificityMetric):
 
 class ConcretenessPredictionMetric(Metric):
     """ This metric uses a concreteness dataset: a human-annotated dataset
-    that gives every word a number between 1 and 5, representing how
-    concrete is this word. We compare it to our prediction: a word that
-    instantiates a cluster is concrete (5) and is otherwise in-concrete (1).
+        that gives every word a number between 1 and 5, representing how
+        concrete is this word. We compare it to our prediction.
     """
 
-    def __init__(self, text_model, concreteness_dataset, token_count, predicted_concreteness=None):
+    def __init__(self, text_model, concreteness_dataset, token_count):
         super(ConcretenessPredictionMetric, self).__init__(None, text_model)
         self.concreteness_dataset = concreteness_dataset
-        self.estimation_absolute_error_sum = 0
-        self.estimation_absolute_error_sum_for_conc_words = 0
-        self.estimation_absolute_error_sum_for_non_conc_words = 0
         self.prediction_absolute_error_sum = 0
-        self.prediction_absolute_error_sum_for_conc_words = 0
-        self.prediction_absolute_error_sum_for_non_conc_words = 0
         self.tested_words_count = 0
-        self.conc_words_count = 0
-        self.non_conc_words_count = 0
 
-        ''' We want to evaluate concreteness on different sets of words: words that appeared more than once
+        ''' We want to evaluate concreteness prediction on different sets of words: words that appeared more than once
         in the training set, words that appeared more than 5 times in the training set, etc. '''
         self.token_count = token_count
-
-        self.predicted_concreteness = predicted_concreteness
-
         self.min_count_vals = [0, 1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]
         self.min_count_gt_lists = []
         self.min_count_est_lists = []
         self.min_count_pred_lists = []
         for _ in self.min_count_vals:
             self.min_count_gt_lists.append([])
-            self.min_count_est_lists.append([])
             self.min_count_pred_lists.append([])
 
-    def traverse_vocab(self):
+    """ Go over the entire validation set (words that occurred in our training set, i.e. are in token_count, intersected
+        with words that occur in the external concreteness dataset), predict concreteness, and compare to ground-truth.
+    """
+
+    def traverse_validation_set(self):
         for token, count in self.token_count.items():
             if token not in self.concreteness_dataset:
                 continue
 
             self.tested_words_count += 1
             gt_concreteness = self.concreteness_dataset[token]
-            ''' We try both estimations of concreteness (a number between 0 and 1) and predictions of concreteness
-            (a binary result on the estimation, after applying a threshold). '''
-            if self.predicted_concreteness:
-                concreteness_estimation = self.predicted_concreteness[token]
-            else:
-                concreteness_estimation = self.text_model.estimate_word_concreteness([[token]])[0][0]
-            concreteness_prediction = concreteness_estimation >= self.text_model.config.text_threshold
-            estimation_absolute_error = abs(gt_concreteness - concreteness_estimation)
-            prediction_absolute_error = abs(gt_concreteness - concreteness_prediction)
-            self.estimation_absolute_error_sum += estimation_absolute_error
-            self.prediction_absolute_error_sum += prediction_absolute_error
+            concreteness_prediction = self.text_model.estimate_word_concreteness([[token]])[0][0]
 
-            if concreteness_prediction == 1:  # concrete
-                self.conc_words_count += 1
-                self.estimation_absolute_error_sum_for_conc_words += estimation_absolute_error
-                self.prediction_absolute_error_sum_for_conc_words += prediction_absolute_error
-            else:  # Non concrete
-                self.non_conc_words_count += 1
-                self.estimation_absolute_error_sum_for_non_conc_words += estimation_absolute_error
-                self.prediction_absolute_error_sum_for_non_conc_words += prediction_absolute_error
+            prediction_absolute_error = abs(gt_concreteness - concreteness_prediction)
+            self.prediction_absolute_error_sum += prediction_absolute_error
 
             for i in range(len(self.min_count_vals)):
                 val = self.min_count_vals[i]
                 if count > val:
                     self.min_count_gt_lists[i].append(gt_concreteness)
-                    self.min_count_est_lists[i].append(concreteness_estimation)
                     self.min_count_pred_lists[i].append(concreteness_prediction)
 
     def predict_and_document(self, visual_metadata, visual_inputs, text_inputs):
-        return
+        return  # Nothing to do here, this metric uses an external dataset
 
     def calc_results(self):
         self.results = {}
-        self.traverse_vocab()
+        self.traverse_validation_set()
 
-        concreteness_estimation_mae = 0
         concreteness_prediction_mae = 0
         if self.tested_words_count > 0:
-            concreteness_estimation_mae = \
-                self.estimation_absolute_error_sum / self.tested_words_count
             concreteness_prediction_mae = \
                 self.prediction_absolute_error_sum / self.tested_words_count
-        self.results['concreteness estimation mae'] = concreteness_estimation_mae
         self.results['concreteness prediction mae'] = concreteness_prediction_mae
 
-        concreteness_estimation_mae_for_conc = 0
-        concreteness_prediction_mae_for_conc = 0
-        if self.conc_words_count > 0:
-            concreteness_estimation_mae_for_conc = \
-                self.estimation_absolute_error_sum_for_conc_words / self.conc_words_count
-            concreteness_prediction_mae_for_conc = \
-                self.prediction_absolute_error_sum_for_conc_words / self.conc_words_count
-        self.results['concreteness estimation mae for conc'] = concreteness_estimation_mae_for_conc
-        self.results['concreteness prediction mae for conc'] = concreteness_prediction_mae_for_conc
-
-        concreteness_estimation_mae_for_non_conc = 0
-        concreteness_prediction_mae_for_non_conc = 0
-        if self.non_conc_words_count > 0:
-            concreteness_estimation_mae_for_non_conc = \
-                self.estimation_absolute_error_sum_for_non_conc_words / self.non_conc_words_count
-            concreteness_prediction_mae_for_non_conc = \
-                self.prediction_absolute_error_sum_for_non_conc_words / self.non_conc_words_count
-        self.results['concreteness estimation mae for non conc'] = concreteness_estimation_mae_for_non_conc
-        self.results['concreteness prediction mae for non conc'] = concreteness_prediction_mae_for_non_conc
-
         for i in range(len(self.min_count_vals)):
-            gt_and_estimations = np.array([self.min_count_gt_lists[i], self.min_count_est_lists[i]])
             gt_and_predictions = np.array([self.min_count_gt_lists[i], self.min_count_pred_lists[i]])
-            est_pearson_corr = np.corrcoef(gt_and_estimations)[0, 1]
             pred_pearson_corr = np.corrcoef(gt_and_predictions)[0, 1]
-            self.results['concreteness estimation/prediction correlation over ' + str(self.min_count_vals[i])] = \
-                (est_pearson_corr, pred_pearson_corr, len(self.min_count_gt_lists[i]))
+            self.results['prediction correlation over ' + str(self.min_count_vals[i])] = \
+                (pred_pearson_corr, len(self.min_count_gt_lists[i]))
 
     def report(self):
         if self.results is None:
             self.calc_results()
 
         res = ''
-        res += 'Concreteness estimation mean absolute error: ' + \
-               self.precision_str % self.results['concreteness estimation mae'] + ' overall, '
-        res += \
-            self.precision_str % self.results['concreteness estimation mae for conc'] + \
-            ' for concrete-predicted words, '
-        res += \
-            self.precision_str % self.results['concreteness estimation mae for non conc'] + \
-            ' for non-concrete-predicted words, '
         res += 'concreteness prediction mean absolute error: ' + \
-               self.precision_str % self.results['concreteness prediction mae'] + ' overall, '
-        res += \
-            self.precision_str % self.results['concreteness prediction mae for conc'] + \
-            ' for concrete-predicted words, '
-        res += \
-            self.precision_str % self.results['concreteness prediction mae for non conc'] + \
-            ' for non-concrete-predicted words, '
+               self.precision_str % self.results['concreteness prediction mae'] + ', '
 
         res += 'pearson correlation by token count: '
         for val in self.min_count_vals:
             if val != self.min_count_vals[0]:
                 res += ', '
             res += str(val) + ': '
-            cur_result = self.results['concreteness estimation/prediction correlation over ' + str(val)]
-            res += str((self.precision_str % cur_result[0], self.precision_str % cur_result[1], cur_result[2]))
+            cur_result = self.results['concreteness prediction correlation over ' + str(val)]
+            res += str((self.precision_str % cur_result[0], cur_result[1]))
 
         return res
 
@@ -506,7 +481,7 @@ class SentenceImageMatchingMetric(Metric):
     This is performed by predicting the clusters for one image, and for the
     two sentences, and checking the hamming distance of the clusters vector
     predicted according to the image to that predicted according to each
-    sentence. If the hamming distance is lower from the correct sentence,
+    sentence. If the hamming distance is lower for the correct sentence,
     this is considered a correct prediction. """
 
     def __init__(self, visual_model, text_model):
@@ -543,6 +518,10 @@ class SentenceImageMatchingMetric(Metric):
             self.overall_count += 1
 
     def calc_results(self):
+        ''' We have 3 types of results: correct (correct sentence was closer), incorrect (incorrect sentence was
+        closer), neither (both sentence are at the same distance).
+        Accuracy is the percentage of correct results. In extended accuracy "neither" is also considered, so it's the
+        percentage of results that were not incorrect. '''
         self.results = {
             'image sentence alignment accuracy': self.correct_count / self.overall_count,
             'image sentence alignment extended accuracy': 1 - (self.incorrect_count / self.overall_count)

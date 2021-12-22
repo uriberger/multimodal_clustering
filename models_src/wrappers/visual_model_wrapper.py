@@ -105,29 +105,34 @@ class VisualModelWrapper(ClusterModelWrapper):
     def predict_most_probable_clusters(self):
         return torch.max(self.cached_output, dim=1).indices.tolist()
 
-    """ Given an input image tensor, run inference and predict the class activation maps for each of the samples. """
+    """ Given an input image tensor, run inference and predict the class activation maps for each of the samples.
+        If the input image tensor is None, predict on the last image we inferred on. """
 
-    def predict_activation_maps(self, image_tensor):
-        # We need to run inference on each image apart, because the cam extraction demands a single hooked tensor
-        old_cached_output = self.cached_output  # We don't want to change the cache
+    def predict_activation_maps(self, image_tensor=None):
+        if image_tensor is not None:
+            # We need to run inference on each image apart, because the cam extraction demands a single hooked tensor
+            old_cached_output = self.cached_output  # We don't want to change the cache
 
         batch_size = image_tensor.shape[0]
         activation_maps = []
         for sample_ind in range(batch_size):
             activation_maps.append([])
-            self.inference(image_tensor[[sample_ind], :, :, :])
+            if image_tensor is not None:
+                self.inference(image_tensor[[sample_ind], :, :, :])
             predicted_cluster_list = self.predict_cluster_lists()[0]
             for predicted_cluster in predicted_cluster_list:
                 activation_map = self.extract_cam(predicted_cluster)
                 activation_maps[-1].append((predicted_cluster, activation_map))
 
-        self.cached_output = old_cached_output
+        if image_tensor is not None:
+            self.cached_output = old_cached_output
 
         return activation_maps
 
-    """ Given an input image tensor, predict bounding boxes for each of the samples. """
+    """ Given an input image tensor, predict bounding boxes for each of the samples.
+        If the input image tensor is None, predict on the last image we inferred on. """
 
-    def predict_bboxes(self, image_tensor):
+    def predict_bboxes(self, image_tensor=None):
         activation_maps = self.predict_activation_maps(image_tensor)
         predicted_bboxes = predict_bboxes_with_activation_maps(activation_maps)
 

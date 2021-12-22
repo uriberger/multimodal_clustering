@@ -1,7 +1,7 @@
 import torch
 import torch.utils.data as data
 from utils.general_utils import generate_dataset, for_loop_with_reports, visual_dir
-from metrics import BBoxMetric
+from metrics import BBoxPredictionMetric
 from executors.executor import Executor
 import os
 from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
@@ -23,7 +23,7 @@ class TwoPhaseBBoxEvaluator(Executor):
         self.model = VisualModelWrapper(self.device, None, visual_model_dir, indent + 1, model_name)
         self.model.eval()
 
-        self.metric = BBoxMetric(self.model)
+        self.metric = BBoxPredictionMetric(self.model)
         self.recorded_data_path = os.path.join('cached_dataset_files', 'recorded_activation_maps')
         self.recorded_data = []
 

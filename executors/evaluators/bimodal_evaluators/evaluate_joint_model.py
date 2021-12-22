@@ -35,7 +35,7 @@ class JointModelEvaluator(BimodalEvaluator):
         dataloader = data.DataLoader(self.test_set, batch_size=100, shuffle=True)
         metric_list = []
         if self.evaluate_bbox:
-            metric_list.append(metrics.BBoxMetric(self.visual_model))
+            metric_list.append(metrics.BBoxPredictionMetric(self.visual_model))
         metric_list += [
             metrics.NounIdentificationMetric(self.text_model, self.nlp),
             metrics.ConcretenessPredictionMetric(self.text_model, self.concreteness_dataset, self.token_count),
