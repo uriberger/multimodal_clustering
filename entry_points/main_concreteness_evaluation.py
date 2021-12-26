@@ -8,7 +8,7 @@ from dataset_builders.dataset_builder_creator import create_dataset_builder
 from dataset_builders.concreteness_dataset import ConcretenessDatasetBuilder
 
 # Metric
-from metrics import ConcretenessPredictionMetric
+from metrics.concreteness_prediction_metric import ConcretenessPredictionMetric
 
 # Models
 from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper

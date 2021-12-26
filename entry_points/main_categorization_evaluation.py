@@ -3,16 +3,13 @@ import torch
 from utils.general_utils import log_print, models_dir, text_dir, init_entry_point
 
 # Dataset
-from datasets_src.dataset_config import DatasetConfig
-from dataset_builders.dataset_builder_creator import create_dataset_builder
 from dataset_builders.category_dataset import CategoryDatasetBuilder
 
 # Metric
-from metrics import CategorizationMetric
+from metrics.categorization_metric import CategorizationMetric
 
 # Models
-from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
-from models_src.wrappers.text_model_wrapper import TextOnlyCountsModelWrapper
+from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper, TextOnlyCountsModelWrapper
 
 
 def main_categorization_evaluation(write_to_log):

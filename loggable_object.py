@@ -7,6 +7,7 @@
 # COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
+import torch
 from utils.general_utils import log_print
 
 
@@ -17,6 +18,10 @@ class LoggableObject:
 
     def __init__(self, indent):
         self.indent = indent
+        if torch.cuda.is_available():
+            self.device = torch.device('cuda:0')
+        else:
+            self.device = torch.device('cpu')
 
     def increment_indent(self):
         self.indent += 1

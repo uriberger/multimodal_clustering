@@ -108,12 +108,15 @@ class VisualModelWrapper(ClusterModelWrapper):
     """ Given an input image tensor, run inference and predict the class activation maps for each of the samples.
         If the input image tensor is None, predict on the last image we inferred on. """
 
-    def predict_activation_maps(self, image_tensor=None):
+    def predict_activation_maps_with_clusters(self, image_tensor=None):
+        if image_tensor is None:
+            # We'll use the results of the last inference
+            batch_size = len(self.cached_output)
         if image_tensor is not None:
             # We need to run inference on each image apart, because the cam extraction demands a single hooked tensor
             old_cached_output = self.cached_output  # We don't want to change the cache
+            batch_size = image_tensor.shape[0]
 
-        batch_size = image_tensor.shape[0]
         activation_maps = []
         for sample_ind in range(batch_size):
             activation_maps.append([])
@@ -129,11 +132,18 @@ class VisualModelWrapper(ClusterModelWrapper):
 
         return activation_maps
 
+    """ Same as the previous function, but only activation maps, without the predicted clusters. """
+
+    def predict_activation_maps_without_clusters(self, image_tensor=None):
+        activation_maps_with_clusters = self.predict_activation_maps_with_clusters(image_tensor)
+        activation_maps = [[x[1] for x in y] for y in activation_maps_with_clusters]
+        return activation_maps
+
     """ Given an input image tensor, predict bounding boxes for each of the samples.
         If the input image tensor is None, predict on the last image we inferred on. """
 
     def predict_bboxes(self, image_tensor=None):
-        activation_maps = self.predict_activation_maps(image_tensor)
+        activation_maps = self.predict_activation_maps_without_clusters(image_tensor)
         predicted_bboxes = predict_bboxes_with_activation_maps(activation_maps)
 
         return predicted_bboxes
@@ -141,7 +151,7 @@ class VisualModelWrapper(ClusterModelWrapper):
     """ Given an input image tensor, run inference and plot the heatmap for each sample. """
 
     def demonstrate_heatmap(self, image_tensor, cluster_to_str):
-        activation_maps = self.predict_activation_maps(image_tensor)
+        activation_maps = self.predict_activation_maps_with_clusters(image_tensor)
         batch_size = len(activation_maps)
 
         for sample_ind in range(batch_size):

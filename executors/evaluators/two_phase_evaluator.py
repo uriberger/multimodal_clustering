@@ -1,7 +1,8 @@
 import torch
 import torch.utils.data as data
 from utils.general_utils import generate_dataset, for_loop_with_reports, visual_dir
-from metrics import BBoxPredictionMetric
+from metrics.sensitivity_specificity_metrics.compare_to_gt_bbox_metrics.bbox_prediction_metric \
+    import BBoxPredictionMetric
 from executors.executor import Executor
 import os
 from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
@@ -76,7 +77,7 @@ class TwoPhaseBBoxEvaluator(Executor):
         batch_size = image_tensor.shape[0]
         gt_bboxes = visual_metadata['gt_bboxes']
 
-        activation_maps = self.model.predict_activation_maps(image_tensor)
+        activation_maps = self.model.predict_activation_maps_wihtout_clusters(image_tensor)
         activation_maps = [x[1] for x in activation_maps]
         for sample_ind in range(batch_size):
             cur_record = {

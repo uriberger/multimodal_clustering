@@ -7,7 +7,6 @@
 # COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
-import torch
 from utils.general_utils import models_dir
 from loggable_object import LoggableObject
 
@@ -18,11 +17,6 @@ class Executor(LoggableObject):
 
     def __init__(self, indent):
         super(Executor, self).__init__(indent)
-
-        if torch.cuda.is_available():
-            self.device = torch.device('cuda:0')
-        else:
-            self.device = torch.device('cpu')
 
         self.models_dir = models_dir
 

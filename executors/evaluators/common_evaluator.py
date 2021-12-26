@@ -13,12 +13,21 @@ from executors.executor import Executor
 from utils.general_utils import for_loop_with_reports
 
 # Metrics
-from metrics import \
-    CategorizationMetric, \
-    ConcretenessPredictionMetric, \
-    VisualPromptClassificationMetric, \
-    ClusterCounterMetric, \
-    HeatmapMetric
+from metrics.categorization_metric import CategorizationMetric
+from metrics.concreteness_prediction_metric import ConcretenessPredictionMetric
+from metrics.sensitivity_specificity_metrics.visual_classification_metrics.visual_class_name_classification_metric \
+    import VisualClassNameClassificationMetric
+from metrics.cluster_counter_metric import ClusterCounterMetric
+from metrics.sensitivity_specificity_metrics.compare_to_gt_bbox_metrics.heatmap_metric import HeatmapMetric
+
+from metrics.sensitivity_specificity_metrics.visual_classification_metrics.visual_cluster_classification_metric \
+    import VisualClusterClassificationMetric
+from metrics.sensitivity_specificity_metrics.compare_to_gt_bbox_metrics.bbox_prediction_metric \
+    import BBoxPredictionMetric
+from metrics.sensitivity_specificity_metrics.compare_to_gt_bbox_metrics.heatmap_metric import HeatmapMetric
+from metrics.sentence_image_matching_metric import SentenceImageMatchingMetric
+from metrics.sensitivity_specificity_metrics.noun_identification_metric import NounIdentificationMetric
+from utils.text_utils import nlp
 
 # Datasets
 from dataset_builders.category_dataset import CategoryDatasetBuilder
@@ -27,6 +36,7 @@ from dataset_builders.concreteness_dataset import ConcretenessDatasetBuilder
 # Models
 from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
 from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
+from models_src.wrappers.visual_classifier_using_text import ClusterVisualClassifier
 
 
 class CommonEvaluator(Executor):
@@ -54,6 +64,8 @@ class CommonEvaluator(Executor):
         self.text_model = TextCountsModelWrapper(self.device, None, text_model_dir, model_name, indent + 1)
         self.text_model.eval()
 
+        class_num = len([x for x in class_mapping.items() if ' ' not in x[1]])
+
         # Metrics
         if metric_list is None:
             # Datasets
@@ -65,8 +77,17 @@ class CommonEvaluator(Executor):
                 CategorizationMetric(self.text_model, category_dataset, ignore_unknown_words=True),
                 CategorizationMetric(self.text_model, category_dataset, ignore_unknown_words=False),
                 ConcretenessPredictionMetric(self.text_model, concreteness_dataset, token_count),
-                VisualPromptClassificationMetric(self.visual_model, self.text_model, class_mapping),
-                ClusterCounterMetric(self.text_model, token_count)
+                # VisualClassNameClassificationMetric(
+                #     ClusterVisualClassifier(self.visual_model, self.text_model, class_mapping, self.indent+1),
+                #     class_num
+                # ),
+                # BBoxPredictionMetric(self.visual_model),
+                # HeatmapMetric(self.visual_model),
+                ClusterCounterMetric(self.text_model, token_count),
+                # VisualClusterClassificationMetric(self.visual_model, class_num, 'co_occur'),
+                # VisualClusterClassificationMetric(self.visual_model, class_num, 'iou'),
+                # SentenceImageMatchingMetric(self.visual_model, self.text_model),
+                # NounIdentificationMetric(self.text_model, nlp)
             ]
         else:
             self.metrics = [self.metric_name_to_object(x) for x in metric_list]
@@ -88,7 +109,7 @@ class CommonEvaluator(Executor):
             concreteness_dataset = ConcretenessDatasetBuilder(self.indent + 1).build_dataset()
             return ConcretenessPredictionMetric(self.text_model, concreteness_dataset, self.token_count)
         elif metric_name == 'visual_prompt_classification':
-            return VisualPromptClassificationMetric(self.visual_model, self.text_model, self.class_mapping)
+            return VisualClassNameClassificationMetric(self.visual_model, self.text_model, self.class_mapping)
         elif metric_name == 'cluster_counter':
             return ClusterCounterMetric(self.text_model, self.token_count)
         else:

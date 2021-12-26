@@ -15,7 +15,7 @@ import abc
 
 
 class TextModelWrapper(ClusterModelWrapper):
-    """This class wraps the text underlying model.
+    """ This class wraps the text underlying model.
     It contains functionality shared by all text wrappers, different from the visual wrappers in the fact that we need
     to predict clusters for each word first (before we predict for the entire sentences). """
 

@@ -11,6 +11,7 @@ import argparse
 import os
 
 from entry_points.main_tune_joint_model_parameters import main_tune_joint_model_parameters
+from entry_points.main_train_joint_model import main_train_joint_model
 from entry_points.main_filter_unwanted_coco_images import main_filter_unwanted_coco_images
 from entry_points.main_categorization_evaluation import main_categorization_evaluation
 from entry_points.main_concreteness_evaluation import main_concreteness_evaluation
@@ -36,6 +37,8 @@ DatasetBuilder.set_datasets_dir(datasets_dir)
 
 if utility == 'tune_joint_model_parameters':
     main_tune_joint_model_parameters(write_to_log)
+elif utility == 'train_joint_model':
+    main_train_joint_model(write_to_log)
 elif utility == 'filter_unwanted_coco_images':
     main_filter_unwanted_coco_images(write_to_log)
 elif utility == 'categorization_evaluation':
