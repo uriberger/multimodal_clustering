@@ -265,7 +265,7 @@ class TextOnlyCountsModelWrapper(TextModelWrapper):
             res.append([])
             for token in sentence:
                 if token in self.concreteness_prediction:
-                    res[-1].append(self.concretenss_prediction[token])
+                    res[-1].append(self.concreteness_prediction[token])
                 else:
                     # Never seen this token before
                     res[-1].append(0)
