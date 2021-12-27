@@ -277,9 +277,7 @@ class TextOnlyCountsModelWrapper(TextModelWrapper):
 
 
 class TextRandomModelWrapper(TextModelWrapper):
-    """ This class will wrap a text-only co-occurrence model. This differs from TextCountsModelWrapper in the fact
-        that TextCountsModelWrapper receives external supervision (from its visual counterpart), while this model only
-        uses words co-occurrences in the training set sentences. """
+    """ This class is a model that makes random predictions (needed as a baseline). """
 
     def __init__(self, device, config, indent):
         super(TextRandomModelWrapper, self).__init__(device, config, models_dir, 'random', indent)
