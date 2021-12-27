@@ -72,8 +72,8 @@ class Trainer(Executor):
 
             checkpoint_len = 1000
             self.increment_indent()
-            # for_loop_with_reports(dataloader, len(dataloader), checkpoint_len,
-            #                       self.train_on_batch, self.progress_report)
+            for_loop_with_reports(dataloader, len(dataloader), checkpoint_len,
+                                  self.train_on_batch, self.progress_report)
             self.decrement_indent()
 
             self.post_epoch()
