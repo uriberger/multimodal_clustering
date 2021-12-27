@@ -11,7 +11,8 @@ import os
 import csv
 from utils.general_utils import visual_dir, text_dir, default_model_name
 from executors.trainers.trainer import Trainer
-from executors.evaluators.common_evaluator import CommonEvaluator
+# from executors.evaluators.common_text_evaluator import CommonTextEvaluator
+from executors.evaluators.common_visual_evaluator import CommonVisualEvaluator
 from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
 from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 
@@ -180,9 +181,9 @@ class MultimodalClusteringModelTrainer(Trainer):
     """ Run evaluation metric on current model (this function will be called after every epoch). """
 
     def evaluate_current_model(self):
-        evaluator = CommonEvaluator(self.visual_model_dir, self.text_model_dir, self.model_name,
-                                    self.test_data[0], self.test_data[1], self.test_data[2], self.test_data[3],
-                                    self.test_data[4], self.indent + 1)
+        evaluator = CommonVisualEvaluator(self.visual_model_dir, self.text_model_dir, self.model_name,
+                                        self.test_data[0], self.test_data[1], self.test_data[2], self.test_data[3],
+                                        self.test_data[4], self.indent + 1)
         results = evaluator.evaluate()
         self.evaluation_results.append(results)
 

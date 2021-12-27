@@ -6,7 +6,7 @@ from datasets_src.dataset_config import DatasetConfig
 from dataset_builders.dataset_builder_creator import create_dataset_builder
 
 # Evaluator
-from executors.evaluators.common_evaluator import CommonEvaluator
+from executors.evaluators.common_text_evaluator import CommonTextEvaluator
 
 
 function_name = 'main_heatmap_evaluation'
@@ -26,9 +26,9 @@ model_name = 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100'
 
 visual_model_dir = os.path.join(models_dir, visual_dir)
 text_model_dir = os.path.join(models_dir, text_dir)
-evaluator = CommonEvaluator(visual_model_dir, text_model_dir, model_name,
-                            test_set, gt_classes_file_path, gt_bboxes_file_path,
-                            None, None, 1, metric_list=['heatmap_metric'], batch_size=1)
+evaluator = CommonTextEvaluator(visual_model_dir, text_model_dir, model_name,
+                                test_set, gt_classes_file_path, gt_bboxes_file_path,
+                                None, None, 1, metric_list=['heatmap_metric'], batch_size=1)
 evaluator.evaluate()
 
 log_print(function_name, 0, 'Finished testing')

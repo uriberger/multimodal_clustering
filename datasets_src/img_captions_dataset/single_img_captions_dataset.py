@@ -35,7 +35,6 @@ class SingleImageCaptionDataset(ImageCaptionDataset):
         super(SingleImageCaptionDataset, self).__init__(config)
 
         self.caption_data = torch.load(caption_file)
-        self.caption_data = self.caption_data[:50]
 
         if self.config.exclude_val_data:
             val_data_dic = {i: True for i in val_data_indices}

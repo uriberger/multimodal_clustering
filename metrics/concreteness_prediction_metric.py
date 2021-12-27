@@ -28,7 +28,6 @@ class ConcretenessPredictionMetric(Metric):
         self.token_count = token_count
         self.min_count_vals = [0, 1, 5, 10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000]
         self.min_count_gt_lists = []
-        self.min_count_est_lists = []
         self.min_count_pred_lists = []
         for _ in self.min_count_vals:
             self.min_count_gt_lists.append([])

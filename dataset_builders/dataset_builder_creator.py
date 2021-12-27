@@ -40,7 +40,7 @@ def create_dataset_builder(dataset_name):
         multi_label = False
     elif dataset_name == 'COCO':
         dataset_generator = Coco(root_dir, 1)
-        val_slice_str = 'val'
+        val_slice_str = 'test'
         multi_label = True
     elif dataset_name == 'flickr30':
         dataset_generator = Flickr30(root_dir, 1)

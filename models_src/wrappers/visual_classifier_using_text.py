@@ -58,6 +58,7 @@ class ClusterVisualClassifier(VisualClassifierUsingText):
         self.visual_model_wrapper = visual_model_wrapper
         self.text_model_wrapper = text_model_wrapper
         self.initialize()
+        self.cached_output = None
 
     def initialize(self):
         self.cluster_to_gt_class = self.text_model_wrapper.create_cluster_to_gt_class_mapping(self.class_mapping)
@@ -67,7 +68,10 @@ class ClusterVisualClassifier(VisualClassifierUsingText):
         self.cached_output = self.visual_model_wrapper.predict_cluster_lists()
 
     def classify_using_inferred_results(self):
-        predicted_clusters = self.cached_output
+        if self.cached_output is None:
+            predicted_clusters = self.visual_model_wrapper.predict_cluster_lists()
+        else:
+            predicted_clusters = self.cached_output
 
         batch_size = len(predicted_clusters)
         predicted_classes = []
