@@ -8,18 +8,10 @@
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
 # General
-import os
-from utils.general_utils import log_print, init_entry_point, project_root_dir
+from utils.general_utils import log_print, init_entry_point
 
 # Dataset
 from dataset_builders.dataset_builder_creator import create_dataset_builder
-from datasets_src.dataset_config import DatasetConfig
-
-# Model
-from models_src.model_configs.cluster_model_config import ClusterModelConfig
-
-# Executors
-from executors.trainers.multimodal_clustering_model_trainer import MultimodalClusteringModelTrainer
 
 
 """ The entry point for filtering unwanted images from the MSCOCO dataset.

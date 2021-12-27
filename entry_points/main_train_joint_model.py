@@ -47,9 +47,6 @@ def main_train_joint_model(write_to_log):
 
     log_print(function_name, 0, 'Training model...')
     model_root_dir = os.path.join(project_root_dir, timestamp)
-    # trainer = MultimodalClusteringModelTrainer(model_root_dir, training_set, 2, model_config, None, 1)
-    trainer = MultimodalClusteringModelTrainer(model_root_dir, training_set, 2, model_config,
-                                               [test_set, gt_classes_file_path, gt_bboxes_file_path, class_mapping,
-                                                token_count], 1)
+    trainer = MultimodalClusteringModelTrainer(model_root_dir, training_set, 2, model_config, token_count, 1)
     trainer.train()
     log_print(function_name, 0, 'Finished training model')

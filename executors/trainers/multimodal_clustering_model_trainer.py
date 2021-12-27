@@ -11,8 +11,7 @@ import os
 import csv
 from utils.general_utils import visual_dir, text_dir, default_model_name
 from executors.trainers.trainer import Trainer
-# from executors.evaluators.common_text_evaluator import CommonTextEvaluator
-from executors.evaluators.common_visual_evaluator import CommonVisualEvaluator
+from executors.evaluators.common_text_evaluator import CommonTextEvaluator
 from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
 from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 
@@ -20,14 +19,12 @@ from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 class MultimodalClusteringModelTrainer(Trainer):
     """ This class trains the main model studied by our work: a self-supervised multimodal clustering model. """
 
-    def __init__(self, model_root_dir, training_set, epoch_num, config, test_data, indent,
+    def __init__(self, model_root_dir, training_set, epoch_num, config, token_count, indent,
                  loaded_model_dir=None, loaded_model_name=None):
         """
         model_root_dir: The directory in which the trained models, the logs, and the results csv will be saved.
         config: Configuration of the model (ClusterModelConfig object).
-        test_data: The data needed for evaluation of the model during training: The test set, the paths to the
-                    gt classes and gt bboxes files, the class_ind->class name mapping, and the token count in the
-                    training set.
+        token_count: The token count in the training set.
         loaded_model_dir/name: In case we continue training an existing model, this is the directory in which the model
         is located, and its name.
         """
@@ -57,7 +54,7 @@ class MultimodalClusteringModelTrainer(Trainer):
         self.text_loss_history = []
 
         self.prev_checkpoint_batch_ind = 0
-        self.test_data = test_data
+        self.token_count = token_count
         self.evaluation_results = []
 
     # Inherited methods
@@ -83,16 +80,15 @@ class MultimodalClusteringModelTrainer(Trainer):
     def post_epoch(self):
         self.dump_models()
 
-        if self.test_data is not None:
-            self.log_print('Evaluating after finishing the epoch...')
-            # If test data was provided, we evaluate after every epoch
-            self.evaluate_current_model()
+        self.log_print('Evaluating after finishing the epoch...')
+        # If test data was provided, we evaluate after every epoch
+        self.evaluate_current_model()
 
-            # Dump results into a csv file
-            self.dump_results_to_csv()
+        # Dump results into a csv file
+        self.dump_results_to_csv()
 
-            # If this is the best model, save it
-            self.dump_best_model_if_needed()
+        # If this is the best model, save it
+        self.dump_best_model_if_needed()
 
     def train_on_batch(self, index, sampled_batch, print_info):
         # Load data
@@ -181,9 +177,7 @@ class MultimodalClusteringModelTrainer(Trainer):
     """ Run evaluation metric on current model (this function will be called after every epoch). """
 
     def evaluate_current_model(self):
-        evaluator = CommonVisualEvaluator(self.visual_model_dir, self.text_model_dir, self.model_name,
-                                        self.test_data[0], self.test_data[1], self.test_data[2], self.test_data[3],
-                                        self.test_data[4], self.indent + 1)
+        evaluator = CommonTextEvaluator(self.text_model_dir, self.model_name, self.token_count, self.indent + 1)
         results = evaluator.evaluate()
         self.evaluation_results.append(results)
 
