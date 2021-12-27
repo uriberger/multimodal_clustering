@@ -11,6 +11,9 @@ __pycache__
 2021-*
 image_embedder_*
 *evaluation_by_epoch.csv
+slurm-*
+my_script*
+makefile
 
 # Old files that I don't want on git
 fast_rcnn_model.py

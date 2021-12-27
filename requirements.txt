@@ -1,10 +1,10 @@
-clip==0.2.0
+clip==1.0
 matplotlib==3.5.1
-nltk==3.6.5
+nltk==3.6.6
 numpy==1.21.4
 Pillow==8.4.0
 PyYAML==6.0
-scikit_learn==1.0.1
+scikit_learn==1.0.2
 spacy==3.2.1
 torch==1.10.1
 torchcam==0.2.0
