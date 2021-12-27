@@ -9,7 +9,11 @@ from dataset_builders.category_dataset import CategoryDatasetBuilder
 from metrics.categorization_metric import CategorizationMetric
 
 # Models
-from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper, TextOnlyCountsModelWrapper
+from models_src.wrappers.text_model_wrapper import \
+    TextCountsModelWrapper, \
+    TextOnlyCountsModelWrapper, \
+    TextRandomModelWrapper
+from models_src.model_configs.cluster_model_config import ClusterModelConfig
 
 
 def main_categorization_evaluation(write_to_log):
@@ -27,7 +31,8 @@ def main_categorization_evaluation(write_to_log):
 
     text_model_dir = os.path.join(models_dir, text_dir)
     # model = TextCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
-    model = TextOnlyCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+    # model = TextOnlyCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+    model = TextRandomModelWrapper(torch.device('cpu'), ClusterModelConfig(cluster_num=41), 1)
     metric = CategorizationMetric(model, category_dataset, ignore_unknown_words=False)
     log_print(function_name, 1, metric.report())
 

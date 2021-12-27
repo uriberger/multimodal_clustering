@@ -47,7 +47,7 @@ class CategorizationMetric(Metric):
         res += 'purity-collocation F1: ' + \
                self.precision_str % self.results[self.name_prefix_str + '_pu_co_f1'] + ', '
         res += 'FScore: ' + \
-               self.precision_str % self.results[self.name_prefix_str + '_FScore'] + ', '
+               self.precision_str % self.results[self.name_prefix_str + '_FScore']
 
         return res
 

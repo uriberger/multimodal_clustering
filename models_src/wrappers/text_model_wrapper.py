@@ -7,11 +7,16 @@
 # COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
-from models_src.wrappers.cluster_model_wrapper import ClusterModelWrapper
-from models_src.underlying_models.word_co_occurrence_model import WordCoOccurrenceModel
-import torch
-from models_src.underlying_models.word_cluster_count_model import WordClusterCountModel
 import abc
+import random
+import torch
+
+from utils.general_utils import models_dir
+
+from models_src.wrappers.cluster_model_wrapper import ClusterModelWrapper
+
+from models_src.underlying_models.word_co_occurrence_model import WordCoOccurrenceModel
+from models_src.underlying_models.word_cluster_count_model import WordClusterCountModel
 
 
 class TextModelWrapper(ClusterModelWrapper):
@@ -268,4 +273,40 @@ class TextOnlyCountsModelWrapper(TextModelWrapper):
         return res
 
     def predict_cluster_associated_words(self, sentences):
+        return
+
+
+class TextRandomModelWrapper(TextModelWrapper):
+    """ This class will wrap a text-only co-occurrence model. This differs from TextCountsModelWrapper in the fact
+        that TextCountsModelWrapper receives external supervision (from its visual counterpart), while this model only
+        uses words co-occurrences in the training set sentences. """
+
+    def __init__(self, device, config, indent):
+        super(TextRandomModelWrapper, self).__init__(device, config, models_dir, 'random', indent)
+
+    def training_step(self, inputs, labels):
+        return
+
+    def inference(self, inputs):
+        return
+
+    def predict_cluster_for_word(self, word):
+        return random.randrange(self.config.cluster_num), 1
+
+    def predict_clusters_for_word(self, word):
+        return
+
+    def estimate_word_concreteness(self, sentences):
+        return
+
+    def generate_underlying_model(self):
+        return
+
+    def dump_underlying_model(self):
+        return
+
+    def load_underlying_model(self):
+        return
+
+    def eval(self):
         return
