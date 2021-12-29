@@ -11,7 +11,8 @@ from dataset_builders.concreteness_dataset import ConcretenessDatasetBuilder
 from metrics.concreteness_prediction_metric import ConcretenessPredictionMetric
 
 # Models
-from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
+from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper, TextOnlyCountsModelWrapper
+from models_src.wrappers.concreteness_supervised_model_wrapper import ConcretenessSupervisedModelWrapper
 
 
 def main_concreteness_evaluation(write_to_log):
@@ -30,10 +31,15 @@ def main_concreteness_evaluation(write_to_log):
 
     log_print(function_name, 0, 'Testing...')
 
-    model_name = 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100'
+    # model_name = 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100'
+    # model_name = 'text_only_baseline'
+    model_name = 'concreteness_supervised_model_pos_suf_emb'
+    # model_name = 'concreteness_supervised_model_pos_suf'
 
     text_model_dir = os.path.join(models_dir, text_dir)
-    model = TextCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+    # model = TextCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+    # model = TextOnlyCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+    model = ConcretenessSupervisedModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
     metric = ConcretenessPredictionMetric(model, concreteness_dataset, token_count)
     log_print(function_name, 1, metric.report())
 

@@ -14,12 +14,13 @@ import torch
 from utils.general_utils import models_dir
 
 from models_src.wrappers.cluster_model_wrapper import ClusterModelWrapper
+from models_src.wrappers.concreteness_prediction_model_wrapper import ConcretenessPredictionModelWrapper
 
 from models_src.underlying_models.word_co_occurrence_model import WordCoOccurrenceModel
 from models_src.underlying_models.word_cluster_count_model import WordClusterCountModel
 
 
-class TextModelWrapper(ClusterModelWrapper):
+class TextModelWrapper(ClusterModelWrapper, ConcretenessPredictionModelWrapper):
     """ This class wraps the text underlying model.
     It contains functionality shared by all text wrappers, different from the visual wrappers in the fact that we need
     to predict clusters for each word first (before we predict for the entire sentences). """
@@ -43,12 +44,6 @@ class TextModelWrapper(ClusterModelWrapper):
 
     @abc.abstractmethod
     def predict_clusters_for_word(self, word):
-        return
-
-    """ Estimate concreteness for all input tokens. """
-
-    @abc.abstractmethod
-    def estimate_word_concreteness(self, sentences):
         return
 
     # Implemented methods

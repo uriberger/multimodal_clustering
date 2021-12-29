@@ -12,7 +12,7 @@ from nltk.corpus import wordnet as wn
 from nltk.corpus.reader.wordnet import POS_LIST
 import numpy as np
 from sklearn import svm
-from dataset_builders.fast_text import generate_fast_text
+from dataset_builders.fast_text_dataset_builder import FastTextDatasetBuilder
 
 
 class ConcretenessSupervisedModel(LoggableObject):
@@ -121,7 +121,8 @@ class ConcretenessSupervisedModel(LoggableObject):
             self.log_print('Collecting common suffixes...')
             self.find_common_suffixes(training_set)
         if self.use_embeddings:
-            self.fast_text = generate_fast_text({x: True for x in training_set.keys()})
+            self.fast_text = \
+                FastTextDatasetBuilder({x: True for x in training_set.keys()}, self.indent + 1).build_dataset()
 
         X = np.zeros((len(training_set), self.word_vec_dim))
         y = np.zeros(len(training_set))

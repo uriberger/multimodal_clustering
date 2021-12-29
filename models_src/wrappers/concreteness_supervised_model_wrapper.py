@@ -8,16 +8,23 @@
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
 import torch
+
 from models_src.wrappers.model_wrapper import ModelWrapper
+from models_src.wrappers.concreteness_prediction_model_wrapper import ConcretenessPredictionModelWrapper
+
 from models_src.underlying_models.concreteness_supervised_model import ConcretenessSupervisedModel
 from dataset_builders.concreteness_dataset import ConcretenessDatasetBuilder
 
 
-class ConcretenessSupervisedWrapper(ModelWrapper):
+class ConcretenessSupervisedModelWrapper(ModelWrapper, ConcretenessPredictionModelWrapper):
     """ This class wraps the ConcretenessSupervisedModel class. """
 
     def __init__(self, device, config, model_dir, model_name, indent):
-        super(ConcretenessSupervisedWrapper, self).__init__(device, config, model_dir, model_name, indent)
+        super(ConcretenessSupervisedModelWrapper, self).__init__(device, config, model_dir, model_name, indent)
+
+        if config is not None:
+            # This is a new model
+            self.word_to_conc_pred = None
 
     # Abstract methods inherited from ModelWrapper class
 
@@ -32,10 +39,10 @@ class ConcretenessSupervisedWrapper(ModelWrapper):
         )
 
     def dump_underlying_model(self):
-        torch.save(self.underlying_model, self.get_underlying_model_path())
+        torch.save([self.underlying_model, self.word_to_conc_pred], self.get_underlying_model_path())
 
     def load_underlying_model(self):
-        self.underlying_model = torch.load(self.get_underlying_model_path())
+        self.underlying_model, self.word_to_conc_pred = torch.load(self.get_underlying_model_path())
 
     # Current class specific functionality
 
@@ -49,9 +56,9 @@ class ConcretenessSupervisedWrapper(ModelWrapper):
             res.append([])
             for token in sentence:
                 if token in self.word_to_conc_pred:
+                    res[-1].append(self.word_to_conc_pred[token])
+                else:
                     # Never seen this token before
                     res[-1].append(0)
-                else:
-                    res[-1].append(self.word_to_conc_pred[token])
 
         return res

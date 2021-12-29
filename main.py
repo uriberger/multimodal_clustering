@@ -16,6 +16,7 @@ from entry_points.main_filter_unwanted_coco_images import main_filter_unwanted_c
 from entry_points.main_categorization_evaluation import main_categorization_evaluation
 from entry_points.main_concreteness_evaluation import main_concreteness_evaluation
 from entry_points.main_train_text_only_baseline import main_train_text_only_baseline
+from entry_points.main_train_concreteness_supervised_model import main_train_concreteness_supervised_model
 from entry_points.main_visual_evaluation import main_visual_evaluation
 from entry_points.main_text_evaluation import main_text_evaluation
 
@@ -49,6 +50,8 @@ elif utility == 'concreteness_evaluation':
     main_concreteness_evaluation(write_to_log)
 elif utility == 'train_text_only_baseline':
     main_train_text_only_baseline(write_to_log)
+elif utility == 'train_concreteness_supervised_model':
+    main_train_concreteness_supervised_model(write_to_log)
 elif utility == 'visual_evaluation':
     main_visual_evaluation(write_to_log)
 elif utility == 'text_evaluation':
@@ -58,4 +61,4 @@ else:
     print('Please choose one of: bbox_demonstration, categorization_evaluation, concreteness_evaluation, ' +
           'heatmap_demonstration, heatmap_evaluation, train_joint_model, tune_joint_model_parameters, ' +
           'two_phase_bbox, filter_unwanted_coco_images, train_text_only_baseline, visual_evaluation, ' +
-          'text_evaluation')
+          'text_evaluation, train_concreteness_supervised_model')
