@@ -8,55 +8,21 @@
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
 import torch
+import abc
 import torch.utils.data as data
 from executors.executor import Executor
 from utils.general_utils import for_loop_with_reports
 
-# Metrics
-from metrics.sensitivity_specificity_metrics.visual_classification_metrics.visual_class_name_classification_metric \
-    import VisualClassNameClassificationMetric
-from metrics.sensitivity_specificity_metrics.visual_classification_metrics.visual_cluster_classification_metric \
-    import VisualClusterClassificationMetric
-from metrics.sensitivity_specificity_metrics.compare_to_gt_bbox_metrics.bbox_prediction_metric \
-    import BBoxPredictionMetric
-from metrics.sensitivity_specificity_metrics.compare_to_gt_bbox_metrics.heatmap_metric import HeatmapMetric
 
-# Models
-from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
-from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
-from models_src.wrappers.visual_classifier_using_text import ClusterVisualClassifier
+class VisualEvaluator(Executor):
+    """ This evaluator is the base class for all evaluators of visual tasks. """
 
-
-class CommonVisualEvaluator(Executor):
-    """ This evaluator is the most commonly used for visual tasks. """
-
-    def __init__(self, visual_model_dir, text_model_dir, model_name, test_set,
-                 gt_classes_file_path, gt_bboxes_file_path, class_mapping, indent):
+    def __init__(self, test_set, gt_classes_file_path, gt_bboxes_file_path, indent):
         super().__init__(indent)
 
         self.test_set = test_set
         self.gt_classes_data = torch.load(gt_classes_file_path)
         self.gt_bboxes_data = torch.load(gt_bboxes_file_path)
-        self.class_mapping = class_mapping
-
-        # Models
-        self.visual_model = VisualModelWrapper(self.device, None, visual_model_dir, model_name, indent + 1)
-        self.visual_model.eval()
-        self.text_model = TextCountsModelWrapper(self.device, None, text_model_dir, model_name, indent + 1)
-        self.text_model.eval()
-
-        class_num = len([x for x in class_mapping.items() if ' ' not in x[1]])
-
-        self.metrics = [
-            VisualClassNameClassificationMetric(
-                ClusterVisualClassifier(self.visual_model, self.text_model, class_mapping, self.indent+1),
-                class_num
-            ),
-            BBoxPredictionMetric(self.visual_model),
-            HeatmapMetric(self.visual_model),
-            VisualClusterClassificationMetric(self.visual_model, class_num, 'co_occur'),
-            VisualClusterClassificationMetric(self.visual_model, class_num, 'iou')
-        ]
 
     """ The entry point of this class. """
 
@@ -133,7 +99,7 @@ class CommonVisualEvaluator(Executor):
                 filtered_image_tensor = filtered_image_tensor[not_visited_image_ids_indices]
 
             # Infer
-            self.infer(filtered_image_tensor)
+            self.infer(filtered_image_tensor, filtered_visual_metadata)
 
             # Run metric
             metric.predict_and_document(filtered_visual_metadata, filtered_image_tensor, None)
@@ -141,10 +107,11 @@ class CommonVisualEvaluator(Executor):
         for image_id in image_ids:
             self.visited_image_ids[image_id] = True
 
-    """ Run inference on input, using the evaluated models. """
+    """ Run inference on input, using the evaluated model. """
 
-    def infer(self, visual_input):
-        self.visual_model.inference(visual_input)
+    @abc.abstractmethod
+    def infer(self, visual_input, visual_metadata):
+        return
 
     """ Extract the evaluation results that are stored in each metric object to a single table. """
 

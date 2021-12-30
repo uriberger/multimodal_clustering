@@ -77,7 +77,7 @@ class TwoPhaseBBoxEvaluator(Executor):
         batch_size = image_tensor.shape[0]
         gt_bboxes = visual_metadata['gt_bboxes']
 
-        activation_maps = self.model.predict_activation_maps_wihtout_clusters(image_tensor)
+        activation_maps = self.model.predict_activation_maps(image_tensor)
         activation_maps = [x[1] for x in activation_maps]
         for sample_ind in range(batch_size):
             cur_record = {

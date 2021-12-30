@@ -1,7 +1,6 @@
 # General
 import os
 from utils.general_utils import log_print, init_entry_point
-from datetime import datetime
 
 # Dataset
 from dataset_builders.coco import Coco

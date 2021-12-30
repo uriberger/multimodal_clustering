@@ -8,14 +8,17 @@
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
 from models_src.wrappers.cluster_model_wrapper import ClusterModelWrapper
+from models_src.wrappers.activation_map_prediction_model_wrapper import ActivationMapPredictionModelWrapper
+
 import torch
 from torchcam.cams import CAM
 from utils.visual_utils import plot_heatmap, generate_visual_model, unnormalize_trans,\
-    predict_bboxes_with_activation_maps
+    predict_bboxes_with_activation_maps, wanted_image_size
 import matplotlib.pyplot as plt
+import random
 
 
-class VisualModelWrapper(ClusterModelWrapper):
+class VisualModelWrapper(ClusterModelWrapper, ActivationMapPredictionModelWrapper):
     """ This class wraps the visual underlying model.
         Unlike the text model wrapper, there's no specific functionality for the visual wrapper. """
 
@@ -134,16 +137,34 @@ class VisualModelWrapper(ClusterModelWrapper):
 
     """ Same as the previous function, but only activation maps, without the predicted clusters. """
 
-    def predict_activation_maps_without_clusters(self, image_tensor=None):
+    def predict_activation_maps(self, image_tensor=None):
         activation_maps_with_clusters = self.predict_activation_maps_with_clusters(image_tensor)
         activation_maps = [[x[1] for x in y] for y in activation_maps_with_clusters]
         return activation_maps
+
+    """ Predict the center of activation maps of objects in the image. """
+
+    def predict_activation_map_centers(self, image_tensor=None):
+        activation_maps = self.predict_activation_maps(image_tensor)
+        res = []
+        for sample_activation_maps in activation_maps:
+            res.append([])
+            for predicted_activation_map_ind in range(len(sample_activation_maps)):
+                predicted_activation_map = sample_activation_maps[predicted_activation_map_ind]
+
+                # Find the location of the maximum-valued pixel of the activation map
+                max_activation_map_ind = torch.argmax(predicted_activation_map)
+                max_activation_map_loc = (torch.div(max_activation_map_ind, predicted_activation_map.shape[1],
+                                                    rounding_mode='floor').item(),
+                                          max_activation_map_ind % predicted_activation_map.shape[1])
+                res[-1].append(max_activation_map_loc)
+        return res
 
     """ Given an input image tensor, predict bounding boxes for each of the samples.
         If the input image tensor is None, predict on the last image we inferred on. """
 
     def predict_bboxes(self, image_tensor=None):
-        activation_maps = self.predict_activation_maps_without_clusters(image_tensor)
+        activation_maps = self.predict_activation_maps(image_tensor)
         predicted_bboxes = predict_bboxes_with_activation_maps(activation_maps)
 
         return predicted_bboxes
@@ -173,3 +194,30 @@ class VisualModelWrapper(ClusterModelWrapper):
                 plt.tick_params(axis='y', which='both', left=False, right=False, labelleft=False)
 
                 plt.show()
+
+
+class ActivationMapRandomPredictionModelWrapper(ActivationMapPredictionModelWrapper):
+    """ This class is a model that makes random predictions for activation maps (needed as a baseline).
+        Given that there are N labelled objects in the image, we sample N random pixels, for usage in the heatmap
+        metric.
+    """
+
+    def __init__(self):
+        super(ActivationMapRandomPredictionModelWrapper, self).__init__()
+        self.pred_num = []
+
+    """ We need to know how many predictions we should make (e.g. how many objects are there in the image).
+        Note: pred_num is a list of numbers: for each image in the batch, how many objects.
+    """
+
+    def set_prediction_num(self, pred_num):
+        self.pred_num = pred_num
+
+    """ Predict the center of activation maps of objects in the image. """
+
+    def predict_activation_map_centers(self, image_tensor=None):
+        res = []
+        for sample_pred_num in self.pred_num:
+            res.append([(random.randrange(wanted_image_size[0]), random.randrange(wanted_image_size[1]))
+                        for _ in range(sample_pred_num)])
+        return res
