@@ -107,7 +107,7 @@ class CLIPVisualClassifier(VisualClassifierUsingText):
         self.mat_ind_to_class_ind = {i: class_ind_and_embedding[i][0] for i in range(len(class_ind_and_embedding))}
 
     def inference(self, visual_inputs):
-        self.cached_output = self.model.encode_image(visual_inputs)
+        self.cached_output = self.model.encode_image(visual_inputs).float()
 
     def classify_using_inferred_results(self):
         image_features = self.cached_output
