@@ -81,23 +81,22 @@ class VisualEvaluator(Executor):
 
     def calculate_metrics_on_batch(self, visual_metadata, image_tensor):
         image_ids = visual_metadata['image_ids']
-        for metric in self.metrics:
-            # First take all the images, without filtering
-            filtered_visual_metadata = visual_metadata
-            filtered_image_tensor = image_tensor
-            if metric.is_image_only():
-                # In this case, we should filter out visited images
-                not_visited_image_id_to_index = {image_ids[i]: i for i in range(len(image_ids))
-                                                 if image_ids[i] not in self.visited_image_ids}
-                not_visited_image_ids_indices = list(not_visited_image_id_to_index.values())
-                filtered_visual_metadata = {
-                    'image_id': [image_ids[i] for i in not_visited_image_ids_indices],
-                    'orig_image_size': [visual_metadata['orig_image_size'][i] for i in not_visited_image_ids_indices],
-                    'gt_classes': [visual_metadata['gt_classes'][i] for i in not_visited_image_ids_indices],
-                    'gt_bboxes': [visual_metadata['gt_bboxes'][i] for i in not_visited_image_ids_indices]
-                }
-                filtered_image_tensor = filtered_image_tensor[not_visited_image_ids_indices]
+        not_visited_image_id_to_index = {image_ids[i]: i for i in range(len(image_ids))
+                                         if image_ids[i] not in self.visited_image_ids}
+        not_visited_image_ids_indices = list(not_visited_image_id_to_index.values())
+        filtered_visual_metadata = {
+            'image_id': [image_ids[i] for i in not_visited_image_ids_indices],
+            'orig_image_size': [visual_metadata['orig_image_size'][i] for i in not_visited_image_ids_indices],
+            'gt_classes': [visual_metadata['gt_classes'][i] for i in not_visited_image_ids_indices],
+            'gt_bboxes': [visual_metadata['gt_bboxes'][i] for i in not_visited_image_ids_indices]
+        }
+        filtered_image_tensor = image_tensor[not_visited_image_ids_indices]
 
+        batch_size = filtered_image_tensor.shape[0]
+        if batch_size == 0:
+            return
+
+        for metric in self.metrics:
             # Infer
             self.infer(filtered_image_tensor, filtered_visual_metadata)
 

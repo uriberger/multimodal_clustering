@@ -94,7 +94,7 @@ class CLIPVisualClassifier(VisualClassifierUsingText):
         super(CLIPVisualClassifier, self).__init__(class_mapping, indent)
 
         self.positive_threshold = positive_threshold
-        self.model, _ = clip.load('clipRN50', self.device)
+        self.model, _ = clip.load('RN50', self.device)
         self.initialize()
 
     def initialize(self):
@@ -113,7 +113,7 @@ class CLIPVisualClassifier(VisualClassifierUsingText):
         image_features = self.cached_output
 
         batch_size = image_features.shape[0]
-        class_num = image_features.shape[1]
+        class_num = self.class_embedding_mat.shape[0]
 
         norm_image_features = image_features / image_features.norm(dim=-1, keepdim=True)
         similarity_mat = norm_image_features @ self.class_embedding_mat.T
