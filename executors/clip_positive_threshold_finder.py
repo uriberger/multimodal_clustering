@@ -40,25 +40,25 @@ class CLIPPositiveThresholdFinder(Executor):
 
     def find_positive_threshold(self):
         self.log_print('Collecting similarity-ground-truth list...')
-        self.create_sim_gt_count_list()
+        self.create_sim_gt_list()
         self.log_print('Finished collecting similarity-ground-truth list')
 
         self.log_print('Searching for the best threshold...')
-        best_threshold = find_best_threshold(self.sim_gt_count_list, self.indent + 1)
+        best_threshold = find_best_threshold(self.sim_gt_list, self.indent + 1)
         self.log_print('Found the best threshold: ' + str(best_threshold))
 
-    def create_sim_gt_count_list(self):
-        self.sim_gt_count_list = []
+    def create_sim_gt_list(self):
+        self.sim_gt_list = []
 
         dataloader = data.DataLoader(self.training_set, batch_size=50)
 
         checkpoint_len = 100
         self.increment_indent()
         for_loop_with_reports(dataloader, len(dataloader), checkpoint_len,
-                              self.collect_sim_gt_count_from_batch, self.progress_report)
+                              self.collect_sim_gt_from_batch, self.progress_report)
         self.decrement_indent()
 
-    def collect_sim_gt_count_from_batch(self, index, sampled_batch, print_info):
+    def collect_sim_gt_from_batch(self, index, sampled_batch, print_info):
         with torch.no_grad():
             visual_inputs = sampled_batch['image'].to(self.device)
             image_features = self.clip_wrapper.encode_image(visual_inputs)
@@ -73,5 +73,5 @@ class CLIPPositiveThresholdFinder(Executor):
                 gt_class_ind = self.clip_wrapper.mat_ind_to_class_ind[mat_class_ind]
                 for sample_ind in range(batch_size):
                     cur_sim = similarity_mat[sample_ind, mat_class_ind]
-                    gt_count_in_sample = len([x for x in gt_classes[sample_ind] if x == gt_class_ind])
-                    self.sim_gt_count_list.append((cur_sim.item(), gt_count_in_sample))
+                    is_gt_in_sample = gt_class_ind in gt_classes[sample_ind]
+                    self.sim_gt_list.append((cur_sim.item(), is_gt_in_sample))

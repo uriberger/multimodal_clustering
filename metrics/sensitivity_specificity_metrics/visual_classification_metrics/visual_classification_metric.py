@@ -36,43 +36,18 @@ class VisualClassificationMetric(SensitivitySpecificityMetric):
     """
 
     def calculate_sens_spec_metrics(self, predicted_classes, gt_classes):
-        predicted_class_to_count = self.count_class_instances(predicted_classes)
-        gt_class_to_count = self.count_class_instances(gt_classes)
+        unique_predicted_classes = set(predicted_classes)
+        unique_gt_classes = set(gt_classes)
 
-        all_classes = list(set(predicted_classes).union(gt_classes))
-        false_negative_classes = []
+        predicted_num = len(unique_predicted_classes)
+        gt_num = len(unique_gt_classes)
 
-        tp_count = 0
-        fp_count = 0
-        fn_count = 0
-        for class_ind in all_classes:
-            if class_ind in predicted_class_to_count:
-                predicted_class_count = predicted_class_to_count[class_ind]
-            else:
-                predicted_class_count = 0
+        tp_count = len(unique_predicted_classes.intersection(unique_gt_classes))
+        fp_count = predicted_num - tp_count
+        fn_count = gt_num - tp_count
 
-            if class_ind in gt_class_to_count:
-                gt_class_count = gt_class_to_count[class_ind]
-            else:
-                gt_class_count = 0
-
-            # The number of true positives is the minimum between number of predicted instances and number of gt
-            # instances
-            intersection_count = min(predicted_class_count, gt_class_count)
-            tp_count += intersection_count
-
-            if predicted_class_count > gt_class_count:
-                # All predicted occurrences that are not in the ground-truth are false positive
-                fp_count += predicted_class_count - gt_class_count
-            if gt_class_count > predicted_class_count:
-                # All ground-truth occurrences that were not predicted are false negative
-                fn_count += gt_class_count - predicted_class_count
-                false_negative_classes.append(class_ind)
-
-        predicted_classes = list(set(predicted_classes))
-        predicted_num = len(predicted_classes)
         non_predicted_num = self.class_num - predicted_num
-        tn_count = non_predicted_num - len(false_negative_classes)
+        tn_count = non_predicted_num - fn_count
 
         return tp_count, fp_count, fn_count, tn_count
 
