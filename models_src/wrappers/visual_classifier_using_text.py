@@ -115,5 +115,5 @@ class CLIPVisualClassifier(VisualClassifierUsingText):
         class_indicator_lists = [[1 if similarity_mat[sample_ind, mat_class_ind] >= self.positive_threshold else 0
                                   for mat_class_ind in range(class_num)] for sample_ind in range(batch_size)]
 
-        return [[self.mat_ind_to_class_ind[mat_class_ind] for mat_class_ind in range(class_num)
+        return [[self.model.mat_ind_to_class_ind[mat_class_ind] for mat_class_ind in range(class_num)
                  if class_indicator_lists[sample_ind][mat_class_ind]] for sample_ind in range(batch_size)]
