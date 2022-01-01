@@ -1,34 +1,36 @@
+###############################################
+### Unsupervised Multimodal Word Clustering ###
+### as a First Step of Language Acquisition ###
+###############################################
+# Written by Uri Berger, December 2021.
+#
+# COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
+# ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
+
+
 from utils.general_utils import for_loop_with_reports, log_print
 from loggable_object import LoggableObject
 
-""" The purpose of the functions in this file is to find, given a multi-label classification problem, and a model that
+""" The purpose of the functions in this file is to find, given a multi-label classification problem and a model that
 predicts the probability of each class for each sample, what is the best threshold, where classes with probability
 lower than the threshold will be considered as negative, and classes with probability that exceeds the threshold will
 be considered as positive.
 The threshold is chosen to maximize the F1 score.
-The input to the main function is a list of tuples: (probability, ground truth, sample index, class index).
-For example, if sample no. 5 instantiates the "dog" class which is class no. 3, and we predicted that this class is
-instantiated in this sample with probability 0.7, we'll get the tuple (0.7, True, 5, 3).
-The output of the main function is a mapping from sample index to a list of class indices that are instantiated in this
-sample, according to the best threshold we calculated internally. """
+The input to the main function is a list of tuples: (probability, ground truth count).
+For example, if a sample image instantiates the "dog" class 3 times and we predicted that this class is
+instantiated in this sample with probability 0.7, we'll get the tuple (0.7, 3).
+The output of the main function is a the best threshold. """
 
 
-def generate_sample_to_predicted_classes_mapping(prob_gt_list, indent):
-    prob_gt_list.sort(key=lambda x: x[0])
+def find_best_threshold(prob_gt_count_list, indent):
+    prob_gt_count_list.sort(key=lambda x: x[0])
 
-    prob_threshold = choose_probability_threshold(prob_gt_list, indent)
+    prob_threshold = choose_probability_threshold(prob_gt_count_list, indent)
 
-    sample_to_predicted_classes = {}
-    for prob, _, sample_ind, class_ind in prob_gt_list:
-        if sample_ind not in sample_to_predicted_classes:
-            sample_to_predicted_classes[sample_ind] = []
-        if prob >= prob_threshold:
-            sample_to_predicted_classes[sample_ind].append(class_ind)
-
-    return sample_to_predicted_classes
+    return prob_threshold
 
 
-def choose_probability_threshold(prob_gt_list, indent):
+def choose_probability_threshold(prob_gt_count_list, indent):
     """ To choose the best probability threshold, we need to know how many gt and non-gt there are before and after each
     element in the list.
     So, we go over the entire list twice: once to collect how many gt and non-gt there are before each element, and
@@ -36,16 +38,16 @@ def choose_probability_threshold(prob_gt_list, indent):
     One thing we need to remember is that there might be multiple probabilities with the same value in the list. So
     we need to update the count only after the last one with the same value. """
     func_name = 'choose_probability_threshold'
-    prob_num = len(prob_gt_list)
+    prob_num = len(prob_gt_count_list)
 
     # First traverse: collect gt non gt relative to element
     log_print(func_name, indent, 'Starting forward traverse to collect gt non gt count...')
-    forward_collector = GtNonGtCollector(prob_gt_list, False, indent + 1)
+    forward_collector = GtNonGtCollector(prob_gt_count_list, False, indent + 1)
     gt_non_gt_count_before_element = forward_collector.collect()
 
     # Second traverse
     log_print(func_name, indent, 'Starting reverse traverse to collect gt non gt count...')
-    reverse_collector = GtNonGtCollector(prob_gt_list, True, indent + 1)
+    reverse_collector = GtNonGtCollector(prob_gt_count_list, True, indent + 1)
     gt_non_gt_count_after_element = reverse_collector.collect()
 
     # F1 calculation for each threshold
@@ -60,17 +62,17 @@ def choose_probability_threshold(prob_gt_list, indent):
         fn = gt_non_gt_count_before_element[i][0]
         f1 = tp / (tp + 0.5 * (fp + fn))  # This is the definition of F1
         if f1 > best_F1:
-            best_threshold = prob_gt_list[i][0]
+            best_threshold = prob_gt_count_list[i][0]
             best_F1 = f1
 
     return best_threshold
 
 
 class GtNonGtCollector(LoggableObject):
-    def __init__(self, prob_gt_list, reverse, indent):
+    def __init__(self, prob_gt_count_list, reverse, indent):
         super(GtNonGtCollector, self).__init__(indent)
 
-        self.prob_gt_list = prob_gt_list
+        self.prob_gt_count_list = prob_gt_count_list
         self.reverse = reverse
 
         self.gt_non_gt_count_relative_to_element = []
@@ -82,7 +84,7 @@ class GtNonGtCollector(LoggableObject):
         self.prev_prob = 0
 
     def collect(self):
-        prob_num = len(self.prob_gt_list)
+        prob_num = len(self.prob_gt_count_list)
         if self.reverse:
             ind_start = prob_num - 1
             ind_end = -1
@@ -110,7 +112,7 @@ class GtNonGtCollector(LoggableObject):
         return self.gt_non_gt_count_relative_to_element
 
     def collect_inner_loop(self, global_index, index_in_prob_list, print_info):
-        prob, is_gt, _, _ = self.prob_gt_list[index_in_prob_list]
+        prob, gt_count = self.prob_gt_count_list[index_in_prob_list]
         if global_index == 0:
             self.prev_prob = prob
 
@@ -134,8 +136,8 @@ class GtNonGtCollector(LoggableObject):
             self.prev_prob = prob
             self.cur_prob_count = 0
 
-        if is_gt:
-            self.gt_count_from_last_different_prob += 1
+        if gt_count > 0:
+            self.gt_count_from_last_different_prob += gt_count
         else:
             self.non_gt_count_from_last_different_prob += 1
 

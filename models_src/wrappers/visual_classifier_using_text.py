@@ -9,9 +9,9 @@
 
 
 import abc
-import clip
 import torch
 from loggable_object import LoggableObject
+from models_src.wrappers.clip_wrapper import CLIPWrapper
 
 
 class VisualClassifierUsingText(LoggableObject):
@@ -94,34 +94,24 @@ class CLIPVisualClassifier(VisualClassifierUsingText):
         super(CLIPVisualClassifier, self).__init__(class_mapping, indent)
 
         self.positive_threshold = positive_threshold
-        self.model, _ = clip.load('RN50', self.device)
+        self.model = CLIPWrapper(class_mapping, indent + 1)
         self.initialize()
 
     def initialize(self):
-        prompts = {x: 'a photo of a ' + self.class_mapping[x] for x in self.class_mapping.keys()
-                   if ' ' not in self.class_mapping[x]}
-        class_ind_and_embedding = [(x[0], self.model.encode_text(clip.tokenize(x[1]).to(self.device)).float())
-                                   for x in prompts.items()]
-        self.class_embedding_mat = torch.cat([x[1] for x in class_ind_and_embedding])
-        self.class_embedding_mat = self.class_embedding_mat / self.class_embedding_mat.norm(dim=-1, keepdim=True)
-        self.mat_ind_to_class_ind = {i: class_ind_and_embedding[i][0] for i in range(len(class_ind_and_embedding))}
+        self.model.initialize()
 
     def inference(self, visual_inputs):
-        self.cached_output = self.model.encode_image(visual_inputs).float()
+        self.cached_output = self.model.encode_image(visual_inputs)
 
     def classify_using_inferred_results(self):
         image_features = self.cached_output
 
         batch_size = image_features.shape[0]
-        class_num = self.class_embedding_mat.shape[0]
+        class_num = self.model.get_class_num()
 
-        norm_image_features = image_features / image_features.norm(dim=-1, keepdim=True)
-        similarity_mat = norm_image_features @ self.class_embedding_mat.T
+        similarity_mat = self.model.calculate_similarity(image_features)
 
         # Check which image-class similarities exceed the threshold
-        similarity_mat[similarity_mat >= self.positive_threshold] = 1
-        similarity_mat[similarity_mat < self.positive_threshold] = 0
-
         class_indicator_lists = [[1 if similarity_mat[sample_ind, mat_class_ind] >= self.positive_threshold else 0
                                   for mat_class_ind in range(class_num)] for sample_ind in range(batch_size)]
 
