@@ -25,7 +25,7 @@ class ClipClassificationEvaluator(VisualEvaluator):
     def __init__(self, test_set, gt_classes_file_path, gt_bboxes_file_path, class_mapping, indent):
         super().__init__(test_set, gt_classes_file_path, gt_bboxes_file_path, indent)
 
-        self.model = CLIPVisualClassifier(0.190234375, class_mapping, self.indent+1)
+        self.model = CLIPVisualClassifier(0.19031381607055664, class_mapping, self.indent+1)
         class_num = len([x for x in class_mapping.items() if ' ' not in x[1]])
 
         self.metrics = [
