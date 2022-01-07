@@ -33,8 +33,8 @@ class Flickr30(ImageCaptionDatasetBuilder):
         if slice_str == 'train':
             # No training for flickr30k
             return []
-        elif slice_str == 'val':
-            fp = open(self.tokens_file_path)
+        elif slice_str == 'test':
+            fp = open(self.tokens_file_path, encoding='utf-8')
             image_id_captions_pairs = []
             for line in fp:
                 split_line = line.strip().split('#')
@@ -151,7 +151,7 @@ class Flickr30(ImageCaptionDatasetBuilder):
             # Extract annotated sentences from file
             filename = file_names[file_ind]
             filepath = os.path.join(self.sentences_dir_path, filename)
-            fp = open(filepath, 'r')
+            fp = open(filepath, 'r', encoding='utf-8')
             for line in fp:
                 split_by_annotations = line.split('[/EN#')[1:]
                 for line_part in split_by_annotations:

@@ -38,7 +38,6 @@ def main_train_joint_model(write_to_log):
 
     training_set_config = DatasetConfig(1)
     training_set, _, _ = dataset_builder.build_dataset(training_set_config)
-    class_mapping = dataset_builder.get_class_mapping()
     token_count = training_set.get_token_count()
 
     test_set_config = DatasetConfig(1, slice_str='test', include_gt_classes=True, include_gt_bboxes=True)
