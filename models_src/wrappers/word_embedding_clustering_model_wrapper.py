@@ -27,9 +27,9 @@ class WordEmbeddingClusteringModelWrapper(WordClusteringModelWrapper):
     def __init__(self, device, word_list):
         self.device = device
         self.model = self.init_model()
-        self.word_to_cluster_list = self.create_word_to_cluster_list(word_list)
+        self.word_to_cluster = self.create_word_to_cluster(word_list)
 
-    def create_word_to_cluster_list(self, word_list):
+    def create_word_to_cluster(self, word_list):
         mat_list = [self.embedding_func(x) for x in word_list]
         mat = np.concatenate(mat_list, axis=1)
         kmeans = KMeans(n_clusters=41).fit(mat.transpose())
@@ -45,7 +45,7 @@ class WordEmbeddingClusteringModelWrapper(WordClusteringModelWrapper):
         return
 
     def predict_cluster_for_word(self, word):
-        return self.word_to_cluster_list[word], 1
+        return self.word_to_cluster[word], 1
     
     
 class W2VClusteringWrapper(WordEmbeddingClusteringModelWrapper):
