@@ -13,12 +13,12 @@ import torch
 import torch.nn as nn
 
 
-class ClusterModelWrapper(ModelWrapper):
-    """ This is the base class for cluster model wrappers.
+class BimodalClusterModelWrapper(ModelWrapper):
+    """ This is the base class for bimodal cluster model wrappers.
         The visual wrapper and text wrapper will inherit from this class. """
 
     def __init__(self, device, config, model_dir, model_name, indent):
-        super(ClusterModelWrapper, self).__init__(device, config, model_dir, model_name, indent)
+        super(BimodalClusterModelWrapper, self).__init__(device, config, model_dir, model_name, indent)
         self.cached_output = None
         self.criterion = nn.BCEWithLogitsLoss()
         self.cached_loss = None

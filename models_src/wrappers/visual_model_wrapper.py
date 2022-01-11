@@ -7,8 +7,9 @@
 # COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
-from models_src.wrappers.cluster_model_wrapper import ClusterModelWrapper
+from models_src.wrappers.bimodal_cluster_model_wrapper import BimodalClusterModelWrapper
 from models_src.wrappers.activation_map_prediction_model_wrapper import ActivationMapPredictionModelWrapper
+from models_src.wrappers.bbox_prediction_model_wrapper import BBoxPredictionModelWrapper
 
 import torch
 from torchcam.cams import CAM
@@ -18,7 +19,7 @@ import matplotlib.pyplot as plt
 import random
 
 
-class VisualModelWrapper(ClusterModelWrapper, ActivationMapPredictionModelWrapper):
+class VisualModelWrapper(BimodalClusterModelWrapper, ActivationMapPredictionModelWrapper, BBoxPredictionModelWrapper):
     """ This class wraps the visual underlying model.
         Unlike the text model wrapper, there's no specific functionality for the visual wrapper. """
 
@@ -196,7 +197,20 @@ class VisualModelWrapper(ClusterModelWrapper, ActivationMapPredictionModelWrappe
                 plt.show()
 
 
-class ActivationMapRandomPredictionModelWrapper(ActivationMapPredictionModelWrapper):
+class RandomPredictor:
+    """ This is a base class for random predictors. We need to know how many predictions we should make (e.g. how many
+        objects are there in the image).
+        Note: pred_num is a list of numbers: for each image in the batch, how many objects.
+    """
+
+    def __init__(self):
+        self.pred_num = []
+
+    def set_prediction_num(self, pred_num):
+        self.pred_num = pred_num
+
+
+class ActivationMapRandomPredictionModelWrapper(ActivationMapPredictionModelWrapper, RandomPredictor):
     """ This class is a model that makes random predictions for activation maps (needed as a baseline).
         Given that there are N labelled objects in the image, we sample N random pixels, for usage in the heatmap
         metric.
@@ -204,14 +218,6 @@ class ActivationMapRandomPredictionModelWrapper(ActivationMapPredictionModelWrap
 
     def __init__(self):
         super(ActivationMapRandomPredictionModelWrapper, self).__init__()
-        self.pred_num = []
-
-    """ We need to know how many predictions we should make (e.g. how many objects are there in the image).
-        Note: pred_num is a list of numbers: for each image in the batch, how many objects.
-    """
-
-    def set_prediction_num(self, pred_num):
-        self.pred_num = pred_num
 
     """ Predict the center of activation maps of objects in the image. """
 
@@ -220,4 +226,31 @@ class ActivationMapRandomPredictionModelWrapper(ActivationMapPredictionModelWrap
         for sample_pred_num in self.pred_num:
             res.append([(random.randrange(wanted_image_size[0]), random.randrange(wanted_image_size[1]))
                         for _ in range(sample_pred_num)])
+        return res
+
+
+class BBoxRandomPredictionModelWrapper(BBoxPredictionModelWrapper, RandomPredictor):
+    """ This class is a model that makes random predictions for bounding boxes (needed as a baseline).
+        Given that there are N labelled objects in the image, we sample N lists of 4 random pixels, for usage in the
+        bbox prediction metric.
+    """
+
+    def __init__(self):
+        super(BBoxRandomPredictionModelWrapper, self).__init__()
+
+    """ Predict random bounding boxes. """
+
+    def predict_bboxes(self, image_tensor=None):
+        res = []
+        for sample_pred_num in self.pred_num:
+            rows = [(random.randrange(wanted_image_size[0]), random.randrange(wanted_image_size[0]))
+                    for _ in range(sample_pred_num)]
+            start_rows = [min(x) for x in rows]
+            end_rows = [max(x) for x in rows]
+            cols = [(random.randrange(wanted_image_size[1]), random.randrange(wanted_image_size[1]))
+                    for _ in range(sample_pred_num)]
+            start_cols = [min(x) for x in cols]
+            end_cols = [max(x) for x in cols]
+            res.append([[start_rows[i], start_cols[i], end_rows[i], end_cols[i]]
+                        for i in range(sample_pred_num)])
         return res

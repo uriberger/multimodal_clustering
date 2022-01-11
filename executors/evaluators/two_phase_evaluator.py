@@ -1,31 +1,40 @@
+###############################################
+### Unsupervised Multimodal Word Clustering ###
+### as a First Step of Language Acquisition ###
+###############################################
+# Written by Uri Berger, December 2021.
+#
+# COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
+# ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
+
 import torch
 import torch.utils.data as data
-from utils.general_utils import generate_dataset, for_loop_with_reports, visual_dir
+import os
+
+from utils.general_utils import generate_dataset, for_loop_with_reports
 from metrics.sensitivity_specificity_metrics.compare_to_gt_bbox_metrics.bbox_prediction_metric \
     import BBoxPredictionMetric
 from executors.executor import Executor
-import os
 from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
+from dataset_builders.dataset_builder import DatasetBuilder
 
 
 class TwoPhaseBBoxEvaluator(Executor):
-    """ This is like the normal evaluator, but here there are two separated phases:
+    """ This is like the normal visual evaluator, but here there are two separated phases:
     First, we run inference on all samples, and then we calculate the metrics. """
 
-    def __init__(self, test_set, gt_bboxes_file, indent, model_name):
+    def __init__(self, visual_model_dir, model_name, test_set, gt_bboxes_file_path, indent):
         super().__init__(indent)
 
         self.test_set = test_set
-        self.gt_bboxes_data = torch.load(gt_bboxes_file)
+        self.gt_bboxes_data = torch.load(gt_bboxes_file_path)
 
-        # Load models
-        visual_model_dir = os.path.join(self.models_dir, visual_dir)
-
-        self.model = VisualModelWrapper(self.device, None, visual_model_dir, indent + 1, model_name)
-        self.model.eval()
+        # Load model
+        self.visual_model = VisualModelWrapper(self.device, None, visual_model_dir, model_name, indent + 1)
+        self.visual_model.eval()
 
         self.metric = BBoxPredictionMetric(self.model)
-        self.recorded_data_path = os.path.join('cached_dataset_files', 'recorded_activation_maps')
+        self.recorded_data_path = os.path.join(DatasetBuilder.cached_dataset_files_dir, 'recorded_activation_maps')
         self.recorded_data = []
 
     def evaluate(self):
@@ -40,8 +49,8 @@ class TwoPhaseBBoxEvaluator(Executor):
 
     def run_inference_on_dataset(self):
         self.log_print('Running inference on entire dataset')
-        dataloader = data.DataLoader(self.test_set, batch_size=100, shuffle=True)
-        checkpoint_len = 10
+        dataloader = data.DataLoader(self.test_set, batch_size=1, shuffle=True)
+        checkpoint_len = 1000
         self.increment_indent()
         for_loop_with_reports(dataloader, len(dataloader), checkpoint_len,
                               self.run_inference_on_batch, self.progress_report)

@@ -9,7 +9,6 @@
 
 
 import abc
-import torch
 from loggable_object import LoggableObject
 from models_src.wrappers.clip_wrapper import CLIPWrapper
 

@@ -13,12 +13,10 @@ from executors.executor import Executor
 from metrics.categorization_metric import CategorizationMetric
 from metrics.concreteness_prediction_metric import ConcretenessPredictionMetric
 from metrics.cluster_counter_metric import ClusterCounterMetric
-# from metrics.word_similarity_metric import WordSimilarityMetric
 
 # Datasets
 from dataset_builders.category_dataset import CategoryDatasetBuilder
 from dataset_builders.concreteness_dataset import ConcretenessDatasetBuilder
-from dataset_builders.word_similarity_dataset import WordSimDatasetBuilder
 
 # Models
 from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper

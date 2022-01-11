@@ -14,13 +14,14 @@ from datasets_src.dataset_config import DatasetConfig
 from dataset_builders.dataset_builder_creator import create_dataset_builder
 
 # Executors
-from executors.evaluators.visual_evaluators.random_bbox_evaluators.random_heatmap_evaluator import RandomHeatmapEvaluator
+from executors.evaluators.visual_evaluators.random_bbox_evaluators.random_bbox_prediction_evaluator \
+    import RandomBBoxPredictionEvaluator
 
-""" This entry point evaluates the heatmap metric using random guesses. """
+""" This entry point evaluates the bbox prediction metric using random guesses. """
 
 
-def main_random_heatmap_evaluation(write_to_log):
-    function_name = 'main_random_heatmap_evaluation'
+def main_random_bbox_prediction_evaluation(write_to_log):
+    function_name = 'main_random_bbox_prediction_evaluation'
     init_entry_point(write_to_log)
 
     log_print(function_name, 0, 'Generating dataset_files...')
@@ -33,6 +34,6 @@ def main_random_heatmap_evaluation(write_to_log):
 
     log_print(function_name, 0, 'Testing...')
 
-    evaluator = RandomHeatmapEvaluator(test_set, gt_classes_file_path, gt_bboxes_file_path, 1)
+    evaluator = RandomBBoxPredictionEvaluator(test_set, gt_classes_file_path, gt_bboxes_file_path, 1)
     evaluator.evaluate()
     log_print(function_name, 0, 'Finished testing')
