@@ -20,7 +20,9 @@ import clip
 
 
 class WordEmbeddingClusteringModelWrapper(WordClusteringModelWrapper):
-    """ This is the base class for models for word clustering. """
+    """ This is the base class for models for word clustering.
+        This class use models that create word embeddings, and cluster these embeddings using kmeans.
+    """
 
     def __init__(self, device, word_list):
         self.device = device
@@ -47,7 +49,9 @@ class WordEmbeddingClusteringModelWrapper(WordClusteringModelWrapper):
     
     
 class W2VClusteringWrapper(WordEmbeddingClusteringModelWrapper):
-    """ This class use word embedding from word2vec presented in the paper... """
+    """ This class use word embedding from word2vec presented in the paper "Efficient estimation of word representations
+        in vector space" by Mikolov et al.
+    """
     
     def __init__(self, device, word_list):
         super(W2VClusteringWrapper, self).__init__(device, word_list)
@@ -60,7 +64,8 @@ class W2VClusteringWrapper(WordEmbeddingClusteringModelWrapper):
 
 
 class BERTClusteringWrapper(WordEmbeddingClusteringModelWrapper):
-    """ This class use word embedding from BERT presented in the paper... """
+    """ This class use word embedding from BERT presented in the paper "Bert: Pre-training of deep bidirectional
+        transformers for language understand" by Devlin et al. """
 
     def __init__(self, device, word_list):
         super(BERTClusteringWrapper, self).__init__(device, word_list)
@@ -105,7 +110,8 @@ class BERTClusteringWrapper(WordEmbeddingClusteringModelWrapper):
 
 
 class CLIPClusteringWrapper(WordEmbeddingClusteringModelWrapper):
-    """ This class use word embedding from CLIP presented in the paper... """
+    """ This class use word embedding from CLIP presented in the paper "Learning Transferable Visual Models From Natural
+        Language Supervision" By Radford et al. """
 
     def __init__(self, device, word_list):
         super(CLIPClusteringWrapper, self).__init__(device, word_list)
