@@ -8,9 +8,11 @@
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
 import torch.utils.data as data
+import gensim.downloader as api
 from executors.trainers.trainer import Trainer
 from models_src.wrappers.text_model_wrapper import TextOnlyCountsModelWrapper
 from utils.general_utils import default_model_name, for_loop_with_reports
+from dataset_builders.category_dataset import CategoryDatasetBuilder
 
 
 class TextOnlyModelTrainer(Trainer):
@@ -46,12 +48,19 @@ class TextOnlyModelTrainer(Trainer):
         self.model.stop_building_vocab()
 
     def post_training(self):
+        token_count = self.training_set.get_token_count()
+
         # Create cluster prediction
+        # First create word list
+        w2v_model = api.load("word2vec-google-news-300")
+        category_dataset = CategoryDatasetBuilder(self.indent + 1).build_dataset()
+        word_list = [x for outer in category_dataset.values() for x in outer
+                     if x in token_count and x in w2v_model.key_to_index]
+
         cluster_num = self.model.config.cluster_num
-        self.model.word_to_cluster = self.model.underlying_model.categorize_words(cluster_num)
+        self.model.word_to_cluster = self.model.underlying_model.categorize_words(word_list, cluster_num)
 
         # Create concreteness prediction
-        token_count = self.training_set.get_token_count()
         self.model.concreteness_prediction = self.model.underlying_model.predict_word_concreteness(token_count)
 
         self.dump_models()

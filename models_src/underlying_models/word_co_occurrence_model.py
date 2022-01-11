@@ -100,12 +100,13 @@ class WordCoOccurrenceModel:
 
     """ Categorize the words according to the vector representations, using KMeans. """
 
-    def categorize_words(self, cluster_num):
-        normalized_mat = (self.co_occurrence_matrix/np.linalg.norm(self.co_occurrence_matrix, axis=0)).transpose()
-        # normalized_mat = (self.co_occurrence_matrix / np.sum(self.co_occurrence_matrix, axis=0)).transpose()
-        kmeans = KMeans(n_clusters=cluster_num).fit(normalized_mat)
+    def categorize_words(self, word_list, cluster_num):
+        all_embeddings_mat = (self.co_occurrence_matrix/np.linalg.norm(self.co_occurrence_matrix, axis=0)).transpose()
+        word_indices = [self.word_to_ind[x] for x in word_list]
+        embedding_mat = all_embeddings_mat[word_indices]
+        kmeans = KMeans(n_clusters=cluster_num).fit(embedding_mat)
         cluster_list = list(kmeans.labels_)
         return {
-            self.ind_to_word[i]: cluster_list[i]
-            for i in range(len(self.ind_to_word))
+            word_list[i]: cluster_list[i]
+            for i in range(len(word_list))
         }
