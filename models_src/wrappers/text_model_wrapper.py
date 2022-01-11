@@ -14,13 +14,14 @@ import torch
 from utils.general_utils import models_dir
 
 from models_src.wrappers.bimodal_cluster_model_wrapper import BimodalClusterModelWrapper
+from models_src.wrappers.word_clustering_model_wrapper import WordClusteringModelWrapper
 from models_src.wrappers.concreteness_prediction_model_wrapper import ConcretenessPredictionModelWrapper
 
 from models_src.underlying_models.word_co_occurrence_model import WordCoOccurrenceModel
 from models_src.underlying_models.word_cluster_count_model import WordClusterCountModel
 
 
-class TextModelWrapper(BimodalClusterModelWrapper, ConcretenessPredictionModelWrapper):
+class TextModelWrapper(BimodalClusterModelWrapper, WordClusteringModelWrapper, ConcretenessPredictionModelWrapper):
     """ This class wraps the text underlying model.
     It contains functionality shared by all text wrappers, different from the visual wrappers in the fact that we need
     to predict clusters for each word first (before we predict for the entire sentences). """
@@ -29,13 +30,6 @@ class TextModelWrapper(BimodalClusterModelWrapper, ConcretenessPredictionModelWr
         super(TextModelWrapper, self).__init__(device, config, model_dir, model_name, indent)
 
     # Abstract methods
-
-    """ Predict the associated cluster and the association probability for a given word.
-    If the word is unknown, return None. """
-
-    @abc.abstractmethod
-    def predict_cluster_for_word(self, word):
-        return
 
     """ Predict all associated cluster for a given word.
         Unlike predict_cluster_for_word, we don't only return the maximum probability cluster, but all the clusters

@@ -36,12 +36,24 @@ parser.add_argument('--write_to_log', action='store_true', default=False, dest='
                     help='redirect output to a log file')
 parser.add_argument('--datasets_dir', type=str, default=os.path.join('..', 'datasets'), dest='datasets_dir',
                     help='the path to the datasets dir')
+parser.add_argument('--model_type', type=str, default=None, dest='model_type',
+                    help='the type of the model to be evaluated')
+parser.add_argument('--model_name', type=str, default=None, dest='model_name',
+                    help='the name of the model to be evaluated')
 
 args = parser.parse_args()
 utility = args.utility
 write_to_log = args.write_to_log
 datasets_dir = args.datasets_dir
+model_type = args.model_type
+model_name = args.model_name
 DatasetBuilder.set_datasets_dir(datasets_dir)
+
+valid_model_types = ['multimodal_clustering', 'text_only', 'random', 'w2v', 'bert', 'clip']
+if model_type is not None and model_type not in valid_model_types:
+    print('Unknown model type: ' + str(model_type))
+    print('Please choose one of: ' + str(valid_model_types))
+    assert(False)
 
 if utility == 'tune_joint_model_parameters':
     main_tune_joint_model_parameters(write_to_log)
@@ -50,7 +62,7 @@ elif utility == 'train_joint_model':
 elif utility == 'filter_unwanted_coco_images':
     main_filter_unwanted_coco_images(write_to_log)
 elif utility == 'categorization_evaluation':
-    main_categorization_evaluation(write_to_log)
+    main_categorization_evaluation(write_to_log, model_type, model_name)
 elif utility == 'concreteness_evaluation':
     main_concreteness_evaluation(write_to_log)
 elif utility == 'train_text_only_baseline':
