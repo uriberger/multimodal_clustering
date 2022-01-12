@@ -14,11 +14,12 @@ from utils.general_utils import log_print, models_dir, text_dir, init_entry_poin
 
 # Dataset
 from dataset_builders.category_dataset import CategoryDatasetBuilder
+from dataset_builders.swow_dataset import SWOWDatasetBuilder
 from dataset_builders.dataset_builder_creator import create_dataset_builder
 from datasets_src.dataset_config import DatasetConfig
 
 # Metric
-from metrics.categorization_metric import CategorizationMetric
+from metrics.word_association_metric import WordAssociationMetric
 
 # Models
 from models_src.wrappers.text_model_wrapper import \
@@ -31,16 +32,17 @@ from models_src.wrappers.word_embedding_clustering_model_wrapper import \
     CLIPClusteringWrapper
 from models_src.model_configs.cluster_model_config import ClusterModelConfig
 
-""" This entry point evaluates taxonomic categorization of different models."""
+
+""" This entry point evaluated association strength between pairs of words in a clustering solution. """
 
 
-def main_categorization_evaluation(write_to_log, model_type, model_name):
-    function_name = 'main_categorization_evaluation'
+def main_association_evaluation(write_to_log, model_type, model_name):
+    function_name = 'main_association_evaluation'
     init_entry_point(write_to_log)
 
     log_print(function_name, 0, 'Generating dataset_files...')
-    category_dataset = CategoryDatasetBuilder(1).build_dataset()
 
+    category_dataset = CategoryDatasetBuilder(1).build_dataset()
     # Filter the category dataset to contain only words with which all of the evaluated models are familiar
     all_words = [x for outer in category_dataset.values() for x in outer]
 
@@ -59,6 +61,8 @@ def main_categorization_evaluation(write_to_log, model_type, model_name):
     # Filter the dataset
     word_dict = {x: True for x in all_words}
     category_dataset = {x[0]: [y for y in x[1] if y in word_dict] for x in category_dataset.items()}
+
+    swow_dataset = SWOWDatasetBuilder(all_words, 1).build_dataset()
     log_print(function_name, 0, 'Datasets generated')
 
     log_print(function_name, 0, 'Testing...')
@@ -78,7 +82,7 @@ def main_categorization_evaluation(write_to_log, model_type, model_name):
     elif model_type == 'clip':
         model = CLIPClusteringWrapper(torch.device('cpu'), all_words)
 
-    metric = CategorizationMetric(model, category_dataset, ignore_unknown_words=True)
+    metric = WordAssociationMetric(model, all_words, swow_dataset)
     log_print(function_name, 1, metric.report())
 
     log_print(function_name, 0, 'Finished testing')
