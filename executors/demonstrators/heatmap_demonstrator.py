@@ -9,7 +9,7 @@
 
 from executors.demonstrators.demonstrator import Demonstrator
 from models_src.wrappers.visual_model_wrapper import VisualModelWrapper
-from models_src.wrappers.text_model_wrapper import generate_text_model
+from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper
 import os
 from utils.general_utils import visual_dir, text_dir
 
@@ -21,21 +21,13 @@ class HeatmapDemonstrator(Demonstrator):
         super(HeatmapDemonstrator, self).__init__(dataset, num_of_items_to_demonstrate, indent)
 
         visual_model_dir = os.path.join(self.models_dir, visual_dir)
-        textual_model_dir = os.path.join(self.models_dir, text_dir)
+        text_model_dir = os.path.join(self.models_dir, text_dir)
         self.visual_model = VisualModelWrapper(self.device, None, visual_model_dir, model_name, indent + 1)
         self.visual_model.eval()
-        self.text_model = \
-            generate_text_model(self.device, 'generative', textual_model_dir, model_name, indent + 1)
+        self.text_model = TextCountsModelWrapper(self.device, None, text_model_dir, model_name, indent + 1)
+        self.text_model.eval()
 
-        gt_class_to_cluster = {i: self.text_model.underlying_model.predict_cluster(class_mapping[i])[0]
-                               for i in range(len(class_mapping))
-                               if ' ' not in class_mapping[i]}
-        cluster_to_gt_class_ind = {}
-        for gt_class_ind, cluster_ind in gt_class_to_cluster.items():
-            if cluster_ind not in cluster_to_gt_class_ind:
-                cluster_to_gt_class_ind[cluster_ind] = []
-            cluster_to_gt_class_ind[cluster_ind].append(gt_class_ind)
-
+        cluster_to_gt_class_ind = self.text_model.create_cluster_to_gt_class_mapping(class_mapping)
         cluster_to_gt_class_str = {x: [class_mapping[i] for i in cluster_to_gt_class_ind[x]]
                                    for x in cluster_to_gt_class_ind.keys()}
 

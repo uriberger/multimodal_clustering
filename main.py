@@ -87,8 +87,8 @@ elif utility == 'find_clip_positive_threshold':
     main_find_clip_positive_threshold(write_to_log)
 elif utility == 'bbox_demonstration':
     main_bbox_demonstration(write_to_log, model_name)
-elif utility == 'bbox_demonstration':
-    main_bbox_demonstration(write_to_log, model_name)
+elif utility == 'heatmap_demonstration':
+    main_heatmap_demonstration(write_to_log, model_name)
 else:
     print('Unknown utility: ' + str(utility))
     print('Please choose one of: bbox_demonstration, categorization_evaluation, association_evaluation, ' +
@@ -96,4 +96,4 @@ else:
           'tune_joint_model_parameters, two_phase_bbox, filter_unwanted_coco_images, train_text_only_baseline, ' +
           'visual_evaluation, text_evaluation, train_concreteness_supervised_model, random_heatmap_evaluation, ' +
           'random_bbox_prediction_evaluation, clip_classification_evaluation, find_clip_positive_threshold, ' +
-          'bbox_demonstration')
+          'bbox_demonstration, heatmap_demonstration')
