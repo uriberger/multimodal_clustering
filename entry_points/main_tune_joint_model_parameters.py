@@ -27,7 +27,7 @@ from executors.trainers.multimodal_clustering_model_trainer import MultimodalClu
 """
 
 
-def main_tune_joint_model_parameters(write_to_log=False):
+def main_tune_joint_model_parameters(write_to_log):
     function_name = 'main_tune_joint_model_parameters'
     timestamp = init_entry_point(write_to_log)
 
@@ -40,15 +40,12 @@ def main_tune_joint_model_parameters(write_to_log=False):
 
     training_set_config = DatasetConfig(1, exclude_val_data=True)
     training_set, _, _ = dataset_builder.build_dataset(training_set_config)
-    class_mapping = dataset_builder.get_class_mapping()
     token_count = training_set.get_token_count()
 
-    test_set_config = DatasetConfig(1, include_gt_classes=True, include_gt_bboxes=True, only_val_data=True)
-    test_set, gt_classes_file_path, gt_bboxes_file_path = dataset_builder.build_dataset(test_set_config)
     log_print(function_name, 0, 'Datasets generated')
 
     log_print(function_name, 0, 'Training model...')
     model_root_dir = os.path.join(project_root_dir, timestamp)
-    trainer = MultimodalClusteringModelTrainer(model_root_dir, training_set, 2, model_config,  token_count, 1)
+    trainer = MultimodalClusteringModelTrainer(model_root_dir, training_set, 2, model_config, token_count, 1)
     trainer.train()
     log_print(function_name, 0, 'Finished training model')

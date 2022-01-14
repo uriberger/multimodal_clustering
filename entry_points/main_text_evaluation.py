@@ -20,7 +20,7 @@ from executors.evaluators.common_text_evaluator import CommonTextEvaluator
 """ This entry point evaluate the model on the most common text metrics. """
 
 
-def main_text_evaluation(write_to_log):
+def main_text_evaluation(write_to_log, model_name):
     function_name = 'main_text_evaluation'
     init_entry_point(write_to_log)
 
@@ -35,7 +35,6 @@ def main_text_evaluation(write_to_log):
 
     log_print(function_name, 0, 'Testing...')
 
-    model_name = 'text_th_0.03_clus_num_100'
     text_model_dir = os.path.join(models_dir, text_dir)
     evaluator = CommonTextEvaluator(text_model_dir, model_name, token_count, 1)
     evaluator.evaluate()

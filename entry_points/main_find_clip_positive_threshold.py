@@ -7,7 +7,6 @@
 # COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,
 # ARE PERMITTED ONLY UNDER A COMMERCIAL LICENSE FROM THE AUTHOR'S EMPLOYER.
 
-import os
 from utils.general_utils import log_print, init_entry_point
 
 # Dataset

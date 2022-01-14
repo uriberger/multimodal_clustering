@@ -24,7 +24,7 @@ from models_src.wrappers.text_model_wrapper import TextCountsModelWrapper, TextO
 from models_src.wrappers.concreteness_supervised_model_wrapper import ConcretenessSupervisedModelWrapper
 
 
-def main_concreteness_evaluation(write_to_log):
+def main_concreteness_evaluation(write_to_log, model_type, model_name):
     function_name = 'main_concreteness_evaluation'
     init_entry_point(write_to_log)
 
@@ -40,15 +40,16 @@ def main_concreteness_evaluation(write_to_log):
 
     log_print(function_name, 0, 'Testing...')
 
-    # model_name = 'resnet_50_non_pretrained_noun_th_0.03_conc_num_100'
-    # model_name = 'text_only_baseline'
-    model_name = 'concreteness_supervised_model_pos_suf_emb'
-    # model_name = 'concreteness_supervised_model_pos_suf'
-
     text_model_dir = os.path.join(models_dir, text_dir)
-    # model = TextCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
-    # model = TextOnlyCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
-    model = ConcretenessSupervisedModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+    if model_type == 'multimodal_clustering':
+        model = TextCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+    elif model_type == 'text_only':
+        model_name = 'text_only_baseline'
+        model = TextOnlyCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+    elif model_type == 'supervised_concreteness':
+        model_name = 'concreteness_supervised_model_' + model_name
+        model = ConcretenessSupervisedModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+
     metric = ConcretenessPredictionMetric(model, concreteness_dataset, token_count)
     log_print(function_name, 1, metric.report())
 

@@ -9,14 +9,11 @@
 
 import os
 import torch
-import gensim.downloader as api
 from utils.general_utils import log_print, models_dir, text_dir, init_entry_point
 
 # Dataset
-from dataset_builders.category_dataset import CategoryDatasetBuilder
 from dataset_builders.swow_dataset import SWOWDatasetBuilder
-from dataset_builders.dataset_builder_creator import create_dataset_builder
-from datasets_src.dataset_config import DatasetConfig
+from dataset_builders.build_word_list_for_categorization import build_word_list_for_categorization
 
 # Metric
 from metrics.word_association_metric import WordAssociationMetric
@@ -41,27 +38,7 @@ def main_association_evaluation(write_to_log, model_type, model_name):
     init_entry_point(write_to_log)
 
     log_print(function_name, 0, 'Generating dataset_files...')
-
-    category_dataset = CategoryDatasetBuilder(1).build_dataset()
-    # Filter the category dataset to contain only words with which all of the evaluated models are familiar
-    all_words = [x for outer in category_dataset.values() for x in outer]
-
-    # 1. Only words that occurred in the COCO training set
-    dataset_name = 'COCO'
-    dataset_builder, _, _ = create_dataset_builder(dataset_name)
-    training_set_config = DatasetConfig(1)
-    training_set, _, _ = dataset_builder.build_dataset(training_set_config)
-    token_count = training_set.get_token_count()
-    all_words = [x for x in all_words if x in token_count]
-
-    # 2. Only words with which word2vec is familiar
-    w2v_model = api.load("word2vec-google-news-300")
-    all_words = [x for x in all_words if x in w2v_model.key_to_index]
-
-    # Filter the dataset
-    word_dict = {x: True for x in all_words}
-    category_dataset = {x[0]: [y for y in x[1] if y in word_dict] for x in category_dataset.items()}
-
+    all_words = build_word_list_for_categorization(1)
     swow_dataset = SWOWDatasetBuilder(all_words, 1).build_dataset()
     log_print(function_name, 0, 'Datasets generated')
 

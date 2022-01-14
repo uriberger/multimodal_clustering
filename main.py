@@ -25,6 +25,7 @@ from entry_points.main_random_bbox_prediction_evaluation import main_random_bbox
 from entry_points.main_clip_classification_evaluation import main_clip_classification_evaluation
 from entry_points.main_find_clip_positive_threshold import main_find_clip_positive_threshold
 from entry_points.main_bbox_demonstration import main_bbox_demonstration
+from entry_points.main_heatmap_demonstration import main_heatmap_demonstration
 
 from dataset_builders.dataset_builder import DatasetBuilder
 
@@ -67,15 +68,15 @@ elif utility == 'categorization_evaluation':
 elif utility == 'association_evaluation':
     main_association_evaluation(write_to_log, model_type, model_name)
 elif utility == 'concreteness_evaluation':
-    main_concreteness_evaluation(write_to_log)
+    main_concreteness_evaluation(write_to_log, model_type, model_name)
 elif utility == 'train_text_only_baseline':
     main_train_text_only_baseline(write_to_log)
 elif utility == 'train_concreteness_supervised_model':
     main_train_concreteness_supervised_model(write_to_log)
 elif utility == 'visual_evaluation':
-    main_visual_evaluation(write_to_log)
+    main_visual_evaluation(write_to_log, model_name)
 elif utility == 'text_evaluation':
-    main_text_evaluation(write_to_log)
+    main_text_evaluation(write_to_log, model_name)
 elif utility == 'random_heatmap_evaluation':
     main_random_heatmap_evaluation(write_to_log)
 elif utility == 'random_bbox_prediction_evaluation':
@@ -85,7 +86,9 @@ elif utility == 'clip_classification_evaluation':
 elif utility == 'find_clip_positive_threshold':
     main_find_clip_positive_threshold(write_to_log)
 elif utility == 'bbox_demonstration':
-    main_bbox_demonstration(write_to_log)
+    main_bbox_demonstration(write_to_log, model_name)
+elif utility == 'bbox_demonstration':
+    main_bbox_demonstration(write_to_log, model_name)
 else:
     print('Unknown utility: ' + str(utility))
     print('Please choose one of: bbox_demonstration, categorization_evaluation, association_evaluation, ' +

@@ -19,11 +19,12 @@ from datasets_src.dataset_config import DatasetConfig
 from executors.demonstrators.bbox_demonstrator import BboxDemonstrator
 
 
-def main_bbox_demonstration(write_to_log):
+""" This entry point demonstrates the bounding boxes predicted by our model. """
+
+
+def main_bbox_demonstration(write_to_log, model_name):
     function_name = 'main_bbox_demonstration'
     init_entry_point(write_to_log)
-
-    model_name = 'text_th_0.08_clus_num_150'
 
     log_print(function_name, 0, 'Generating dataset_files...')
     coco_dir = os.path.join('..', 'datasets', 'COCO')

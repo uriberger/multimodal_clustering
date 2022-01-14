@@ -20,7 +20,7 @@ from executors.evaluators.visual_evaluators.common_visual_evaluator import Commo
 """ This entry point evaluate the model on the most common visual metrics. """
 
 
-def main_visual_evaluation(write_to_log):
+def main_visual_evaluation(write_to_log, model_name):
     function_name = 'main_visual_evaluation'
     init_entry_point(write_to_log)
 
@@ -35,7 +35,6 @@ def main_visual_evaluation(write_to_log):
 
     log_print(function_name, 0, 'Testing...')
 
-    model_name = 'text_th_0.03_clus_num_100'
     visual_model_dir = os.path.join(models_dir, visual_dir)
     text_model_dir = os.path.join(models_dir, text_dir)
     evaluator = CommonVisualEvaluator(visual_model_dir, text_model_dir, model_name, test_set,

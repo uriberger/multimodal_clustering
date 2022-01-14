@@ -14,11 +14,10 @@ from utils.general_utils import log_print, init_entry_point
 from dataset_builders.dataset_builder_creator import create_dataset_builder
 
 
-""" The entry point for filtering unwanted images from the MSCOCO dataset.
-"""
+""" The entry point for filtering unwanted images from the MSCOCO dataset. """
 
 
-def main_filter_unwanted_coco_images(write_to_log=False):
+def main_filter_unwanted_coco_images(write_to_log):
     function_name = 'main_filter_unwanted_coco_images'
     init_entry_point(write_to_log)
 
