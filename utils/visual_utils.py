@@ -12,8 +12,7 @@ import torch.nn as nn
 import torchvision.models as models
 import torchvision.transforms as transforms
 from torchvision.transforms.functional import to_pil_image
-import matplotlib.pyplot as plt
-from PIL import Image, ImageDraw
+from PIL import Image
 from torchcam.utils import overlay_mask
 from models_src.underlying_models.simclr import SimCLRModel
 import numpy as np
