@@ -1,3 +1,8 @@
+##########################################
+### A Computational Acquisition Model  ###
+### for Multimodal Word Categorization ###
+##########################################
+
 import torch
 from datasets_src.img_captions_dataset.img_captions_dataset import ImageCaptionDataset
 

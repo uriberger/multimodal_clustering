@@ -1,3 +1,8 @@
+##########################################
+### A Computational Acquisition Model  ###
+### for Multimodal Word Categorization ###
+##########################################
+
 from utils.visual_utils import pil_image_trans
 import torchvision.datasets as datasets
 from dataset_builders.classification_dataset_builder import ClassificationDatasetBuilder

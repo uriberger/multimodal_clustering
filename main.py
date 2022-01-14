@@ -1,7 +1,7 @@
-###############################################
-### Unsupervised Multimodal Word Clustering ###
-### as a First Step of Language Acquisition ###
-###############################################
+##########################################
+### A Computational Acquisition Model  ###
+### for Multimodal Word Categorization ###
+##########################################
 # Written by Uri Berger, December 2021.
 #
 # COMMERCIAL USE AND DISTRIBUTION OF THIS CODE, AND ITS MODIFICATIONS,

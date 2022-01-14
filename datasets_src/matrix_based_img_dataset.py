@@ -1,3 +1,8 @@
+##########################################
+### A Computational Acquisition Model  ###
+### for Multimodal Word Categorization ###
+##########################################
+
 import torch.utils.data as data
 import torchvision.transforms as transforms
 from utils.visual_utils import tensor_trans

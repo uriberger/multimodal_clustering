@@ -1,3 +1,8 @@
+##########################################
+### A Computational Acquisition Model  ###
+### for Multimodal Word Categorization ###
+##########################################
+
 import os
 from xml.dom import minidom
 import torch
