@@ -49,7 +49,7 @@ class WordAssociationMetric(Metric):
 
     def evaluate_clusters(self):
         word_to_cluster = {word: self.text_model.predict_cluster_for_word(word)[0] for word in self.word_list}
-        cluster_num = max(word_to_cluster.values())
+        cluster_num = max(word_to_cluster.values()) + 1
         cluster_to_word_list = {i: [x for x in self.word_list if word_to_cluster[x] == i] for i in range(cluster_num)}
         cluster_pair_lists = [
             [x for outer in [[(z[i], z[j]) for j in range(i + 1, len(z))] for i in range(len(z))] for x in outer] for z
