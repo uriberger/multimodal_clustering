@@ -41,14 +41,21 @@ def main_concreteness_evaluation(write_to_log, model_type, model_name):
     log_print(function_name, 0, 'Testing...')
 
     text_model_dir = os.path.join(models_dir, text_dir)
+    if model_type == 'text_only':
+        model_name = 'text_only_baseline'
+    if model_name is None:
+        log_print(function_name, 0, 'Please enter model name using the flag --model_name')
+        return
+        
     if model_type == 'multimodal_clustering':
         model = TextCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
     elif model_type == 'text_only':
         model_name = 'text_only_baseline'
         model = TextOnlyCountsModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
     elif model_type == 'supervised_concreteness':
-        model_name = 'concreteness_supervised_model_' + model_name
         model = ConcretenessSupervisedModelWrapper(torch.device('cpu'), None, text_model_dir, model_name, 1)
+    else:
+        log_print(function_name, 0, 'Incorrect model type, please use --model_type <MODEL_TYPE>, where <MODEL_TYPE> is one of [multimodal_clustering, text_only, supervised_concreteness]')
 
     metric = ConcretenessPredictionMetric(model, concreteness_dataset, token_count)
     log_print(function_name, 1, metric.report())

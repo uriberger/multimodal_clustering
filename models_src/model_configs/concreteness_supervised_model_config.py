@@ -25,9 +25,9 @@ class ConcretenessSupervisedModelConfig(ModelConfig):
     fast_text_dim: The dimension of the pretrained embeddings (only used if use_embeddings==True)
     """
     def __init__(self,
-                 use_pos_tags=True,
-                 use_suffix=True,
-                 use_embeddings=True,
+                 use_pos_tags=False,
+                 use_suffix=False,
+                 use_embeddings=False,
                  suffix_num=200,
                  fast_text_dim=300
                  ):
