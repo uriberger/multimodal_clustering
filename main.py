@@ -42,6 +42,12 @@ parser.add_argument('--model_type', type=str, default=None, dest='model_type',
                     help='the type of the model to be evaluated')
 parser.add_argument('--model_name', type=str, default=None, dest='model_name',
                     help='the name of the model to be evaluated')
+parser.add_argument('--conc_use_pos', action='store_true', default=False, dest='conc_use_pos',
+                    help='use POS features when training a concreteness supervised model')
+parser.add_argument('--conc_use_suffix', action='store_true', default=False, dest='conc_use_suffix',
+                    help='use common suffix features when training a concreteness supervised model')
+parser.add_argument('--conc_use_embeddings', action='store_true', default=False, dest='conc_use_embeddings',
+                    help='use pre-trained embeddings as features when training a concreteness supervised model')
 
 args = parser.parse_args()
 utility = args.utility
@@ -49,13 +55,10 @@ write_to_log = args.write_to_log
 datasets_dir = args.datasets_dir
 model_type = args.model_type
 model_name = args.model_name
+conc_use_pos = args.conc_use_pos
+conc_use_suffix = args.conc_use_suffix
+conc_use_embeddings = args.conc_use_embeddings
 DatasetBuilder.set_datasets_dir(datasets_dir)
-
-valid_model_types = ['multimodal_clustering', 'text_only', 'random', 'w2v', 'bert', 'clip']
-if model_type is not None and model_type not in valid_model_types:
-    print('Unknown model type: ' + str(model_type))
-    print('Please choose one of: ' + str(valid_model_types))
-    assert False
 
 if utility == 'tune_joint_model_parameters':
     main_tune_joint_model_parameters(write_to_log)
@@ -72,7 +75,7 @@ elif utility == 'concreteness_evaluation':
 elif utility == 'train_text_only_baseline':
     main_train_text_only_baseline(write_to_log)
 elif utility == 'train_concreteness_supervised_model':
-    main_train_concreteness_supervised_model(write_to_log)
+    main_train_concreteness_supervised_model(write_to_log, conc_use_pos, conc_use_suffix, conc_use_embeddings)
 elif utility == 'visual_evaluation':
     main_visual_evaluation(write_to_log, model_name)
 elif utility == 'text_evaluation':

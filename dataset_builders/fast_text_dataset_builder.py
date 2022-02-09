@@ -31,6 +31,9 @@ class FastTextDatasetBuilder(DatasetBuilder):
     def generate_fast_text_internal(self):
         self.log_print('Generating fast text vectors dataset...')
 
+        if not os.path.isfile(self.input_filename):
+            self.log_print('Couldn\'t find file ' + self.input_filename + '. Please download from url https://fasttext.cc/docs/en/english-vectors.html')
+            assert False
         fin = io.open(self.input_filename, 'r', encoding='utf-8', newline='\n', errors='ignore')
         map(int, fin.readline().split())
         data = {}

@@ -26,12 +26,19 @@ from models_src.wrappers.concreteness_supervised_model_wrapper import Concretene
 """
 
 
-def main_train_concreteness_supervised_model(write_to_log):
+def main_train_concreteness_supervised_model(write_to_log, use_pos_tags, use_suffix, use_embeddings):
     function_name = 'main_train_concreteness_supervised_model'
     timestamp = init_entry_point(write_to_log)
 
-    model_config = ConcretenessSupervisedModelConfig()
-    # model_config = ConcretenessSupervisedModelConfig(use_embeddings=False)
+    if not (use_pos_tags or use_suffix or use_embeddings):
+        log_print(function_name, 0, 'Please choose features used by the model, by providing the --conc_use_<FEATURE> flag, where <FEATURE> is one of [pos, suffix, embeddings]. Multiple features can be used')
+        return
+
+    model_config = ConcretenessSupervisedModelConfig(
+        use_pos_tags=use_pos_tags,
+        use_suffix=use_suffix,
+        use_embeddings=use_embeddings
+    )
     log_print(function_name, 0, str(model_config))
 
     log_print(function_name, 0, 'Generating dataset_files...')
@@ -46,4 +53,4 @@ def main_train_concreteness_supervised_model(write_to_log):
     model = ConcretenessSupervisedModelWrapper(torch.device('cpu'), model_config, model_root_dir, default_model_name, 1)
     model.train_model()
     model.dump()
-    log_print(function_name, 0, 'Finished training model')
+    log_print(function_name, 0, 'Finished training model. Model dumped to ' + str(model.get_dump_path()))

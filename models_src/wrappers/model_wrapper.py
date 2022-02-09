@@ -24,6 +24,7 @@ class ModelWrapper(LoggableObject):
         super(ModelWrapper, self).__init__(indent)
         self.device = device  # CPU or GPU
         self.model_dir = model_dir
+        self.model_name = model_name
         self.dump_path = os.path.join(self.model_dir, model_name)
 
         # Check if we need to load an existing model (the provided configuration is None), or create new model (the
@@ -82,8 +83,7 @@ class ModelWrapper(LoggableObject):
     def load_config(self):
         config_path = self.get_config_path()
         if not os.path.isfile(config_path):
-            self.log_print('Model was instantiated without configuration, and no config file was found. Stopping!')
-            self.log_print('The config path was ' + config_path)
+            self.log_print('Couldn\'t find model "' + str(self.model_name) + '" in directory ' + str(self.model_dir))
             assert False
         self.config = torch.load(config_path)
 

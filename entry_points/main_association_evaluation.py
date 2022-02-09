@@ -58,6 +58,8 @@ def main_association_evaluation(write_to_log, model_type, model_name):
         model = BERTClusteringWrapper(torch.device('cpu'), all_words)
     elif model_type == 'clip':
         model = CLIPClusteringWrapper(torch.device('cpu'), all_words)
+    else:
+        log_print(function_name, 0, 'Incorrect model type, please use --model_type <MODEL_TYPE>, where <MODEL_TYPE> is one of [multimodal_clustering, text_only, random, w2v, bert, clip]')
 
     metric = WordAssociationMetric(model, all_words, swow_dataset)
     log_print(function_name, 1, metric.report())
