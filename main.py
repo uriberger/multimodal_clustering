@@ -33,7 +33,12 @@ from dataset_builders.dataset_builder import DatasetBuilder
 
 parser = argparse.ArgumentParser(description='Train and evaluate a multimodal word learning model.')
 parser.add_argument('--utility', type=str, default='train_joint_model', dest='utility',
-                    help='the wanted utility')
+                    help='the wanted utility, one of [bbox_demonstration, categorization_evaluation, association_evaluation, ' +
+                    'concreteness_evaluation, heatmap_demonstration, heatmap_evaluation, train_joint_model, ' +
+                    'tune_joint_model_parameters, two_phase_bbox, filter_unwanted_coco_images, train_text_only_baseline, ' +
+                    'visual_evaluation, text_evaluation, train_concreteness_supervised_model, random_heatmap_evaluation, ' +
+                    'random_bbox_prediction_evaluation, clip_classification_evaluation, find_clip_positive_threshold, ' +
+                    'bbox_demonstration, heatmap_demonstration]')
 parser.add_argument('--write_to_log', action='store_true', default=False, dest='write_to_log',
                     help='redirect output to a log file')
 parser.add_argument('--datasets_dir', type=str, default=os.path.join('..', 'datasets'), dest='datasets_dir',
