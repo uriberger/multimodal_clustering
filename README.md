@@ -5,4 +5,4 @@ Our model consists of two encoders (a visual encoder and a text encoder), both o
 
 
 ## Visualization of the Model
-![Alt text](model_desc.png)
+![Alt text](model_desc.jpg)
